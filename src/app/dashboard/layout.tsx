@@ -24,11 +24,20 @@ export default function DashboardLayout({
   }
 
   return (
-    <div className="min-h-screen bg-black">
-      <Header />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {children}
-      </main>
+    <div className="min-h-screen bg-black relative">
+      {/* Background principal */}
+      <div 
+        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat opacity-30"
+        style={{ backgroundImage: 'url(/background.jpg)' }}
+      />
+
+      {/* Conteúdo */}
+      <div className="relative z-10">
+        <Header />
+        <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          {children}
+        </main>
+      </div>
     </div>
   )
 }
