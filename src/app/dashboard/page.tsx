@@ -94,6 +94,23 @@ export default function DashboardPage() {
         </Link>
       </div>
 
+      {/* Recado da Espiritualidade */}
+      <div className="relative overflow-hidden rounded-2xl">
+        {/* Background da seção */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center bg-no-repeat opacity-10"
+          style={{ backgroundImage: 'url(/background.jpg)' }}
+        />
+        
+        {/* Conteúdo da seção */}
+        <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
+          <h2 className="text-2xl font-semibold text-primary mb-4">Recado da Espiritualidade</h2>
+          <p className="text-gray-300 text-center py-4 text-lg">
+            "A vida é uma jornada de autodescoberta. Cada desafio é uma oportunidade de crescimento, e cada momento de paz é um presente do universo. Mantenha seu coração aberto às mensagens que o cosmos tem para você."
+          </p>
+        </div>
+      </div>
+
       {/* Últimas Consultas */}
       <div className="relative overflow-hidden rounded-2xl">
         {/* Background da seção */}

@@ -9,11 +9,21 @@ export function Header() {
   const logout = useAuthStore(state => state.logout)
 
   return (
-    <header className="bg-black/40 backdrop-blur-md border-b border-primary/20">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <header className="bg-black/40 backdrop-blur-md border-b border-primary/20 relative">
+      {/* Sombra sutil */}
+      <div className="absolute -bottom-4 left-0 right-0 h-4 bg-gradient-to-b from-primary/10 to-transparent blur-xl"></div>
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
-          <div className="flex items-center">
+          <div className="flex items-center space-x-2">
+            <div className="w-8 h-8">
+              <img
+                src="/logo.png"
+                alt="StarTarot Logo"
+                className="w-full h-full object-contain"
+              />
+            </div>
             <Link href="/dashboard" className="text-primary font-raleway text-xl font-bold">
               StarTarot
             </Link>
