@@ -1,5 +1,84 @@
 # Especificações Técnicas - StarTarot
 
+## Design System
+
+### Cores
+- **Primárias**:
+  - Primary: #FFB800 (Dourado)
+  - Primary Light: #FFD700
+  - Background: Preto com overlay dourado
+
+### Tipografia
+- **Fontes**:
+  - Títulos: Raleway (font-raleway)
+  - Corpo: Montserrat (font-montserrat)
+- **Tamanhos**:
+  - Título Principal: text-5xl (3rem)
+  - Subtítulos: text-xl
+  - Texto Base: text-base
+
+### Layout
+- **Container**:
+  - Max Width: max-w-md
+  - Padding: p-8
+  - Border Radius: rounded-2xl
+  - Background: bg-black/40 com backdrop-blur-md
+
+### Componentes
+
+#### Botões
+```css
+/* Botão Primário */
+.btn-primary {
+  @apply w-full px-4 py-3 bg-primary 
+         hover:bg-primary-light text-black font-semibold
+         rounded-lg transition-all duration-200 
+         ease-in-out transform hover:scale-[1.02];
+}
+```
+
+#### Inputs
+```css
+/* Input Padrão */
+.input-primary {
+  @apply w-full px-4 py-3 bg-black/40 
+         border border-primary/20 rounded-lg
+         focus:outline-none focus:border-primary 
+         focus:ring-1 focus:ring-primary
+         text-white placeholder-gray-400 
+         transition-all duration-200;
+}
+```
+
+#### Links
+```css
+/* Link Padrão */
+.link-primary {
+  @apply text-primary hover:text-primary-light 
+         transition-colors duration-200;
+}
+```
+
+### Efeitos
+- **Transições**:
+  - Duração: duration-200
+  - Timing: ease-in-out
+- **Hover**:
+  - Escala: hover:scale-[1.02]
+  - Cor: hover:bg-primary-light
+- **Focus**:
+  - Ring: focus:ring-1
+  - Border: focus:border-primary
+
+### Responsividade
+- **Breakpoints**:
+  - Mobile: < 768px (padrão)
+  - Tablet: >= 768px
+  - Desktop: >= 1200px
+- **Imagens**:
+  - Background: object-cover w-full h-full
+  - Logo: object-contain w-44 h-44
+
 ## Arquitetura do Sistema
 
 ### Frontend
@@ -124,4 +203,3 @@ src/
     "@shadcn/ui": "^0.0.1"
   }
 }
-```
