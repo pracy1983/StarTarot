@@ -5,16 +5,34 @@ import { BellIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
 import { useAuthStore } from '@/stores/authStore'
 import { useState, useEffect, useRef } from 'react'
 
+// Exemplo de notificações (depois virá do backend)
+const MOCK_NOTIFICATIONS = [
+  {
+    id: 1,
+    title: "Sua consulta sobre amor foi respondida",
+    date: "Há 5 minutos"
+  },
+  {
+    id: 2,
+    title: "Nova mensagem do Oráculo dos Anjos",
+    date: "Há 30 minutos"
+  }
+]
+
 export function Header() {
   const user = useAuthStore(state => state.user)
   const logout = useAuthStore(state => state.logout)
   const [isMenuOpen, setIsMenuOpen] = useState(false)
+  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
+  const notificationsRef = useRef<HTMLDivElement>(null)
+  const notificationButtonRef = useRef<HTMLButtonElement>(null)
 
-  // Fecha o menu ao clicar fora
+  // Fecha os menus ao clicar fora
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      // Menu mobile
       if (
         menuRef.current &&
         !menuRef.current.contains(event.target as Node) &&
@@ -23,13 +41,23 @@ export function Header() {
       ) {
         setIsMenuOpen(false)
       }
+      
+      // Menu notificações
+      if (
+        notificationsRef.current &&
+        !notificationsRef.current.contains(event.target as Node) &&
+        notificationButtonRef.current &&
+        !notificationButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationsOpen(false)
+      }
     }
 
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  // Previne scroll quando menu está aberto
+  // Previne scroll apenas quando o menu mobile está aberto
   useEffect(() => {
     if (isMenuOpen) {
       document.body.style.overflow = 'hidden'
@@ -92,9 +120,47 @@ export function Header() {
 
           {/* Menu Direito - Desktop */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="text-gray-300 hover:text-primary transition-colors duration-200">
-              <BellIcon className="h-6 w-6" />
-            </button>
+            <div className="relative">
+              <button 
+                ref={notificationButtonRef}
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="text-gray-300 hover:text-primary transition-colors duration-200"
+              >
+                <BellIcon className="h-6 w-6" />
+                {MOCK_NOTIFICATIONS.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {MOCK_NOTIFICATIONS.length}
+                  </span>
+                )}
+              </button>
+
+              {/* Menu de Notificações */}
+              <div
+                ref={notificationsRef}
+                className={`absolute right-0 mt-2 w-80 transform transition-all duration-300 ease-in-out origin-top ${
+                  isNotificationsOpen ? 'scale-100 opacity-100' : 'scale-95 opacity-0 pointer-events-none'
+                }`}
+              >
+                <div className="bg-black/95 backdrop-blur-md rounded-lg shadow-xl border border-primary/20">
+                  <div className="p-4 border-b border-primary/20">
+                    <h3 className="text-lg font-semibold text-primary">Notificações</h3>
+                  </div>
+                  <div className="max-h-96 overflow-y-auto">
+                    {MOCK_NOTIFICATIONS.map(notification => (
+                      <Link
+                        key={notification.id}
+                        href="/dashboard/mensagens"
+                        onClick={() => setIsNotificationsOpen(false)}
+                        className="block p-4 hover:bg-primary/5 transition-colors duration-200 border-b border-primary/10 last:border-0"
+                      >
+                        <p className="text-gray-300 font-medium">{notification.title}</p>
+                        <p className="text-sm text-gray-500 mt-1">{notification.date}</p>
+                      </Link>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
             <button 
               onClick={() => logout()}
               className="text-gray-300 hover:text-primary transition-colors duration-200"
@@ -104,7 +170,23 @@ export function Header() {
           </div>
 
           {/* Botão Menu Mobile */}
-          <div className="flex md:hidden">
+          <div className="flex md:hidden items-center space-x-4">
+            {/* Notificações Mobile */}
+            <div className="relative">
+              <button 
+                ref={notificationButtonRef}
+                onClick={() => setIsNotificationsOpen(!isNotificationsOpen)}
+                className="text-gray-300 hover:text-primary transition-colors duration-200"
+              >
+                <BellIcon className="h-6 w-6" />
+                {MOCK_NOTIFICATIONS.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                    {MOCK_NOTIFICATIONS.length}
+                  </span>
+                )}
+              </button>
+            </div>
+
             <button
               ref={buttonRef}
               onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -120,10 +202,10 @@ export function Header() {
         </div>
       </div>
 
-      {/* Menu Mobile Overlay */}
+      {/* Overlay (compartilhado entre menu mobile e notificações) */}
       <div 
         className={`fixed inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-300 ease-in-out md:hidden ${
-          isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          (isMenuOpen || isNotificationsOpen) ? 'opacity-100' : 'opacity-0 pointer-events-none'
         }`}
         aria-hidden="true"
       />
@@ -161,9 +243,6 @@ export function Header() {
             Meu Perfil
           </Link>
           <div className="flex items-center justify-between px-4 py-3">
-            <button className="text-gray-300 hover:text-primary transition-colors duration-200">
-              <BellIcon className="h-6 w-6" />
-            </button>
             <button 
               onClick={() => {
                 setIsMenuOpen(false)
@@ -174,6 +253,29 @@ export function Header() {
               Sair
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Menu de Notificações Mobile */}
+      <div
+        ref={notificationsRef}
+        className={`absolute right-0 top-0 h-auto w-64 bg-black/95 backdrop-blur-md transform transition-all duration-300 ease-in-out md:hidden ${
+          isNotificationsOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div className="px-2 pt-20 pb-3">
+          <h3 className="text-lg font-semibold text-primary mb-4 px-4">Notificações</h3>
+          {MOCK_NOTIFICATIONS.map(notification => (
+            <Link
+              key={notification.id}
+              href="/dashboard/mensagens"
+              onClick={() => setIsNotificationsOpen(false)}
+              className="block px-4 py-3 hover:bg-primary/5 transition-colors duration-200 rounded-lg"
+            >
+              <p className="text-gray-300 font-medium">{notification.title}</p>
+              <p className="text-sm text-gray-500 mt-1">{notification.date}</p>
+            </Link>
+          ))}
         </div>
       </div>
     </header>
