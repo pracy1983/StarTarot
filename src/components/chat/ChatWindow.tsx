@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '@/services/deepseek/chatService'
+import { useRouter } from 'next/navigation'
 
 interface Message {
   id: string
@@ -25,6 +26,7 @@ export function ChatWindow() {
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const chatService = useRef<ChatService | null>(null)
+  const router = useRouter()
 
   // Inicializa o serviço de chat
   useEffect(() => {
@@ -137,18 +139,26 @@ export function ChatWindow() {
             {messages.map(message => (
               <div
                 key={message.id}
-                className={`mb-4 flex ${
+                className={`flex ${
                   message.sender === 'user' ? 'justify-end' : 'justify-start'
-                }`}
+                } mb-4`}
               >
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
+                  className={`p-3 rounded-lg ${
                     message.sender === 'user'
-                      ? 'bg-primary/20 text-white rounded-br-none'
+                      ? 'bg-primary text-black rounded-br-none'
                       : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
                   }`}
                 >
-                  {message.content}
+                  <p>{message.content}</p>
+                  {message.sender === 'agent' && message.content.toLowerCase().includes('consulta') && (
+                    <button
+                      onClick={() => router.push('/credits')}
+                      className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
+                    >
+                      Comprar créditos para consulta
+                    </button>
+                  )}
                 </div>
               </div>
             ))}
