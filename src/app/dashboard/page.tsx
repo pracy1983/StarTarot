@@ -47,7 +47,7 @@ export default function DashboardPage() {
 
         {/* Adicionar Créditos */}
         <Link 
-          href="/dashboard/creditos"
+          href="/dashboard/credits"
           className="group relative overflow-hidden rounded-2xl"
         >
           {/* Background do card */}
