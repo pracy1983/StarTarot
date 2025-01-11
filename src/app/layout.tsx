@@ -1,13 +1,14 @@
 import type { Metadata } from 'next'
 import { Montserrat, Raleway } from 'next/font/google'
 import './globals.css'
+import ClientLayout from './ClientLayout'
 
 const montserrat = Montserrat({ 
   subsets: ['latin'],
   variable: '--font-montserrat'
 })
 
-const raleway = Raleway({
+const raleway = Raleway({ 
   subsets: ['latin'],
   variable: '--font-raleway'
 })
@@ -24,7 +25,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${montserrat.variable} ${raleway.variable}`}>
-      <body className={montserrat.className}>{children}</body>
+      <body className={montserrat.className}>
+        <ClientLayout>
+          {children}
+        </ClientLayout>
+      </body>
     </html>
   )
 }

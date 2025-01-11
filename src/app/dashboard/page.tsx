@@ -3,7 +3,6 @@
 import { useAuthStore } from '@/stores/authStore'
 import { ChatBubbleLeftRightIcon, CreditCardIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
-import { ChatWindow } from '@/components/chat/ChatWindow'
 
 export default function DashboardPage() {
   const user = useAuthStore(state => state.user)
@@ -134,9 +133,6 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
-
-      {/* Chat Window */}
-      <ChatWindow />
     </div>
   )
 }
