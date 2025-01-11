@@ -56,27 +56,37 @@ export function ChatWindow() {
     setIsTyping(true)
 
     try {
-      // Converte mensagens para o formato da API
       const history = messages.map(msg => ({
         role: msg.sender === 'user' ? 'user' : 'assistant',
         content: msg.content
       }))
 
-      // Envia mensagem para a API
       const response = await chatService.current.sendMessage(inputMessage, history)
-
-      // Adiciona resposta do agente
-      const agentMessage: Message = {
-        id: (Date.now() + 1).toString(),
-        content: response,
-        sender: 'agent',
-        timestamp: new Date()
+      
+      // Quebra a resposta em balões separados
+      const sentences = response.split(/(?<=[.!?])\s+/)
+      
+      for (const sentence of sentences) {
+        // Calcula o tempo de digitação baseado no tamanho da mensagem
+        // Mínimo de 1.5s, máximo de 3s, com variação aleatória
+        const baseTime = Math.min(Math.max(sentence.length * 50, 1500), 3000)
+        const randomVariation = Math.random() * 500 // Adiciona até 500ms de variação
+        const typingTime = baseTime + randomVariation
+        
+        await new Promise(resolve => setTimeout(resolve, typingTime))
+        
+        const agentMessage: Message = {
+          id: Date.now().toString(),
+          content: sentence,
+          sender: 'agent',
+          timestamp: new Date()
+        }
+        
+        setMessages(prev => [...prev, agentMessage])
       }
 
-      setMessages(prev => [...prev, agentMessage])
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      // Adiciona mensagem de erro
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
@@ -95,7 +105,7 @@ export function ChatWindow() {
     }`}>
       {/* Header */}
       <div className="flex items-center justify-between p-4 border-b border-primary/20">
-        <h3 className="text-primary font-semibold">Chat Espiritual</h3>
+        <h3 className="text-primary font-semibold">Chat ao vivo</h3>
         <div className="flex items-center space-x-2">
           <button
             onClick={() => setIsMinimized(!isMinimized)}
@@ -115,7 +125,14 @@ export function ChatWindow() {
         <>
           <div 
             ref={chatRef}
-            className="flex-1 p-4 overflow-y-auto h-[calc(100%-8rem)]"
+            style={{
+              backgroundImage: 'url(/background.jpg)',
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+              backgroundRepeat: 'no-repeat',
+              backgroundBlendMode: 'overlay'
+            }}
+            className="flex-1 p-4 overflow-y-auto h-[calc(100%-8rem)] bg-black/80"
           >
             {messages.map(message => (
               <div
@@ -138,10 +155,10 @@ export function ChatWindow() {
             {isTyping && (
               <div className="flex justify-start mb-4">
                 <div className="bg-gray-800/50 text-gray-300 p-3 rounded-lg rounded-bl-none">
-                  <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-100"></div>
-                    <div className="w-2 h-2 bg-gray-500 rounded-full animate-bounce delay-200"></div>
+                  <div className="flex space-x-1">
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"></div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce delay-100"></div>
+                    <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce delay-200"></div>
                   </div>
                 </div>
               </div>
