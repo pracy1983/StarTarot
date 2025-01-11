@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '@/stores/authStore'
 import { ChatModule } from '@/modules/chat'
+import { usePathname } from 'next/navigation'
 
 export default function ClientLayout({
   children,
@@ -9,11 +10,13 @@ export default function ClientLayout({
   children: React.ReactNode
 }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const pathname = usePathname()
+  const isAdminPage = pathname?.startsWith('/admin')
 
   return (
     <>
       {children}
-      {isAuthenticated && <ChatModule />}
+      {isAuthenticated && !isAdminPage && <ChatModule />}
     </>
   )
 }
