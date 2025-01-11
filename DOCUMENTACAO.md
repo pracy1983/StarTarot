@@ -42,7 +42,15 @@
 - [x] Opções de compra
 - [x] Informações sobre preços variáveis
 
-### 5. Arquitetura e Tecnologias
+### 5. Página de Oraculistas
+- [x] Layout responsivo com 3 cards por linha
+- [x] Foto e informações de cada oraculista
+- [x] Status de disponibilidade (online/offline)
+- [x] Botão de enviar pergunta
+- [x] Integração com sistema de créditos
+- [x] Design consistente com a identidade visual
+
+### 6. Arquitetura e Tecnologias
 - [x] Next.js 13+ (App Router)
 - [x] TypeScript
 - [x] Tailwind CSS
