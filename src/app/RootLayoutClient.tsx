@@ -2,6 +2,7 @@
 
 import { useAuthStore } from '@/stores/authStore'
 import { ChatModule } from '@/modules/chat'
+import { usePathname } from 'next/navigation'
 
 export function RootLayoutClient({
   children,
@@ -11,11 +12,13 @@ export function RootLayoutClient({
   className: string
 }) {
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const pathname = usePathname()
+  const isAdminPage = pathname?.startsWith('/admin')
 
   return (
     <body className={className}>
       {children}
-      {isAuthenticated && <ChatModule />}
+      {isAuthenticated && !isAdminPage && <ChatModule />}
     </body>
   )
 }
