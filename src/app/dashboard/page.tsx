@@ -3,12 +3,13 @@
 import { useAuthStore } from '@/stores/authStore'
 import { ChatBubbleLeftRightIcon, CreditCardIcon, UserGroupIcon } from '@heroicons/react/24/outline'
 import Link from 'next/link'
+import { ChatWindow } from '@/components/chat/ChatWindow'
 
 export default function DashboardPage() {
   const user = useAuthStore(state => state.user)
 
   return (
-    <div className="space-y-8">
+    <div className="min-h-screen bg-black text-white relative space-y-8">
       {/* Boas-vindas */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-raleway font-bold text-primary">
@@ -133,6 +134,9 @@ export default function DashboardPage() {
           </div>
         </div>
       </div>
+
+      {/* Chat Window */}
+      <ChatWindow />
     </div>
   )
 }
