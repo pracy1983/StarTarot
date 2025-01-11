@@ -5,6 +5,7 @@ interface User {
   id: string
   name: string
   email: string
+  isAdmin?: boolean
 }
 
 interface AuthState {
@@ -21,7 +22,8 @@ const DEFAULT_USER = {
   userData: {
     id: '1',
     name: 'Usuário StarTarot',
-    email: 'user@startarot.com'
+    email: 'user@startarot.com',
+    isAdmin: true // Para testes
   }
 }
 

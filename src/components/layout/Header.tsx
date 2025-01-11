@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { BellIcon, Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline'
+import { BellIcon, Bars3Icon, XMarkIcon, Cog6ToothIcon } from '@heroicons/react/24/outline'
 import { useAuthStore } from '@/stores/authStore'
 import { useState, useEffect, useRef } from 'react'
 
@@ -161,6 +161,18 @@ export function Header() {
                 </div>
               </div>
             </div>
+
+            {/* Ícone de Administração */}
+            {user?.isAdmin && (
+              <Link
+                href="/admin"
+                className="text-gray-300 hover:text-primary transition-colors duration-200"
+                title="Área Administrativa"
+              >
+                <Cog6ToothIcon className="h-6 w-6" />
+              </Link>
+            )}
+
             <button 
               onClick={() => logout()}
               className="text-gray-300 hover:text-primary transition-colors duration-200"
