@@ -17,23 +17,23 @@ export default function Credits() {
   const currentBalance = 0 // TODO: Integrar com o backend
 
   return (
-    <div className="min-h-screen bg-black text-white p-6">
+    <div className="p-6">
       <div className="max-w-2xl mx-auto">
         <h1 className="text-4xl font-bold text-primary mb-8">Créditos</h1>
         
         {/* Saldo Atual */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-6 mb-8">
-          <h2 className="text-xl font-semibold mb-2">Seu Saldo</h2>
+        <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6 mb-8">
+          <h2 className="text-xl font-semibold mb-2 text-gray-300">Seu Saldo</h2>
           <p className="text-3xl font-bold text-primary">
             R$ {currentBalance.toFixed(2)}
           </p>
         </div>
 
         {/* Texto Informativo */}
-        <div className="bg-gray-900/50 backdrop-blur-sm rounded-lg p-6 mb-8">
+        <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6 mb-8">
           <p className="text-gray-300">
             Os valores das consultas variam de acordo com cada oraculista.
-            Recomendamos verificar o valor específico antes de iniciar sua consulta.
+            O valor da pergunta unitária é a partir de R$ 15,00.
           </p>
         </div>
 
@@ -47,7 +47,7 @@ export default function Credits() {
                 p-4 rounded-lg text-lg font-semibold transition-all duration-300
                 ${selectedValue === option.value
                   ? 'bg-primary text-black'
-                  : 'bg-gray-900/50 hover:bg-gray-800/50 text-white'
+                  : 'bg-black/40 backdrop-blur-md border border-primary/20 hover:bg-black/60 text-gray-300 hover:text-primary'
                 }
               `}
             >
@@ -69,7 +69,7 @@ export default function Credits() {
             w-full py-4 rounded-lg text-xl font-bold transition-all duration-300
             ${selectedValue
               ? 'bg-primary text-black hover:bg-primary/90'
-              : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+              : 'bg-black/40 backdrop-blur-md border border-primary/20 text-gray-500 cursor-not-allowed'
             }
           `}
         >

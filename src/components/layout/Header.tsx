@@ -93,7 +93,7 @@ export function Header() {
           {/* Menu Principal - Desktop */}
           <nav className="hidden md:flex space-x-8">
             <Link 
-              href="/dashboard/creditos" 
+              href="/credits" 
               className="text-gray-300 hover:text-primary transition-colors duration-200"
             >
               Saldo: R$ 0,00
@@ -219,7 +219,7 @@ export function Header() {
       >
         <div className="px-2 pt-20 pb-3 space-y-1">
           <Link 
-            href="/dashboard/creditos" 
+            href="/credits" 
             className="block px-4 py-3 text-gray-300 hover:text-primary hover:bg-primary/5 rounded-lg transition-all duration-200"
           >
             Saldo: R$ 0,00
