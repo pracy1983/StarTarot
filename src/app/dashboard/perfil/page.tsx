@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '@/stores/authStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
 
@@ -15,7 +15,7 @@ interface UserProfile {
 }
 
 export default function PerfilPage() {
-  const { user } = useAuth()
+  const { user } = useAuthStore()
   const [profile, setProfile] = useState<UserProfile>({
     nome: user?.name || 'Usuário',
     email: user?.email || '',
