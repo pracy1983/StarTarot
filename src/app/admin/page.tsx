@@ -5,7 +5,10 @@ import {
   UserGroupIcon, 
   ChartBarIcon, 
   CreditCardIcon, 
-  ChatBubbleLeftRightIcon 
+  ChatBubbleLeftRightIcon,
+  Cog6ToothIcon,
+  UsersIcon,
+  LifebuoyIcon
 } from '@heroicons/react/24/outline'
 
 const adminMenuItems = [
@@ -32,6 +35,24 @@ const adminMenuItems = [
     description: 'Gerencie consultas e mensagens',
     icon: ChatBubbleLeftRightIcon,
     href: '/admin/consultations'
+  },
+  {
+    title: 'Configurações Gerais',
+    description: 'Configure parâmetros do sistema',
+    icon: Cog6ToothIcon,
+    href: '/admin/settings'
+  },
+  {
+    title: 'Oraculistas',
+    description: 'Gerencie oraculistas e especialidades',
+    icon: UsersIcon,
+    href: '/admin/oraculists'
+  },
+  {
+    title: 'Suporte',
+    description: 'Central de atendimento e ajuda',
+    icon: LifebuoyIcon,
+    href: '/admin/support'
   }
 ]
 
@@ -42,7 +63,7 @@ export default function AdminPage() {
         Painel Administrativo
       </h1>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
         {adminMenuItems.map((item) => {
           const Icon = item.icon
           return (
