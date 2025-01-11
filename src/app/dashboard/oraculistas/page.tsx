@@ -110,10 +110,10 @@ export default function OraculistasPage() {
               </div>
 
               {/* Status de disponibilidade */}
-              <div className="mt-3 flex items-center gap-2">
+              <div className="mt-1.5 flex items-center gap-2">
                 <div className={`w-2 h-2 rounded-full ${
                   oraculista.disponivel 
-                    ? 'bg-green-500 animate-pulse' 
+                    ? 'bg-green-500 animate-[pulse_1s_ease-in-out_infinite]' 
                     : 'bg-red-500'
                 }`} />
                 <span className={`text-sm ${
