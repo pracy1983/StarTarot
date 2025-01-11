@@ -129,7 +129,7 @@ export function ChatWindow() {
                 <div
                   className={`max-w-[80%] p-3 rounded-lg ${
                     message.sender === 'user'
-                      ? 'bg-primary/80 text-black rounded-br-none'
+                      ? 'bg-primary/50 text-white rounded-br-none'
                       : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
                   }`}
                 >
