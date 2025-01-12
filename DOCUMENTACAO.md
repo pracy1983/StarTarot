@@ -76,6 +76,22 @@
 - [x] Clean Architecture
 - [x] Princípios SOLID
 
+### 8. Sistema de Gestão de Usuários
+- [x] Interface de listagem separada (admins/usuários)
+- [x] Filtros avançados
+  - [x] Status (online/offline)
+  - [x] Créditos (igual/acima/abaixo)
+  - [x] Itens por página
+- [x] Modal de adição de administradores
+  - [x] Sistema de roles
+  - [x] Interface moderna com blur
+- [x] Paginação
+- [x] Informações detalhadas
+  - [x] Última vez online
+  - [x] Última consulta
+  - [x] Status atual
+  - [x] Créditos
+
 ## Funcionalidades Pendentes
 
 ### 1. Sistema de Pagamentos
@@ -99,72 +115,6 @@
 ### 4. Melhorias Gerais
 - [ ] Testes automatizados
 - [ ] Documentação de API
-- [ ] Sistema de notificações
-- [ ] Área administrativa
-
-### 5. Implementar sistema de avaliação nas consultas
-- [ ] Integração com sistema de email
-- [ ] Cálculo automático da média de avaliações
-- [ ] Implementar sistema de edição de oraculistas
-  - [ ] Reutilizar modal de adição
-  - [ ] Carregar dados existentes
-  - [ ] Validação de campos
-- [ ] Persistência de dados
-  - [ ] Integração com banco de dados
-  - [ ] Sistema de backup
-- [ ] Sistema de agendamento
-  - [ ] Calendário de disponibilidade
-  - [ ] Bloqueio de horários
-  - [ ] Notificações
-
-## Estrutura do Projeto
-
-```bash
-src/
-├── app/                    # Rotas e layouts (Next.js App Router)
-├── components/            # Componentes compartilhados
-├── modules/              # Módulos da aplicação
-│   └── chat/            # Módulo de chat
-│       ├── components/  # Componentes do chat
-│       ├── services/    # Serviços (ex: API DeepSeek)
-│       └── store/       # Gerenciamento de estado
-├── config/              # Configurações (ex: prompts)
-└── stores/             # Stores globais (ex: auth)
-```
-
-## Convenções e Boas Práticas
-
-1. **Código**
-   - TypeScript para type safety
-   - ESLint para padronização
-   - Prettier para formatação
-
-2. **Commits**
-   - Commits semânticos (feat, fix, docs, etc)
-   - Mensagens descritivas em português
-   - Branches por feature
-
-3. **Arquitetura**
-   - Clean Architecture
-   - SOLID principles
-   - Módulos independentes
-   - Separação clara de responsabilidades
-
-4. **Estilização**
-   - Tailwind CSS
-   - Design system consistente
-   - Responsividade mobile-first
-
-5. **Performance**
-   - Lazy loading
-   - Otimização de imagens
-   - Minimização de bundle
-
-## Variáveis de Ambiente Necessárias
-
-```env
-NEXT_PUBLIC_DEEPSEEK_API_KEY=  # Chave da API DeepSeek
-```
 
 ## Comandos Úteis
 
@@ -180,11 +130,3 @@ npm run test
 
 # Lint
 npm run lint
-```
-
-## Links Úteis
-
-- [Repositório do Projeto](https://github.com/seu-usuario/appTarot)
-- [Documentação do Next.js](https://nextjs.org/docs)
-- [Documentação do Tailwind CSS](https://tailwindcss.com/docs)
-- [API DeepSeek](https://deepseek.com/docs)

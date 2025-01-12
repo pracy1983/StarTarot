@@ -8,6 +8,34 @@
 - [x] Sistema de autenticação para admin
 - [x] Remoção do chat da área administrativa
 
+### Gestão de Usuários e Administradores
+- [x] Interface de listagem de usuários
+  - [x] Tabela com informações principais
+  - [x] Status online/offline
+  - [x] Última vez online
+  - [x] Última consulta
+  - [x] Saldo de créditos
+  - [x] Ações (editar)
+
+- [x] Interface de listagem de administradores
+  - [x] Tabela com informações principais
+  - [x] Função/Role do admin
+  - [x] Status online/offline
+  - [x] Última vez online
+  - [x] Ações (editar)
+
+- [x] Modal de adição de administradores
+  - [x] Design moderno com blur effect
+  - [x] Sistema de roles com descrições
+  - [x] Campos para informações básicas
+  - [x] Validações de formulário
+
+- [x] Sistema de filtros
+  - [x] Filtro por status
+  - [x] Filtro por créditos
+  - [x] Sistema de paginação
+  - [x] Itens por página
+
 ### Gestão de Oraculistas
 - [x] Criação da interface de listagem de oraculistas
   - [x] Tabela com informações principais
@@ -56,9 +84,17 @@ src/
 │   └── admin/
 │       ├── layout.tsx
 │       ├── page.tsx
+│       ├── users/
+│       │   ├── page.tsx
+│       │   └── components/
+│       │       └── AddAdminModal.tsx
 │       └── oraculists/
 │           └── page.tsx
 ├── modules/
+│   ├── users/
+│   │   ├── components/
+│   │   └── store/
+│   │       └── usersStore.ts
 │   └── oraculistas/
 │       ├── components/
 │       │   └── OraculistaModal.tsx
@@ -87,6 +123,7 @@ src/
 - `master`: Código em produção
 - `feat/admin-dashboard`: Desenvolvimento da área administrativa
 - `feat/admin-oraculistas`: Gestão de oraculistas
+- `feat/admin-users`: Gestão de usuários e administradores
 
 ## Observações Importantes
 - Sistema preparado para internacionalização futura
