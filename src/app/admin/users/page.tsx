@@ -1,6 +1,7 @@
 'use client'
 
 import { useUsersStore } from '@/modules/users/store/usersStore'
+import AddAdminModal from './components/AddAdminModal'
 
 export default function UsersPage() {
   const { users, filters, setFilters, setIsModalOpen, setSelectedUserId } = useUsersStore()
@@ -253,5 +254,6 @@ export default function UsersPage() {
         )}
       </div>
     </div>
+    <AddAdminModal />
   )
 }
