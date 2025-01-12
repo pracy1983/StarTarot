@@ -4,7 +4,7 @@ import { useCouponsStore } from '@/modules/coupons/store/couponsStore'
 import { AddCouponModal } from './components/AddCouponModal'
 
 export default function CouponsPage() {
-  const { coupons, isModalOpen, setIsModalOpen } = useCouponsStore()
+  const { coupons, isModalOpen, setIsModalOpen, toggleCouponStatus } = useCouponsStore()
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -57,9 +57,16 @@ export default function CouponsPage() {
                   </div>
                   <div>
                     <div className="text-sm text-gray-400">Status</div>
-                    <div className="text-lg font-semibold text-primary">
+                    <button
+                      onClick={() => toggleCouponStatus(coupon.id)}
+                      className={`text-lg font-semibold px-3 py-1 rounded-lg transition-colors ${
+                        coupon.isActive
+                          ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30'
+                          : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'
+                      }`}
+                    >
                       {coupon.isActive ? 'Ativo' : 'Inativo'}
-                    </div>
+                    </button>
                   </div>
                   {coupon.expiresAt && (
                     <div>
@@ -70,6 +77,19 @@ export default function CouponsPage() {
                     </div>
                   )}
                 </div>
+              </div>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    // TODO: Implementar edição
+                    setIsModalOpen(true)
+                  }}
+                  className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
               </div>
             </div>
           </div>

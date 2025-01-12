@@ -124,8 +124,10 @@ export function AddCouponModal() {
                       value={maxUses}
                       onChange={(e) => setMaxUses(e.target.value)}
                       min="1"
-                      className="mt-1 block w-full rounded-md border border-primary/20 bg-black/40 text-primary p-2.5
-                        focus:border-primary focus:ring-primary"
+                      className="mt-1 block w-full rounded-md border border-primary/20 bg-[#1a1a2e]/30 text-primary p-2.5
+                        focus:border-primary focus:ring-primary hover:bg-primary/20 hover:text-black transition-colors
+                        [&::-webkit-inner-spin-button]:bg-[#1a1a2e] [&::-webkit-inner-spin-button]:appearance-none
+                        [&::-webkit-outer-spin-button]:bg-[#1a1a2e] [&::-webkit-outer-spin-button]:appearance-none"
                     />
                   </div>
 
@@ -162,8 +164,10 @@ export function AddCouponModal() {
                         required
                         min="0"
                         step={type === 'PERCENTAGE' ? '1' : '0.01'}
-                        className="mt-1 block w-full rounded-md border border-primary/20 bg-black/40 text-primary p-2.5
-                          focus:border-primary focus:ring-primary"
+                        className="mt-1 block w-full rounded-md border border-primary/20 bg-[#1a1a2e]/30 text-primary p-2.5
+                          focus:border-primary focus:ring-primary hover:bg-primary/20 hover:text-black transition-colors
+                          [&::-webkit-inner-spin-button]:bg-[#1a1a2e] [&::-webkit-inner-spin-button]:appearance-none
+                          [&::-webkit-outer-spin-button]:bg-[#1a1a2e] [&::-webkit-outer-spin-button]:appearance-none"
                       />
                     </div>
                   )}
