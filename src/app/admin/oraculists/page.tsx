@@ -264,73 +264,78 @@ export default function OraculistasAdminPage() {
                           />
                         </div>
 
-                        {/* Nome */}
-                        <div className="col-span-2">
-                          <input
-                            type="text"
-                            value={formData.nome}
-                            onChange={e => setFormData(prev => ({ ...prev, nome: e.target.value }))}
-                            className="w-full px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
-                              focus:ring-2 focus:ring-primary/20 focus:border-primary/40
-                              text-white placeholder-gray-500"
-                            placeholder="Nome do oraculista"
-                            required
-                          />
-                        </div>
-
-                        {/* Especialidades */}
-                        <div className="col-span-2">
-                          <div className="flex space-x-2">
+                        {/* Grupo: Visível para o público */}
+                        <div className="col-span-2 p-4 border border-primary/30 rounded-lg bg-yellow-500/5">
+                          <h4 className="text-lg font-semibold text-primary mb-4">Visível para o público</h4>
+                          
+                          {/* Nome */}
+                          <div className="mb-4">
                             <input
                               type="text"
-                              value={novaEspecialidade}
-                              onChange={e => setNovaEspecialidade(e.target.value)}
-                              className="flex-1 px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
+                              value={formData.nome}
+                              onChange={e => setFormData(prev => ({ ...prev, nome: e.target.value }))}
+                              className="w-full px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
                                 focus:ring-2 focus:ring-primary/20 focus:border-primary/40
                                 text-white placeholder-gray-500"
-                              placeholder="Nova especialidade"
-                              onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddEspecialidade())}
+                              placeholder="Nome do oraculista"
+                              required
                             />
-                            <button
-                              type="button"
-                              onClick={handleAddEspecialidade}
-                              className="px-4 py-2 bg-primary/10 text-primary rounded-lg
-                                hover:bg-primary/20 transition-colors"
-                            >
-                              Adicionar
-                            </button>
                           </div>
-                          <div className="flex flex-wrap gap-2 mt-2">
-                            {formData.especialidades.map((esp, index) => (
-                              <span
-                                key={index}
-                                className="inline-flex items-center px-3 py-1 rounded-full
-                                  text-sm bg-primary/10 text-primary"
-                              >
-                                {esp}
-                                <button
-                                  type="button"
-                                  onClick={() => handleRemoveEspecialidade(index)}
-                                  className="ml-2 text-primary hover:text-white"
-                                >
-                                  ×
-                                </button>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
 
-                        {/* Descrição */}
-                        <div className="col-span-2">
-                          <textarea
-                            value={formData.descricao}
-                            onChange={e => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
-                            className="w-full px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
-                              focus:ring-2 focus:ring-primary/20 focus:border-primary/40
-                              text-white placeholder-gray-500 h-24"
-                            placeholder="Descrição do oraculista"
-                            required
-                          />
+                          {/* Especialidades */}
+                          <div className="mb-4">
+                            <div className="flex space-x-2">
+                              <input
+                                type="text"
+                                value={novaEspecialidade}
+                                onChange={e => setNovaEspecialidade(e.target.value)}
+                                className="flex-1 px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
+                                  focus:ring-2 focus:ring-primary/20 focus:border-primary/40
+                                  text-white placeholder-gray-500"
+                                placeholder="Nova especialidade"
+                                onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), handleAddEspecialidade())}
+                              />
+                              <button
+                                type="button"
+                                onClick={handleAddEspecialidade}
+                                className="px-4 py-2 bg-primary/10 text-primary rounded-lg
+                                  hover:bg-primary/20 transition-colors"
+                              >
+                                Adicionar
+                              </button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {formData.especialidades.map((esp, index) => (
+                                <span
+                                  key={index}
+                                  className="inline-flex items-center px-3 py-1 rounded-full
+                                    text-sm bg-primary/10 text-primary"
+                                >
+                                  {esp}
+                                  <button
+                                    type="button"
+                                    onClick={() => handleRemoveEspecialidade(index)}
+                                    className="ml-2 text-primary hover:text-white"
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Descrição */}
+                          <div>
+                            <textarea
+                              value={formData.descricao}
+                              onChange={e => setFormData(prev => ({ ...prev, descricao: e.target.value }))}
+                              className="w-full px-4 py-2 bg-black/40 border border-primary/20 rounded-lg
+                                focus:ring-2 focus:ring-primary/20 focus:border-primary/40
+                                text-white placeholder-gray-500 h-24"
+                              placeholder="Descrição do oraculista"
+                              required
+                            />
+                          </div>
                         </div>
 
                         {/* Valor */}
@@ -369,6 +374,7 @@ export default function OraculistasAdminPage() {
 
                         {/* Prompt */}
                         <div className="col-span-2">
+                          <label className="block text-lg font-semibold text-primary mb-2">Prompt</label>
                           <textarea
                             value={formData.prompt}
                             onChange={e => setFormData(prev => ({ ...prev, prompt: e.target.value }))}
@@ -394,7 +400,7 @@ export default function OraculistasAdminPage() {
                         <button
                           type="submit"
                           disabled={saving}
-                          className="px-6 py-2 bg-primary text-white rounded-lg
+                          className="px-6 py-2 bg-primary text-black font-bold rounded-lg shadow-black shadow-sm
                             hover:bg-primary/90 transition-colors disabled:opacity-50
                             disabled:cursor-not-allowed"
                         >
