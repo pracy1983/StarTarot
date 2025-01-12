@@ -8,6 +8,9 @@ interface User {
   isOnline: boolean
   credits: number
   createdAt: Date
+  lastOnline: Date
+  lastConsultation?: Date
+  adminRole?: string
 }
 
 interface UsersFilters {
@@ -39,6 +42,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       isOnline: true,
       credits: 0,
       createdAt: new Date('2024-01-01'),
+      lastOnline: new Date('2025-01-12T01:20:00'),
+      adminRole: 'Administrador Principal',
     },
     {
       id: '2',
@@ -48,6 +53,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       isOnline: true,
       credits: 50,
       createdAt: new Date('2024-01-05'),
+      lastOnline: new Date('2025-01-12T01:15:00'),
+      lastConsultation: new Date('2025-01-11T14:30:00'),
     },
     {
       id: '3',
@@ -57,6 +64,8 @@ export const useUsersStore = create<UsersStore>((set, get) => ({
       isOnline: false,
       credits: 10,
       createdAt: new Date('2024-01-10'),
+      lastOnline: new Date('2025-01-11T23:45:00'),
+      lastConsultation: new Date('2025-01-11T22:15:00'),
     },
   ],
   filters: {
