@@ -153,14 +153,75 @@ export default function OraculistasAdminPage() {
                     </div>
                     <div className="text-right">
                       <div className="text-sm text-gray-400">Valor da Consulta</div>
-                      <div className="text-xl font-semibold text-primary">
+                      <div className={`text-xl font-bold text-primary ${oraculista.emPromocao ? 'line-through' : ''}`}>
                         R$ {oraculista.preco.toFixed(2)}
                       </div>
                       {oraculista.emPromocao && oraculista.precoPromocional && (
-                        <div className="text-sm text-green-500">
-                          Promoção: R$ {oraculista.precoPromocional.toFixed(2)}
+                        <div className="text-xl font-bold text-green-500">
+                          R$ {oraculista.precoPromocional.toFixed(2)}
                         </div>
                       )}
+                      <div className="mt-2 flex items-center gap-2">
+                        <input
+                          type="number"
+                          placeholder="Desconto"
+                          className="w-24 px-2 py-1 bg-black/40 border border-primary/20 rounded text-sm"
+                          value={oraculista.descontoTemp || ''}
+                          onChange={(e) => {
+                            const desconto = parseFloat(e.target.value);
+                            useOraculistasStore.setState(state => ({
+                              oraculistas: state.oraculistas.map(o => 
+                                o.id === oraculista.id 
+                                  ? { ...o, descontoTemp: e.target.value }
+                                  : o
+                              )
+                            }));
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const novoPreco = parseFloat(oraculista.descontoTemp || '0');
+                            if (!isNaN(novoPreco)) {
+                              useOraculistasStore.setState(state => ({
+                                oraculistas: state.oraculistas.map(o => 
+                                  o.id === oraculista.id 
+                                    ? { 
+                                        ...o, 
+                                        emPromocao: true,
+                                        precoPromocional: novoPreco,
+                                        descontoTemp: ''
+                                      }
+                                    : o
+                                )
+                              }));
+                            }
+                          }}
+                          className="px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm"
+                        >
+                          OK
+                        </button>
+                        {oraculista.emPromocao && (
+                          <button
+                            onClick={() => {
+                              useOraculistasStore.setState(state => ({
+                                oraculistas: state.oraculistas.map(o => 
+                                  o.id === oraculista.id 
+                                    ? { 
+                                        ...o, 
+                                        emPromocao: false,
+                                        precoPromocional: null,
+                                        descontoTemp: ''
+                                      }
+                                    : o
+                              )
+                              }));
+                            }}
+                            className="px-2 py-1 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20 text-sm"
+                          >
+                            Remover
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
 
@@ -177,17 +238,36 @@ export default function OraculistasAdminPage() {
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-gray-400">Cliente Desde</div>
+                      <div className="text-sm text-gray-400">Adicionado em</div>
                       <div className="text-lg font-semibold text-primary">
                         {oraculista.createdAt.toLocaleDateString('pt-BR')}
                       </div>
                     </div>
                     <div>
                       <div className="text-sm text-gray-400">Status</div>
-                      <div className={`text-lg font-semibold ${
-                        oraculista.disponivel ? 'text-green-500' : 'text-red-500'
-                      }`}>
-                        {oraculista.disponivel ? 'Disponível' : 'Indisponível'}
+                      <div className="flex items-center gap-2">
+                        <div className={`text-lg font-semibold ${
+                          oraculista.disponivel ? 'text-green-500' : 'text-red-500'
+                        }`}>
+                          {oraculista.disponivel ? 'Disponível' : 'Indisponível'}
+                        </div>
+                        <button
+                          onClick={() => {
+                            useOraculistasStore.setState(state => ({
+                              oraculistas: state.oraculistas.map(o => 
+                                o.id === oraculista.id 
+                                  ? { ...o, disponivel: !o.disponivel }
+                                  : o
+                              )
+                            }));
+                          }}
+                          className={`w-12 h-6 rounded-full transition-colors relative
+                            ${oraculista.disponivel ? 'bg-green-500' : 'bg-gray-400'}`}
+                        >
+                          <div className={`absolute top-1 w-4 h-4 rounded-full bg-white transition-all
+                            ${oraculista.disponivel ? 'left-7' : 'left-1'}`}
+                          />
+                        </button>
                       </div>
                     </div>
                   </div>
