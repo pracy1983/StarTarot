@@ -107,11 +107,10 @@ export default function OraculistasAdminPage() {
           <h1 className="text-3xl font-bold text-primary">Oraculistas</h1>
           <button
             onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-primary text-white rounded-lg
-              hover:bg-primary/90 transition-colors"
+            className="px-4 py-2 text-black font-medium bg-gradient-to-r from-primary to-primary/80 rounded-lg
+              hover:from-primary/90 hover:to-primary/70 transition-all whitespace-nowrap"
           >
-            <PlusIcon className="h-5 w-5" />
-            Novo Oraculista
+            + Novo Oraculista
           </button>
         </div>
 
@@ -121,7 +120,7 @@ export default function OraculistasAdminPage() {
             <div
               key={oraculista.id}
               className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6
-                hover:border-primary/40 transition-all duration-300"
+                hover:border-primary/40 transition-all duration-300 relative"
             >
               <div className="flex items-start gap-6">
                 {/* Foto */}
@@ -297,6 +296,24 @@ export default function OraculistasAdminPage() {
                     </div>
                   </div>
                 </div>
+              </div>
+
+              {/* Botão Editar */}
+              <div className="absolute bottom-6 right-6">
+                <button
+                  onClick={() => {
+                    useOraculistasStore.setState(state => ({
+                      ...state,
+                      selectedOraculista: oraculista.id
+                    }));
+                    setIsModalOpen(true);
+                  }}
+                  className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
               </div>
             </div>
           ))}
