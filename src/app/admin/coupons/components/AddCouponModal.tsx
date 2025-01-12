@@ -139,8 +139,9 @@ export function AddCouponModal() {
                         setType(e.target.value as CouponType)
                         setDiscount('')
                       }}
-                      className="mt-1 block w-full rounded-md border border-primary/20 bg-black/40 text-primary p-2.5
-                        focus:border-primary focus:ring-primary"
+                      className="mt-1 block w-full rounded-md border border-primary/20 bg-[#1a1a2e] text-primary p-2.5
+                        focus:border-primary focus:ring-primary [&>option]:bg-[#1a1a2e] [&>option]:text-primary
+                        [&>option:checked]:bg-primary/40 [&>option:checked]:text-black"
                     >
                       <option value="PERCENTAGE">Desconto em Porcentagem</option>
                       <option value="FIXED">Desconto Fixo</option>
