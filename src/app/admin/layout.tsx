@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuthStore } from '@/stores/authStore'
-import { useRouter } from 'next/navigation'
+import { useRouter, usePathname } from 'next/navigation'
 import { useEffect } from 'react'
 import { Header } from '@/components/layout/Header'
 import Link from 'next/link'
@@ -16,6 +16,7 @@ export default function AdminLayout({
   const isAuthenticated = useAuthStore(state => state.isAuthenticated)
   const user = useAuthStore(state => state.user)
   const router = useRouter()
+  const pathname = usePathname()
 
   useEffect(() => {
     if (!isAuthenticated || !user?.isAdmin) {
