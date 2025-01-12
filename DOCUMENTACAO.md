@@ -50,7 +50,25 @@
 - [x] Integração com sistema de créditos
 - [x] Design consistente com a identidade visual
 
-### 6. Arquitetura e Tecnologias
+### 6. Gestão de Oraculistas
+- [x] Interface de listagem de oraculistas
+  - [x] Cards com informações detalhadas
+  - [x] Sistema de avaliação com estrelas (0-5)
+  - [x] Status de disponibilidade com toggle
+  - [x] Contador de consultas
+  - [x] Data de adição do oraculista
+  - [x] Sistema de preços com suporte a promoções
+  - [x] Botão de edição rápida
+
+- [x] Modal de adição/edição de oraculista
+  - [x] Upload e preview de foto
+  - [x] Sistema de tags para especialidades
+  - [x] Campos para informações básicas (nome, descrição)
+  - [x] Campo de prompt personalizado para IA
+  - [x] Agrupamento visual de campos públicos
+  - [x] Sistema de preços e status
+
+### 7. Arquitetura e Tecnologias
 - [x] Next.js 13+ (App Router)
 - [x] TypeScript
 - [x] Tailwind CSS
@@ -84,9 +102,24 @@
 - [ ] Sistema de notificações
 - [ ] Área administrativa
 
+### 5. Implementar sistema de avaliação nas consultas
+- [ ] Integração com sistema de email
+- [ ] Cálculo automático da média de avaliações
+- [ ] Implementar sistema de edição de oraculistas
+  - [ ] Reutilizar modal de adição
+  - [ ] Carregar dados existentes
+  - [ ] Validação de campos
+- [ ] Persistência de dados
+  - [ ] Integração com banco de dados
+  - [ ] Sistema de backup
+- [ ] Sistema de agendamento
+  - [ ] Calendário de disponibilidade
+  - [ ] Bloqueio de horários
+  - [ ] Notificações
+
 ## Estrutura do Projeto
 
-```
+```bash
 src/
 ├── app/                    # Rotas e layouts (Next.js App Router)
 ├── components/            # Componentes compartilhados
