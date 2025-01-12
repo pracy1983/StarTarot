@@ -1,6 +1,7 @@
 'use client'
 
 import { useCouponsStore } from '@/modules/coupons/store/couponsStore'
+import { AddCouponModal } from './components/AddCouponModal'
 
 export default function CouponsPage() {
   const { coupons, isModalOpen, setIsModalOpen } = useCouponsStore()
@@ -32,15 +33,26 @@ export default function CouponsPage() {
                 </div>
                 <div className="flex gap-6">
                   <div>
-                    <div className="text-sm text-gray-400">Desconto</div>
+                    <div className="text-sm text-gray-400">Tipo</div>
                     <div className="text-lg font-semibold text-primary">
-                      {coupon.discount}%
+                      {coupon.type === 'PERCENTAGE' && 'Desconto %'}
+                      {coupon.type === 'FIXED' && 'Desconto Fixo'}
+                      {coupon.type === 'DOUBLE_CREDITS' && 'Crédito em Dobro'}
+                      {coupon.type === 'FREE_FIRST' && '1ª Pergunta Grátis'}
                     </div>
                   </div>
+                  {['PERCENTAGE', 'FIXED'].includes(coupon.type) && (
+                    <div>
+                      <div className="text-sm text-gray-400">Desconto</div>
+                      <div className="text-lg font-semibold text-primary">
+                        {coupon.type === 'PERCENTAGE' ? `${coupon.discount}%` : `R$ ${coupon.discount}`}
+                      </div>
+                    </div>
+                  )}
                   <div>
                     <div className="text-sm text-gray-400">Usos</div>
                     <div className="text-lg font-semibold text-primary">
-                      {coupon.usageCount}
+                      {coupon.usageCount}{coupon.maxUses ? `/${coupon.maxUses}` : ''}
                     </div>
                   </div>
                   <div>
@@ -63,6 +75,8 @@ export default function CouponsPage() {
           </div>
         ))}
       </div>
+
+      <AddCouponModal />
     </div>
   )
 }

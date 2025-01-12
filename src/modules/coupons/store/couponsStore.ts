@@ -1,9 +1,13 @@
 import { create } from 'zustand'
 
+export type CouponType = 'PERCENTAGE' | 'FIXED' | 'DOUBLE_CREDITS' | 'FREE_FIRST'
+
 interface Coupon {
   id: string
   code: string
-  discount: number
+  type: CouponType
+  discount?: number
+  maxUses?: number
   usageCount: number
   isActive: boolean
   createdAt: Date
@@ -23,6 +27,7 @@ export const useCouponsStore = create<CouponsStore>((set) => ({
     {
       id: '1',
       code: 'BEMVINDO10',
+      type: 'PERCENTAGE',
       discount: 10,
       usageCount: 5,
       isActive: true,
