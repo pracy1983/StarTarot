@@ -8,7 +8,8 @@ import {
   ChatBubbleLeftRightIcon,
   Cog6ToothIcon,
   UsersIcon,
-  LifebuoyIcon
+  LifebuoyIcon,
+  TicketIcon
 } from '@heroicons/react/24/outline'
 
 const adminMenuItems = [
@@ -47,6 +48,12 @@ const adminMenuItems = [
     description: 'Gerencie oraculistas e especialidades',
     icon: UsersIcon,
     href: '/admin/oraculists'
+  },
+  {
+    title: 'Cupons',
+    description: 'Gerencie cupons e descontos',
+    icon: TicketIcon,
+    href: '/admin/coupons'
   },
   {
     title: 'Suporte',

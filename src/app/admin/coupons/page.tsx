@@ -1,70 +1,67 @@
 'use client'
 
-import { useState } from 'react'
+import { useCouponsStore } from '@/modules/coupons/store/couponsStore'
 
 export default function CouponsPage() {
-  const [isModalOpen, setIsModalOpen] = useState(false)
-
-  // Dados de exemplo
-  const cupons = [
-    {
-      id: 1,
-      codigo: 'BEMVINDO10',
-      descricao: 'Cupom de boas-vindas',
-      usos: 12,
-      limite: 100,
-      ativo: true
-    },
-    {
-      id: 2,
-      codigo: 'NATAL2024',
-      descricao: 'Promoção de Natal',
-      usos: 45,
-      limite: 50,
-      ativo: true
-    }
-  ]
+  const { coupons, isModalOpen, setIsModalOpen } = useCouponsStore()
 
   return (
-    <div className="space-y-8">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-3xl font-bold text-primary">Cupons</h1>
+    <div className="container mx-auto py-8 px-4">
+      <div className="flex justify-between items-center mb-8">
+        <h1 className="text-3xl font-bold text-primary">Cupons e Descontos</h1>
         <button
           onClick={() => setIsModalOpen(true)}
           className="px-4 py-2 text-black font-medium bg-gradient-to-r from-primary to-primary/80 rounded-lg
-            hover:from-primary/90 hover:to-primary/70 transition-all"
+            hover:from-primary/90 hover:to-primary/70 transition-all whitespace-nowrap"
         >
-          + Adicionar Cupom
+          + Novo Cupom
         </button>
       </div>
 
-      {/* Lista de Cupons */}
-      <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg overflow-hidden">
-        <table className="w-full">
-          <thead>
-            <tr className="border-b border-primary/20">
-              <th className="px-6 py-4 text-left text-sm text-gray-400">Código</th>
-              <th className="px-6 py-4 text-left text-sm text-gray-400">Descrição</th>
-              <th className="px-6 py-4 text-left text-sm text-gray-400">Usos</th>
-              <th className="px-6 py-4 text-left text-sm text-gray-400">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {cupons.map((cupom) => (
-              <tr key={cupom.id} className="border-b border-primary/10 last:border-0">
-                <td className="px-6 py-4 text-primary font-medium">{cupom.codigo}</td>
-                <td className="px-6 py-4 text-gray-300">{cupom.descricao}</td>
-                <td className="px-6 py-4 text-gray-300">{cupom.usos}/{cupom.limite}</td>
-                <td className="px-6 py-4">
-                  <span className="px-2 py-1 bg-primary/10 text-primary text-sm rounded-full">
-                    {cupom.ativo ? 'Ativo' : 'Inativo'}
-                  </span>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="grid gap-6">
+        {coupons.map((coupon) => (
+          <div
+            key={coupon.id}
+            className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6
+              hover:border-primary/40 transition-all duration-300"
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="text-xl font-semibold text-primary mb-2">
+                  {coupon.code}
+                </div>
+                <div className="flex gap-6">
+                  <div>
+                    <div className="text-sm text-gray-400">Desconto</div>
+                    <div className="text-lg font-semibold text-primary">
+                      {coupon.discount}%
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-400">Usos</div>
+                    <div className="text-lg font-semibold text-primary">
+                      {coupon.usageCount}
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm text-gray-400">Status</div>
+                    <div className="text-lg font-semibold text-primary">
+                      {coupon.isActive ? 'Ativo' : 'Inativo'}
+                    </div>
+                  </div>
+                  {coupon.expiresAt && (
+                    <div>
+                      <div className="text-sm text-gray-400">Expira em</div>
+                      <div className="text-lg font-semibold text-primary">
+                        {coupon.expiresAt.toLocaleDateString('pt-BR')}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   )
