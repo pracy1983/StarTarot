@@ -149,7 +149,8 @@ export function ChatWindow() {
                 content = content.replace(
                   consultarMatch[0],
                   `<button 
-                    class="bg-primary/90 hover:bg-primary text-white px-6 py-3 rounded-lg mt-2 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border border-primary/20 font-medium"
+                    class="bg-black/80 backdrop-blur-sm hover:bg-primary/20 text-primary px-8 py-3 rounded-lg mt-4 mb-2 transition-all duration-300 transform hover:scale-105 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_10px_-1px_rgba(0,0,0,0.5)] border border-primary/20 font-medium"
+                    style="padding-left: calc(2rem + 5px); padding-right: calc(2rem + 5px);"
                     onclick="window.location.href='/consulta/${encodeURIComponent(oraculistaNome.toLowerCase().trim())}'"
                   >
                     Consultar ${oraculistaNome.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
