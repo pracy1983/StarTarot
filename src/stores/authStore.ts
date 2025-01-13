@@ -1,30 +1,18 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
+import { supabase } from '@/lib/supabase'
 
 interface User {
   id: string
-  name: string
   email: string
-  isAdmin?: boolean
+  isAdmin: boolean
 }
 
 interface AuthState {
   user: User | null
   isAuthenticated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
-}
-
-// Usuário padrão para desenvolvimento
-const DEFAULT_USER = {
-  email: 'user@startarot.com',
-  password: 'startarot123',
-  userData: {
-    id: '1',
-    name: 'Usuário StarTarot',
-    email: 'user@startarot.com',
-    isAdmin: true // Para testes
-  }
+  logout: () => Promise<void>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -32,25 +20,35 @@ export const useAuthStore = create<AuthState>()(
     (set) => ({
       user: null,
       isAuthenticated: false,
-      login: async (email: string, password: string) => {
-        // Simula delay de rede
-        await new Promise(resolve => setTimeout(resolve, 1000))
 
-        // Verifica credenciais com usuário padrão
-        if (email === DEFAULT_USER.email && password === DEFAULT_USER.password) {
+      login: async (email: string, password: string) => {
+        try {
+          const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+          })
+
+          if (error) throw error
+
+          const isAdmin = data.user?.user_metadata?.isAdmin || false
+
           set({
-            user: DEFAULT_USER.userData,
+            user: {
+              id: data.user.id,
+              email: data.user.email!,
+              isAdmin
+            },
             isAuthenticated: true
           })
-          return { success: true }
-        }
 
-        return {
-          success: false,
-          error: 'Email ou senha incorretos'
+          return { success: true }
+        } catch (error: any) {
+          return { success: false, error: error.message }
         }
       },
-      logout: () => {
+
+      logout: async () => {
+        await supabase.auth.signOut()
         set({
           user: null,
           isAuthenticated: false
@@ -59,7 +57,6 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'auth-storage',
-      skipHydration: true
     }
   )
 )
