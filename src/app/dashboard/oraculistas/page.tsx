@@ -2,6 +2,8 @@
 
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
+import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore';
+import { useEffect } from 'react';
 
 interface Oraculista {
   id: string
@@ -59,6 +61,11 @@ const oraculistas: Oraculista[] = [
 
 export default function OraculistasPage() {
   const router = useRouter()
+  const { oraculistas: oraculistasStore, carregarOraculistas } = useOraculistasStore();
+
+  useEffect(() => {
+    carregarOraculistas();
+  }, [carregarOraculistas]);
 
   return (
     <div className="min-h-screen p-4">
@@ -74,7 +81,7 @@ export default function OraculistasPage() {
 
       {/* Grid de oraculistas */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-7xl mx-auto">
-        {oraculistas.map((oraculista) => (
+        {oraculistasStore.map((oraculista) => (
           <div
             key={oraculista.id}
             className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg overflow-hidden hover:border-primary/40 transition-all duration-300 flex flex-col"
