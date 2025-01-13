@@ -9,6 +9,7 @@ export default function ConsultasAdminPage() {
   const [mensagemSelecionada, setMensagemSelecionada] = useState(null);
   const [editando, setEditando] = useState(false);
   const [conteudoEditado, setConteudoEditado] = useState('');
+  const [mensagensEnviadas, setMensagensEnviadas] = useState([]);
 
   useEffect(() => {
     if (user?.id) {
@@ -30,16 +31,26 @@ export default function ConsultasAdminPage() {
     }
   };
 
-  function ContadorRegressivo({ initialTime }) {
+  const handleComplete = (mensagemId) => {
+    setMensagensEnviadas((prev) => [...prev, ...mensagens.filter(m => m.id === mensagemId)]);
+    setMensagens((prev) => prev.filter(m => m.id !== mensagemId));
+  };
+
+  function ContadorRegressivo({ initialTime, onComplete }) {
     const [timeLeft, setTimeLeft] = useState(initialTime);
 
     useEffect(() => {
       const timer = setInterval(() => {
-        setTimeLeft((prev) => (prev > 0 ? prev - 1 : 0));
+        setTimeLeft((prev) => {
+          if (prev > 1) return prev - 1;
+          clearInterval(timer);
+          onComplete();
+          return 0;
+        });
       }, 1000);
 
       return () => clearInterval(timer);
-    }, []);
+    }, [onComplete]);
 
     return <span>{timeLeft}s</span>;
   }
@@ -57,7 +68,7 @@ export default function ConsultasAdminPage() {
                 <div className="flex justify-between items-center">
                   <div>
                     <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
-                    <p className="text-sm text-gray-500">Contador regressivo: <ContadorRegressivo initialTime={mensagem.delay || 20} /></p>
+                    <p className="text-sm text-gray-500">Contador regressivo: <ContadorRegressivo initialTime={mensagem.delay || 20} onComplete={() => handleComplete(mensagem.id)} /></p>
                   </div>
                   <button
                     onClick={() => handleEditar(mensagem)}
@@ -86,7 +97,23 @@ export default function ConsultasAdminPage() {
           </ul>
         )}
         <h2 className="text-2xl font-bold text-primary mt-8">Mensagens Enviadas</h2>
-        {/* Aqui você pode adicionar a lógica para listar mensagens enviadas */}
+        <ul className="space-y-4">
+          {mensagensEnviadas.map((mensagem) => (
+            <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
+                </div>
+                <button
+                  onClick={() => handleEditar(mensagem)}
+                  className="text-primary hover:text-primary-dark"
+                >
+                  <PencilIcon className="h-5 w-5" /> Editar
+                </button>
+              </div>
+            </li>
+          ))}
+        </ul>
       </div>
     </div>
   );

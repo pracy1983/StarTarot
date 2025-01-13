@@ -50,7 +50,14 @@
 - [x] Integração com sistema de créditos
 - [x] Design consistente com a identidade visual
 
-### 6. Gestão de Oraculistas
+### 6. Página de Consultas
+- Lista mensagens, mas as mensagens estão duplicadas.
+- Editar/visualizar não funciona.
+- Só tem mensagem de 1 oraculista.
+- Não está mostrando em lista.
+- O "de" ainda está sem nome.
+
+### 7. Gestão de Oraculistas
 - [x] Interface de listagem de oraculistas
   - [x] Cards com informações detalhadas
   - [x] Sistema de avaliação com estrelas (0-5)
@@ -68,7 +75,7 @@
   - [x] Agrupamento visual de campos públicos
   - [x] Sistema de preços e status
 
-### 7. Arquitetura e Tecnologias
+### 8. Arquitetura e Tecnologias
 - [x] Next.js 13+ (App Router)
 - [x] TypeScript
 - [x] Tailwind CSS
@@ -76,7 +83,7 @@
 - [x] Clean Architecture
 - [x] Princípios SOLID
 
-### 8. Sistema de Gestão de Usuários
+### 9. Sistema de Gestão de Usuários
 - [x] Interface de listagem separada (admins/usuários)
 - [x] Filtros avançados
   - [x] Status (online/offline)
