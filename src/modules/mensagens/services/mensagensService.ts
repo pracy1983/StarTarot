@@ -6,18 +6,18 @@ export async function carregarMensagens(userId: string) {
     const { data, error } = await supabase
       .from('mensagens')
       .select(`
-        id,
-        user_id,
-        oraculista_id,
-        titulo,
-        conteudo,
-        lida,
-        data,
-        tipo,
-        thread_id,
-        created_at,
-        updated_at,
-        oraculistas (
+        mensagens.id,
+        mensagens.user_id,
+        mensagens.oraculista_id,
+        mensagens.titulo,
+        mensagens.conteudo,
+        mensagens.lida,
+        mensagens.data,
+        mensagens.tipo,
+        mensagens.thread_id,
+        mensagens.created_at,
+        mensagens.updated_at,
+        oraculista:oraculistas (
           id,
           nome,
           foto
@@ -50,7 +50,24 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
         tipo: 'pergunta',
         data: new Date().toISOString()
       })
-      .select()
+      .select(`
+        mensagens.id,
+        mensagens.user_id,
+        mensagens.oraculista_id,
+        mensagens.titulo,
+        mensagens.conteudo,
+        mensagens.lida,
+        mensagens.data,
+        mensagens.tipo,
+        mensagens.thread_id,
+        mensagens.created_at,
+        mensagens.updated_at,
+        oraculista:oraculistas (
+          id,
+          nome,
+          foto
+        )
+      `)
       .single()
 
     if (error) {
@@ -61,6 +78,51 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
     return formatarMensagem(data)
   } catch (error) {
     console.error('Erro ao enviar pergunta:', error)
+    throw error
+  }
+}
+
+export async function enviarResposta(mensagemId: string, oraculistaId: string, conteudo: string) {
+  try {
+    const { data, error } = await supabase
+      .from('mensagens')
+      .insert({
+        user_id: (await supabase.from('mensagens').select('user_id').eq('id', mensagemId).single()).data?.user_id,
+        oraculista_id: oraculistaId,
+        titulo: 'Resposta do Oraculista',
+        conteudo: conteudo,
+        tipo: 'resposta',
+        thread_id: mensagemId,
+        data: new Date().toISOString()
+      })
+      .select(`
+        mensagens.id,
+        mensagens.user_id,
+        mensagens.oraculista_id,
+        mensagens.titulo,
+        mensagens.conteudo,
+        mensagens.lida,
+        mensagens.data,
+        mensagens.tipo,
+        mensagens.thread_id,
+        mensagens.created_at,
+        mensagens.updated_at,
+        oraculista:oraculistas (
+          id,
+          nome,
+          foto
+        )
+      `)
+      .single()
+
+    if (error) {
+      console.error('Erro ao enviar resposta:', error)
+      throw error
+    }
+
+    return formatarMensagem(data)
+  } catch (error) {
+    console.error('Erro ao enviar resposta:', error)
     throw error
   }
 }
@@ -82,6 +144,32 @@ export async function marcarComoLida(mensagemId: string) {
   }
 }
 
+// Função auxiliar para testes
+export async function enviarMensagemTeste(userId: string) {
+  try {
+    // Primeiro, enviar uma pergunta
+    const pergunta = await enviarPergunta(userId, {
+      oraculistaId: '1', // ID do primeiro oraculista
+      titulo: 'Dúvida sobre relacionamento',
+      conteudo: 'Olá, gostaria de saber sobre meu relacionamento atual. Tenho algumas dúvidas sobre o futuro.'
+    })
+
+    // Depois, enviar a resposta do oraculista
+    if (pergunta) {
+      await enviarResposta(
+        pergunta.id,
+        pergunta.oraculistaId,
+        'Querido consulente, analisando suas cartas, vejo que seu relacionamento está passando por uma fase de transformação importante. As cartas indicam que é um momento de crescimento mútuo, onde a comunicação será fundamental. Mantenha seu coração aberto e seja honesto com seus sentimentos. O período atual pede reflexão e paciência.'
+      )
+    }
+
+    return true
+  } catch (error) {
+    console.error('Erro ao enviar mensagem de teste:', error)
+    throw error
+  }
+}
+
 function formatarMensagem(data: any): Mensagem {
   return {
     id: data.id,
@@ -95,10 +183,10 @@ function formatarMensagem(data: any): Mensagem {
     threadId: data.thread_id,
     createdAt: new Date(data.created_at),
     updatedAt: new Date(data.updated_at),
-    oraculista: data.oraculistas ? {
-      id: data.oraculistas.id,
-      nome: data.oraculistas.nome,
-      foto: data.oraculistas.foto
+    oraculista: data.oraculista ? {
+      id: data.oraculista.id,
+      nome: data.oraculista.nome,
+      foto: data.oraculista.foto
     } : undefined
   }
 }

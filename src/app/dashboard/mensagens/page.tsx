@@ -4,6 +4,8 @@ import { useEffect } from 'react'
 import { useMensagensStore } from '@/modules/mensagens/store/mensagensStore'
 import { MensagemList } from '@/modules/mensagens/components/MensagemList'
 import { MensagemThread } from '@/modules/mensagens/components/MensagemThread'
+import { useAuthStore } from '@/stores/authStore'
+import { enviarMensagemTeste } from '@/modules/mensagens/services/mensagensService'
 
 export default function MensagensPage() {
   const { 
@@ -12,40 +14,23 @@ export default function MensagensPage() {
     setMensagemAtual,
     marcarComoLida,
     getMensagensFiltradas,
-    adicionarMensagem
+    carregarMensagens
   } = useMensagensStore()
 
-  // Adiciona mensagens de teste se não houver nenhuma
+  const user = useAuthStore(state => state.user)
+
+  // Carrega mensagens do usuário
   useEffect(() => {
-    // Verifica se já existem mensagens com esses IDs
-    const mensagem1Existe = mensagens.some(m => m.id === '1')
-    const mensagem2Existe = mensagens.some(m => m.id === '2')
-
-    if (mensagens.length === 0 && !mensagem1Existe && !mensagem2Existe) {
-      // Mensagem de pergunta
-      adicionarMensagem({
-        id: '1',
-        userId: 'user1',
-        titulo: 'Consulta sobre relacionamento',
-        conteudo: 'Olá, gostaria de entender melhor sobre minha situação amorosa atual. Tenho sentido muitas dúvidas...',
-        lida: false,
-        data: new Date('2024-01-11T10:30:00'),
-        tipo: 'pergunta'
-      })
-
-      // Mensagem de resposta
-      adicionarMensagem({
-        id: '2',
-        userId: 'user1',
-        titulo: 'Resposta do Oráculo dos Anjos',
-        conteudo: 'Querido consulente, os anjos me mostram que você está em um momento de transição importante...',
-        lida: true,
-        data: new Date('2024-01-11T11:00:00'),
-        tipo: 'resposta',
-        threadId: '1'
-      })
+    if (user?.id) {
+      carregarMensagens(user.id)
+      // Envia uma mensagem de teste se não houver mensagens
+      if (mensagens.length === 0) {
+        enviarMensagemTeste(user.id)
+          .then(() => carregarMensagens(user.id))
+          .catch(console.error)
+      }
     }
-  }, []) // Removido mensagens.length e adicionarMensagem das dependências
+  }, [user?.id, carregarMensagens, mensagens.length])
 
   // Marca a mensagem como lida quando selecionada
   useEffect(() => {
