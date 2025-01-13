@@ -1,65 +1,90 @@
 'use client'
 
-import { Mensagem, MensagemFiltro } from '../types/mensagem'
+import { useState, useEffect } from 'react'
+import { Mensagem } from '../types/mensagem'
 import { MensagemItem } from './MensagemItem'
+import { Trash2 } from 'lucide-react'
 import { useMensagensStore } from '../store/mensagensStore'
 
 interface MensagemListProps {
   mensagens: Mensagem[]
-  onSelectMensagem: (mensagem: Mensagem) => void
+  onSelectMensagem: (mensagem: Mensagem | null) => void
   mensagemSelecionada: Mensagem | null
 }
 
-export function MensagemList({ 
-  mensagens, 
-  onSelectMensagem, 
-  mensagemSelecionada 
-}: MensagemListProps) {
-  const setFiltro = useMensagensStore(state => state.setFiltro)
-  const filtroAtual = useMensagensStore(state => state.filtroAtual)
+export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada }: MensagemListProps) {
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const deletarMensagens = useMensagensStore(state => state.deletarMensagens)
 
-  const filtros: { valor: MensagemFiltro; label: string }[] = [
-    { valor: 'todas', label: 'Todas' },
-    { valor: 'nao_lidas', label: 'Não Lidas' },
-    { valor: 'respondidas', label: 'Respondidas' }
-  ]
+  // Limpa seleções quando as mensagens mudam
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [mensagens])
+
+  const handleSelect = (mensagem: Mensagem, event: React.MouseEvent) => {
+    if (event.ctrlKey || event.metaKey) {
+      // Ctrl/Cmd + Click para selecionar múltiplos
+      const newSelectedIds = new Set(selectedIds)
+      if (selectedIds.has(mensagem.id)) {
+        newSelectedIds.delete(mensagem.id)
+      } else {
+        newSelectedIds.add(mensagem.id)
+      }
+      setSelectedIds(newSelectedIds)
+    } else if (event.shiftKey && mensagemSelecionada) {
+      // Shift + Click para selecionar intervalo
+      const currentIndex = mensagens.findIndex(m => m.id === mensagem.id)
+      const lastIndex = mensagens.findIndex(m => m.id === mensagemSelecionada.id)
+      const start = Math.min(currentIndex, lastIndex)
+      const end = Math.max(currentIndex, lastIndex)
+      const newSelectedIds = new Set(
+        mensagens.slice(start, end + 1).map(m => m.id)
+      )
+      setSelectedIds(newSelectedIds)
+    } else {
+      // Click normal
+      setSelectedIds(new Set([mensagem.id]))
+      onSelectMensagem(mensagem)
+    }
+  }
+
+  const handleDeleteSelected = async () => {
+    if (selectedIds.size === 0) return
+    if (window.confirm(`Tem certeza que deseja deletar ${selectedIds.size} mensagem(ns)?`)) {
+      await deletarMensagens(Array.from(selectedIds))
+      setSelectedIds(new Set())
+      onSelectMensagem(null)
+    }
+  }
 
   return (
-    <div className="h-full bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl flex flex-col">
-      {/* Cabeçalho com Filtros */}
-      <div className="p-3 border-b border-primary/20">
-        <div className="flex space-x-2">
-          {filtros.map(f => (
-            <button
-              key={f.valor}
-              onClick={() => setFiltro(f.valor)}
-              className={`
-                px-2 py-1 rounded-full text-xs transition-colors duration-200
-                ${filtroAtual === f.valor
-                  ? 'bg-primary text-black'
-                  : 'text-gray-300 hover:text-primary'
-                }
-              `}
-            >
-              {f.label}
-            </button>
-          ))}
+    <div className="h-full flex flex-col">
+      {selectedIds.size > 0 && (
+        <div className="p-2 bg-black/40 border-b border-primary/20 flex items-center justify-between">
+          <span className="text-sm text-gray-400">
+            {selectedIds.size} mensagem(ns) selecionada(s)
+          </span>
+          <button
+            onClick={handleDeleteSelected}
+            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+            title="Deletar mensagens selecionadas"
+          >
+            <Trash2 size={18} />
+          </button>
         </div>
-      </div>
-
-      {/* Lista de Mensagens */}
+      )}
       <div className="flex-1 overflow-y-auto">
         {mensagens.length === 0 ? (
-          <div className="p-3 text-center text-gray-500 text-sm">
+          <div className="h-full flex items-center justify-center text-gray-500">
             Nenhuma mensagem encontrada
           </div>
         ) : (
-          mensagens.map(mensagem => (
+          mensagens.map((mensagem) => (
             <MensagemItem
               key={mensagem.id}
               mensagem={mensagem}
-              selecionada={mensagemSelecionada?.id === mensagem.id}
-              onClick={() => onSelectMensagem(mensagem)}
+              selecionada={selectedIds.has(mensagem.id)}
+              onClick={(e) => handleSelect(mensagem, e)}
             />
           ))
         )}

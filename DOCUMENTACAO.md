@@ -112,7 +112,12 @@
 - [ ] Chat em tempo real
 - [ ] Avaliações e feedback
 
-### 4. Melhorias Gerais
+### 4. Configurações Administrativas
+- [ ] Configuração do tempo médio de resposta dos oraculistas
+- [ ] Ajuste de parâmetros do sistema
+- [ ] Monitoramento de desempenho
+
+### 5. Melhorias Gerais
 - [ ] Testes automatizados
 - [ ] Documentação de API
 

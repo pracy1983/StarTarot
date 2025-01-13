@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuthStore } from '../stores/authStore'
@@ -8,15 +8,28 @@ import { useAuthStore } from '../stores/authStore'
 export default function LoginPage() {
   const router = useRouter()
   const login = useAuthStore(state => state.login)
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
+  const isLoading = useAuthStore(state => state.isLoading)
+  const checkAuth = useAuthStore(state => state.checkAuth)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [formLoading, setFormLoading] = useState(false)
+
+  useEffect(() => {
+    checkAuth()
+  }, [checkAuth])
+
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      router.push('/dashboard')
+    }
+  }, [isAuthenticated, isLoading, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
-    setIsLoading(true)
+    setFormLoading(true)
 
     try {
       const result = await login(email, password)
@@ -28,8 +41,16 @@ export default function LoginPage() {
     } catch (err) {
       setError('Erro ao fazer login')
     } finally {
-      setIsLoading(false)
+      setFormLoading(false)
     }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    )
   }
 
   return (
@@ -48,84 +69,65 @@ export default function LoginPage() {
           {/* Logo e Título */}
           <div className="text-center space-y-6">
             <div className="w-44 h-44 mx-auto">
-              <img
-                src="/logo.png"
-                alt="StarTarot Logo"
+              <img 
+                src="/logo.png" 
+                alt="StarTarot Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <div>
-              <h1 className="font-raleway text-5xl font-bold text-primary mb-4">StarTarot</h1>
-              <p className="text-xl text-gray-300 font-light leading-relaxed">
-                O direcionamento que você precisa,
-                <br />na energia que você quer.
-              </p>
-              <p className="text-primary-light mt-6 text-base">
-                Daemons/Baralho cigano/Oráculo dos Anjos
-              </p>
-            </div>
+            <h1 className="text-4xl font-bold text-primary">StarTarot</h1>
+            <p className="text-gray-400">O direcionamento que você precisa,<br/>na energia que você quer.</p>
+            <p className="text-primary/80 text-sm">Daemons/Baralho cigano/Oráculo dos Anjos</p>
           </div>
 
           {/* Formulário */}
           <form onSubmit={handleSubmit} className="space-y-6">
-            {error && (
-              <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm text-center">
-                {error}
-              </div>
-            )}
-            
-            <div className="space-y-4">
-              <div>
-                <input
-                  type="email"
-                  placeholder="Email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/40 border border-primary/20 rounded-lg
-                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                           text-white placeholder-gray-400 transition-all duration-200"
-                  required
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  placeholder="Senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/40 border border-primary/20 rounded-lg
-                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                           text-white placeholder-gray-400 transition-all duration-200"
-                  required
-                />
-              </div>
+            <div>
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-black/40 border border-primary/20 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                required
+              />
             </div>
 
-            <div className="flex items-center justify-between text-sm">
-              <Link 
-                href="/cadastro" 
-                className="text-primary hover:text-primary-light transition-colors duration-200"
-              >
-                Criar conta
-              </Link>
-              <Link 
-                href="/esqueci-senha" 
-                className="text-primary hover:text-primary-light transition-colors duration-200"
-              >
-                Esqueceu a senha?
-              </Link>
+            <div>
+              <input
+                type="password"
+                placeholder="Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-black/40 border border-primary/20 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
+                required
+              />
             </div>
+
+            {error && (
+              <div className="text-red-500 text-sm text-center">{error}</div>
+            )}
 
             <button
               type="submit"
-              disabled={isLoading}
-              className="w-full px-4 py-3 bg-primary hover:bg-primary-light text-black font-semibold
-                       rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02]
-                       disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={formLoading}
+              className={`w-full py-3 rounded-lg bg-primary text-white font-semibold transition-all ${
+                formLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/80'
+              }`}
             >
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {formLoading ? 'Entrando...' : 'Entrar'}
             </button>
           </form>
+
+          {/* Links */}
+          <div className="flex justify-between text-sm">
+            <Link href="/criar-conta" className="text-primary hover:text-primary/80">
+              Criar conta
+            </Link>
+            <Link href="/esqueceu-senha" className="text-primary hover:text-primary/80">
+              Esqueceu a senha?
+            </Link>
+          </div>
         </div>
       </div>
     </main>

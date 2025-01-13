@@ -25,6 +25,7 @@
     "autoprefixer": "^10.4.16",
     "clsx": "^2.0.0",
     "framer-motion": "^10.16.4",
+    "lucide-react": "^0.471.1",
     "next": "14.0.3",
     "postcss": "^8.4.31",
     "react": "^18.2.0",

@@ -1,11 +1,12 @@
 'use client'
 
 import { Mensagem } from '../types/mensagem'
+import { MouseEvent } from 'react'
 
 interface MensagemItemProps {
   mensagem: Mensagem
   selecionada: boolean
-  onClick: () => void
+  onClick: (event: MouseEvent) => void
 }
 
 export function MensagemItem({ mensagem, selecionada, onClick }: MensagemItemProps) {
@@ -27,22 +28,25 @@ export function MensagemItem({ mensagem, selecionada, onClick }: MensagemItemPro
         ${!mensagem.lida ? 'bg-black/40' : ''}
       `}
     >
-      <div className="flex items-center justify-between">
-        <h3 className={`text-sm font-medium truncate flex-1 ${!mensagem.lida ? 'text-primary' : 'text-gray-300'}`}>
+      <div className="flex flex-col">
+        <div className="flex items-center justify-between mb-1">
+          <span className="text-xs text-gray-400">
+            {mensagem.tipo === 'pergunta' 
+              ? `De: Eu | Para: ${mensagem.oraculista?.nome || 'Oraculista'}`
+              : `De: ${mensagem.oraculista?.nome || 'Oraculista'} | Para: Mim`
+            }
+          </span>
+          {!mensagem.lida && (
+            <span className="bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full ml-2">
+              Nova
+            </span>
+          )}
+        </div>
+        <h3 className={`text-sm font-medium truncate ${!mensagem.lida ? 'text-primary' : 'text-gray-300'}`}>
           {mensagem.titulo}
         </h3>
-        {!mensagem.lida && (
-          <span className="bg-primary/20 text-primary text-xs px-1.5 py-0.5 rounded-full ml-2">
-            Nova
-          </span>
-        )}
-      </div>
-      <div className="flex items-center justify-between mt-1">
-        <p className="text-xs text-gray-500">
+        <span className="text-xs text-gray-500 mt-1">
           {formatarData(mensagem.data)}
-        </p>
-        <span className={`text-xs ${mensagem.tipo === 'resposta' ? 'text-primary/60' : 'text-gray-500'}`}>
-          {mensagem.tipo === 'pergunta' ? 'Pergunta' : 'Resposta'}
         </span>
       </div>
     </div>

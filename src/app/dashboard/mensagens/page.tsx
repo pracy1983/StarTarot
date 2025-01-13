@@ -1,11 +1,10 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useMensagensStore } from '@/modules/mensagens/store/mensagensStore'
 import { MensagemList } from '@/modules/mensagens/components/MensagemList'
 import { MensagemThread } from '@/modules/mensagens/components/MensagemThread'
 import { useAuthStore } from '@/stores/authStore'
-import { enviarMensagemTeste } from '@/modules/mensagens/services/mensagensService'
 
 export default function MensagensPage() {
   const { 
@@ -14,23 +13,40 @@ export default function MensagensPage() {
     setMensagemAtual,
     marcarComoLida,
     getMensagensFiltradas,
-    carregarMensagens
+    carregarMensagens,
+    limparMensagens
   } = useMensagensStore()
 
   const user = useAuthStore(state => state.user)
+  const carregando = useRef(false)
 
   // Carrega mensagens do usuário
   useEffect(() => {
-    if (user?.id) {
-      carregarMensagens(user.id)
-      // Envia uma mensagem de teste se não houver mensagens
-      if (mensagens.length === 0) {
-        enviarMensagemTeste(user.id)
-          .then(() => carregarMensagens(user.id))
-          .catch(console.error)
+    let mounted = true
+
+    const loadMensagens = async () => {
+      if (!user?.id || carregando.current) return
+      
+      try {
+        console.log('Iniciando carregamento para usuário:', user.id)
+        carregando.current = true
+        limparMensagens()
+        await carregarMensagens(user.id)
+      } catch (error) {
+        console.error('Erro ao carregar mensagens:', error)
+      } finally {
+        if (mounted) {
+          carregando.current = false
+        }
       }
     }
-  }, [user?.id, carregarMensagens, mensagens.length])
+
+    loadMensagens()
+
+    return () => {
+      mounted = false
+    }
+  }, [user?.id])
 
   // Marca a mensagem como lida quando selecionada
   useEffect(() => {
@@ -48,7 +64,7 @@ export default function MensagensPage() {
 
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Lista de Mensagens */}
-        <div className="h-[600px]">
+        <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
           <MensagemList
             mensagens={getMensagensFiltradas()}
             onSelectMensagem={setMensagemAtual}
