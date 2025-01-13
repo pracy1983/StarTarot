@@ -35,7 +35,7 @@ const adminMenuItems = [
     title: 'Consultas',
     description: 'Gerencie consultas e mensagens',
     icon: ChatBubbleLeftRightIcon,
-    href: '/admin/consultations'
+    href: '/admin/consultas'
   },
   {
     title: 'Configurações Gerais',

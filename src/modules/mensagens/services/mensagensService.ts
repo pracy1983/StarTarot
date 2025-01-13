@@ -53,6 +53,8 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
   try {
     await verificarTabelasExistem()
 
+    console.log('Enviando mensagem para o oraculista:', formData.oraculistaId);
+
     // Verificar se o oraculista existe
     const { data: oraculista, error: oraculistaError } = await supabase
       .from('oraculistas')
