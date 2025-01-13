@@ -60,6 +60,14 @@
   - [x] Gestão de estados (loading, error)
   - [x] Integração com sistema de prompts
 
+### Sistema de Autenticação
+- [x] Implementação do Supabase Auth
+  - [x] Configuração do cliente Supabase
+  - [x] Integração com Zustand para estado
+  - [x] Sistema de roles (admin/user)
+  - [x] Script de configuração de admin
+  - [x] Documentação do processo
+
 ### Próximos Passos
 - [ ] Interface de edição de prompts
 - [ ] Sistema de upload de fotos
@@ -68,6 +76,9 @@
 - [ ] Validações de formulários
 - [ ] Confirmações para ações destrutivas
 - [ ] Logs de alterações
+- [ ] Implementar sistema de notificações
+- [ ] Configurar webhooks do Supabase
+- [ ] Implementar sistema de cache
 
 ## Tecnologias e Padrões Utilizados
 - Next.js para estrutura do projeto
@@ -124,6 +135,7 @@ src/
 - `feat/admin-dashboard`: Desenvolvimento da área administrativa
 - `feat/admin-oraculistas`: Gestão de oraculistas
 - `feat/admin-users`: Gestão de usuários e administradores
+- `feat/admin-13-1-5`: Implementação do Supabase Auth (merged)
 
 ## Observações Importantes
 - Sistema preparado para internacionalização futura
