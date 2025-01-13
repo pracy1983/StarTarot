@@ -7,6 +7,7 @@ export interface Oraculista {
   preco: number
   disponivel: boolean
   prompt?: string
+  prompt_formatado?: string
   emPromocao: boolean
   precoPromocional?: number
   consultas: number // Número total de consultas realizadas

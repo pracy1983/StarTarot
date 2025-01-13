@@ -22,12 +22,23 @@ export const promptVariables: PromptVariable[] = [
 
       const oraculistasDisponiveis = oraculistas
         .filter(o => o.disponivel)
-        .map(o => `
+        .map(o => {
+          let descricao = `
 ${o.nome}
 ${o.descricao}
-${o.especialidades.map(esp => `- ${esp}`).join('\n')}
-${o.emPromocao ? `EM PROMOÇÃO! R$ ${o.precoPromocional}` : `R$ ${o.preco}`}
-`).join('\n\n')
+${o.especialidades.map(esp => `- ${esp}`).join('\n')}`
+
+          // Adiciona informação de preço e promoção
+          if (o.emPromocao && o.precoPromocional) {
+            descricao += `\nPREÇO NORMAL: R$ ${o.preco}`
+            descricao += `\nPREÇO PROMOCIONAL: R$ ${o.precoPromocional} (APROVEITE!)`
+          } else {
+            descricao += `\nPREÇO: R$ ${o.preco}`
+          }
+
+          return descricao
+        })
+        .join('\n\n')
 
       return oraculistasDisponiveis
     }

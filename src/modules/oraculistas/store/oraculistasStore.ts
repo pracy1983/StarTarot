@@ -23,6 +23,7 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   carregarOraculistas: async () => {
     set({ loading: true, error: null })
     try {
+      console.log('Iniciando carregamento dos oraculistas...')
       const { data, error } = await supabase
         .from('oraculistas')
         .select('*')
@@ -30,17 +31,28 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
 
       if (error) throw error
 
+      console.log('Dados recebidos do Supabase:', data)
+
+      const oraculistasFormatados = data.map(o => ({
+        ...o,
+        especialidades: o.especialidades || [],
+        createdAt: new Date(o.created_at),
+        updatedAt: new Date(o.updated_at),
+        consultas: o.consultas || 0,
+        prompt_formatado: o.prompt_formatado || '',
+        prompt: o.prompt || '',
+        emPromocao: o.em_promocao || false,
+        precoPromocional: o.preco_promocional
+      }))
+
+      console.log('Oraculistas formatados:', oraculistasFormatados)
+
       set({ 
-        oraculistas: data.map(o => ({
-          ...o,
-          especialidades: o.especialidades || [],
-          createdAt: new Date(o.created_at),
-          updatedAt: new Date(o.updated_at),
-          consultas: o.consultas || 0
-        })),
+        oraculistas: oraculistasFormatados,
         loading: false 
       })
     } catch (error: any) {
+      console.error('Erro ao carregar oraculistas:', error)
       set({ error: error.message, loading: false })
     }
   },
@@ -103,7 +115,7 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
 
   atualizarOraculista: async (id, data) => {
     try {
-      const { error } = await supabase
+      const { data: updated, error } = await supabase
         .from('oraculistas')
         .update({
           nome: data.nome,
@@ -113,33 +125,45 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
           preco: data.preco,
           disponivel: data.disponivel,
           prompt: data.prompt,
+          prompt_formatado: data.prompt_formatado,
           em_promocao: data.emPromocao,
           preco_promocional: data.precoPromocional,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
+        .select()
+        .single()
 
       if (error) throw error
 
-      const oraculistaAtualizado = {
-        id,
-        ...data,
-        updatedAt: new Date()
-      }
-
-      // Atualiza apenas o prompt do oraculista
-      await atualizarPromptOraculista(oraculistaAtualizado)
-
+      // Atualiza o estado local com os dados formatados
       set(state => ({
         oraculistas: state.oraculistas.map(o => 
           o.id === id 
-            ? oraculistaAtualizado
+            ? {
+                ...o,
+                nome: data.nome ?? o.nome,
+                foto: data.foto ?? o.foto,
+                especialidades: data.especialidades ?? o.especialidades,
+                descricao: data.descricao ?? o.descricao,
+                preco: data.preco ?? o.preco,
+                disponivel: data.disponivel ?? o.disponivel,
+                prompt: data.prompt ?? o.prompt,
+                prompt_formatado: data.prompt_formatado ?? o.prompt_formatado,
+                emPromocao: data.emPromocao ?? o.emPromocao,
+                precoPromocional: data.precoPromocional,
+                updatedAt: new Date()
+              }
             : o
         )
       }))
 
+      // Recarrega os oraculistas para garantir sincronização
+      await get().carregarOraculistas()
+
       return { success: true }
     } catch (error: any) {
+      console.error('Erro ao atualizar oraculista:', error)
       return { success: false, error: error.message }
     }
   },
@@ -208,22 +232,24 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
     }
   },
 
-  excluirOraculista: async (id) => {
+  excluirOraculista: async (id: string) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('oraculistas')
         .delete()
-        .eq('id', id)
+        .eq('id', id);
 
-      if (error) throw error
+      if (error) throw error;
 
-      set(state => ({
-        oraculistas: state.oraculistas.filter(o => o.id !== id)
-      }))
+      // Atualiza o estado removendo o oraculista
+      set((state) => ({
+        oraculistas: state.oraculistas.filter((o) => o.id !== id)
+      }));
 
-      return { success: true }
+      return { success: true };
     } catch (error: any) {
-      return { success: false, error: error.message }
+      console.error('Erro ao excluir oraculista:', error);
+      return { success: false, error: error.message };
     }
-  }
+  },
 }))
