@@ -41,7 +41,7 @@ export default function DashboardLayout({
     <div className="min-h-screen bg-black relative">
       {/* Background principal */}
       <div 
-        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat opacity-30"
+        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat"
         style={{ backgroundImage: 'url(/background.jpg)' }}
       />
 
