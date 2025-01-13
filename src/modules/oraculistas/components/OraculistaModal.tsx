@@ -29,6 +29,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const [novaEspecialidade, setNovaEspecialidade] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (oraculistaId) {
@@ -69,16 +70,17 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
+    setError(null)
 
     try {
-      if (oraculistaId) {
-        await atualizarOraculista(oraculistaId, formData)
-      } else {
-        await adicionarOraculista(formData)
+      const result = await adicionarOraculista(formData)
+      if (!result.success) {
+        setError(result.error || 'Erro ao salvar oraculista')
+        return
       }
       onClose()
-    } catch (error) {
-      console.error('Erro ao salvar oraculista:', error)
+    } catch (err: any) {
+      setError(err.message || 'Erro ao salvar oraculista')
     } finally {
       setLoading(false)
     }
@@ -299,6 +301,12 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                 </div>
               )}
             </div>
+
+            {error && (
+              <div className="mt-2 text-red-500 text-sm">
+                {error}
+              </div>
+            )}
 
             {/* Botões */}
             <div className="flex justify-end gap-4 pt-4">

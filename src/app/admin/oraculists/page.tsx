@@ -1,7 +1,7 @@
 'use client'
 
 import { useRouter } from 'next/navigation'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { 
   PlusIcon, 
   PencilIcon, 
@@ -17,12 +17,11 @@ import { formatarPreco } from '@/utils/format'
 import { OraculistaModal } from '@/modules/oraculistas/components/OraculistaModal'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
-import { savePromptForOraculista } from '@/config/prompts/oraculistas'
 import { OraculistaFormData } from '@/modules/oraculistas/types/oraculista'
 
 export default function OraculistasAdminPage() {
   const router = useRouter()
-  const { oraculistas, loading, adicionarOraculista } = useOraculistasStore()
+  const { oraculistas, loading, carregarOraculistas, adicionarOraculista } = useOraculistasStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [formData, setFormData] = useState<OraculistaFormData>({
     nome: '',
@@ -38,6 +37,10 @@ export default function OraculistasAdminPage() {
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
+
+  useEffect(() => {
+    carregarOraculistas()
+  }, [carregarOraculistas])
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -74,7 +77,6 @@ export default function OraculistasAdminPage() {
     setError(null)
 
     try {
-      await savePromptForOraculista(formData.nome, formData.prompt)
       const result = await adicionarOraculista(formData)
       
       if (result.success) {

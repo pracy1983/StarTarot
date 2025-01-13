@@ -1,11 +1,13 @@
 'use client'
 
 import { useRef, useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '../services/chatService'
 import { useChatStore } from '../store/chatStore'
 
 export function ChatWindow() {
+  const router = useRouter()
   const { isMinimized, messages, setMinimized, addMessage } = useChatStore()
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -14,10 +16,7 @@ export function ChatWindow() {
 
   // Inicializa o serviço de chat
   useEffect(() => {
-    const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
-    if (apiKey) {
-      chatService.current = new ChatService(apiKey)
-    }
+    chatService.current = new ChatService()
   }, [])
 
   // Auto scroll para última mensagem
@@ -27,8 +26,27 @@ export function ChatWindow() {
     }
   }, [messages])
 
+  const handleRedirect = (text: string) => {
+    // Verifica se o texto contém "me apssa" ou "me transfere" seguido do nome do oraculista
+    const redirectRegex = /(?:me (?:apssa|transfere) pr[ao]|quero) (.+)/i
+    const match = text.match(redirectRegex)
+    
+    if (match) {
+      const oraculistaNome = match[1].toLowerCase().trim()
+      router.push(`/consulta/${encodeURIComponent(oraculistaNome)}`)
+      return true
+    }
+    return false
+  }
+
   const sendMessage = async () => {
     if (!inputMessage.trim() || !chatService.current) return
+
+    // Verifica se é um comando de redirecionamento
+    if (handleRedirect(inputMessage)) {
+      setInputMessage('')
+      return
+    }
 
     const userMessage = {
       id: Date.now().toString(),
@@ -42,17 +60,19 @@ export function ChatWindow() {
     setIsTyping(true)
 
     try {
-      const history = messages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content
-      }))
-
-      const response = await chatService.current.sendMessage(inputMessage, history)
+      const response = await chatService.current.sendMessage(inputMessage)
+      
+      // Verifica se a resposta do assistente contém um redirecionamento
+      if (handleRedirect(response.content)) {
+        return
+      }
       
       // Quebra a resposta em balões separados
-      const sentences = response.split(/(?<=[.!?])\s+/)
+      const sentences = response.content.split(/(?<=[.!?])\s+/)
       
       for (const sentence of sentences) {
+        if (!sentence.trim()) continue
+        
         // Calcula o tempo de digitação baseado no tamanho da mensagem
         const baseTime = Math.min(Math.max(sentence.length * 50, 1500), 3000)
         const randomVariation = Math.random() * 500
@@ -119,24 +139,45 @@ export function ChatWindow() {
             }}
             className="flex-1 p-4 overflow-y-auto h-[calc(100%-8rem)] bg-black/80"
           >
-            {messages.map(message => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.sender === 'user' ? 'justify-end' : 'justify-start'
-                } mb-4`}
-              >
+            {messages.map(message => {
+              // Processa o código [CONSULTAR:nome] na mensagem
+              let content = message.content
+              const consultarMatch = content.match(/\[CONSULTAR:(.+?)\]/i)
+              
+              if (consultarMatch && message.sender === 'agent') {
+                const oraculistaNome = consultarMatch[1]
+                content = content.replace(
+                  consultarMatch[0],
+                  `<button 
+                    class="bg-primary/90 hover:bg-primary text-white px-6 py-3 rounded-lg mt-2 transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-xl border border-primary/20 font-medium"
+                    onclick="window.location.href='/consulta/${encodeURIComponent(oraculistaNome.toLowerCase().trim())}'"
+                  >
+                    Consultar ${oraculistaNome.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
+                  </button>`
+                )
+              }
+
+              // Remove colchetes extras que possam ter ficado
+              content = content.replace(/\[|\]/g, '')
+
+              return (
                 <div
-                  className={`max-w-[80%] p-3 rounded-lg ${
-                    message.sender === 'user'
-                      ? 'bg-primary/50 text-white rounded-br-none'
-                      : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
-                  }`}
+                  key={message.id}
+                  className={`flex ${
+                    message.sender === 'user' ? 'justify-end' : 'justify-start'
+                  } mb-4`}
                 >
-                  {message.content}
+                  <div
+                    className={`max-w-[80%] p-3 rounded-lg ${
+                      message.sender === 'user'
+                        ? 'bg-primary/50 text-white rounded-br-none'
+                        : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
+                    }`}
+                    dangerouslySetInnerHTML={{ __html: content }}
+                  />
                 </div>
-              </div>
-            ))}
+              )
+            })}
 
             {isTyping && (
               <div className="flex justify-start mb-4">

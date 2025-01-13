@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Oraculista, OraculistaFormData } from '../types/oraculista'
-import { getPromptByOraculista } from '@/config/prompts/oraculistas'
+import { getPromptByOraculista, atualizarPromptOraculista } from '@/config/prompts/oraculistas'
+import { supabase } from '@/lib/supabase'
 
 interface OraculistasState {
   oraculistas: Oraculista[]
@@ -11,188 +12,218 @@ interface OraculistasState {
   alternarDisponibilidade: (id: string) => Promise<{ success: boolean; error?: string }>
   alternarPromocao: (id: string, precoPromocional?: number) => Promise<{ success: boolean; error?: string }>
   excluirOraculista: (id: string) => Promise<{ success: boolean; error?: string }>
+  carregarOraculistas: () => Promise<void>
 }
 
-// Mock de oraculistas para desenvolvimento
-const MOCK_ORACULISTAS: Oraculista[] = [
-  {
-    id: '1',
-    nome: 'MAGO NEGRO',
-    foto: '/oraculistas/mago-negro.jpg',
-    especialidades: [
-      'Trabalha com tarot dos daemons',
-      'Especialista em amor e finanças',
-      'Foco em questões mundanas e carnais',
-      'Abordagem direta e prática'
-    ],
-    descricao: 'Especialista em questões mundanas e carnais, com abordagem direta e prática.',
-    preco: 20,
-    disponivel: true,
-    prompt: getPromptByOraculista('MAGO NEGRO'),
-    emPromocao: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: '2',
-    nome: 'VÓ CLEUSA',
-    foto: '/oraculistas/vo-cleusa.jpg',
-    especialidades: [
-      'Trabalha com tarot dos anjos',
-      'Especialista em destino e missão de vida',
-      'Foco em caminhos a seguir e saúde',
-      'Abordagem espiritual e orientadora'
-    ],
-    descricao: 'Especialista em destino e missão de vida, com abordagem espiritual.',
-    preco: 20,
-    disponivel: false,
-    prompt: getPromptByOraculista('VÓ CLEUSA'),
-    emPromocao: false,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  },
-  {
-    id: '3',
-    nome: 'CIGANA FLORA',
-    foto: '/oraculistas/cigana-flora.jpg',
-    especialidades: [
-      'Trabalha com baralho cigano e baralho das fadas',
-      'Especialista em amor, saúde e dinheiro',
-      'Abordagem mística'
-    ],
-    descricao: 'Especialista em amor, saúde e dinheiro, com abordagem mística.',
-    preco: 15,
-    disponivel: true,
-    prompt: getPromptByOraculista('CIGANA FLORA'),
-    emPromocao: true,
-    precoPromocional: 10,
-    createdAt: new Date(),
-    updatedAt: new Date()
-  }
-]
-
 export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
-  oraculistas: MOCK_ORACULISTAS,
+  oraculistas: [],
   loading: false,
   error: null,
 
+  carregarOraculistas: async () => {
+    set({ loading: true, error: null })
+    try {
+      const { data, error } = await supabase
+        .from('oraculistas')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+
+      set({ 
+        oraculistas: data.map(o => ({
+          ...o,
+          especialidades: o.especialidades || [],
+          createdAt: new Date(o.created_at),
+          updatedAt: new Date(o.updated_at),
+          consultas: o.consultas || 0
+        })),
+        loading: false 
+      })
+    } catch (error: any) {
+      set({ error: error.message, loading: false })
+    }
+  },
+
   adicionarOraculista: async (data) => {
     try {
-      set({ loading: true, error: null })
-      
-      // Simula delay de rede
-      await new Promise(resolve => setTimeout(resolve, 1000))
-
-      const novoOraculista: Oraculista = {
-        id: Math.random().toString(36).substr(2, 9),
-        ...data,
-        createdAt: new Date(),
-        updatedAt: new Date()
+      // Garantir que temos a sessão atual
+      const { data: session } = await supabase.auth.getSession()
+      if (!session?.session) {
+        throw new Error('Usuário não autenticado')
       }
 
+      const { data: newOraculista, error } = await supabase
+        .from('oraculistas')
+        .insert([{
+          nome: data.nome,
+          foto: data.foto,
+          especialidades: data.especialidades,
+          descricao: data.descricao,
+          preco: data.preco,
+          disponivel: data.disponivel,
+          prompt: data.prompt,
+          em_promocao: data.emPromocao,
+          preco_promocional: data.precoPromocional,
+          consultas: 0,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }])
+        .select()
+        .single()
+
+      if (error) {
+        console.error('Erro ao adicionar oraculista:', error)
+        throw error
+      }
+
+      const oraculista = {
+        ...newOraculista,
+        especialidades: newOraculista.especialidades || [],
+        createdAt: new Date(newOraculista.created_at),
+        updatedAt: new Date(newOraculista.updated_at),
+        emPromocao: newOraculista.em_promocao,
+        precoPromocional: newOraculista.preco_promocional,
+        consultas: 0
+      }
+
+      // Atualiza apenas o prompt do oraculista
+      await atualizarPromptOraculista(oraculista)
+
       set(state => ({
-        oraculistas: [...state.oraculistas, novoOraculista]
+        oraculistas: [oraculista, ...state.oraculistas]
       }))
 
       return { success: true }
-    } catch (error) {
-      set({ error: 'Erro ao adicionar oraculista' })
-      return { success: false, error: 'Erro ao adicionar oraculista' }
-    } finally {
-      set({ loading: false })
+    } catch (error: any) {
+      console.error('Erro detalhado:', error)
+      return { success: false, error: error.message }
     }
   },
 
   atualizarOraculista: async (id, data) => {
     try {
-      set({ loading: true, error: null })
-      
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const { error } = await supabase
+        .from('oraculistas')
+        .update({
+          nome: data.nome,
+          foto: data.foto,
+          especialidades: data.especialidades,
+          descricao: data.descricao,
+          preco: data.preco,
+          disponivel: data.disponivel,
+          prompt: data.prompt,
+          em_promocao: data.emPromocao,
+          preco_promocional: data.precoPromocional,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      const oraculistaAtualizado = {
+        id,
+        ...data,
+        updatedAt: new Date()
+      }
+
+      // Atualiza apenas o prompt do oraculista
+      await atualizarPromptOraculista(oraculistaAtualizado)
 
       set(state => ({
-        oraculistas: state.oraculistas.map(oraculista =>
-          oraculista.id === id
-            ? { ...oraculista, ...data, updatedAt: new Date() }
-            : oraculista
+        oraculistas: state.oraculistas.map(o => 
+          o.id === id 
+            ? oraculistaAtualizado
+            : o
         )
       }))
 
       return { success: true }
-    } catch (error) {
-      set({ error: 'Erro ao atualizar oraculista' })
-      return { success: false, error: 'Erro ao atualizar oraculista' }
-    } finally {
-      set({ loading: false })
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   },
 
   alternarDisponibilidade: async (id) => {
+    const oraculista = get().oraculistas.find(o => o.id === id)
+    if (!oraculista) return { success: false, error: 'Oraculista não encontrado' }
+
     try {
-      set({ loading: true, error: null })
-      
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const { error } = await supabase
+        .from('oraculistas')
+        .update({ 
+          disponivel: !oraculista.disponivel,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) throw error
 
       set(state => ({
-        oraculistas: state.oraculistas.map(oraculista =>
-          oraculista.id === id
-            ? { ...oraculista, disponivel: !oraculista.disponivel, updatedAt: new Date() }
-            : oraculista
+        oraculistas: state.oraculistas.map(o =>
+          o.id === id
+            ? { ...o, disponivel: !o.disponivel, updatedAt: new Date() }
+            : o
         )
       }))
 
       return { success: true }
-    } catch (error) {
-      set({ error: 'Erro ao alterar disponibilidade' })
-      return { success: false, error: 'Erro ao alterar disponibilidade' }
-    } finally {
-      set({ loading: false })
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   },
 
   alternarPromocao: async (id, precoPromocional) => {
+    const oraculista = get().oraculistas.find(o => o.id === id)
+    if (!oraculista) return { success: false, error: 'Oraculista não encontrado' }
+
     try {
-      set({ loading: true, error: null })
-      
-      await new Promise(resolve => setTimeout(resolve, 500))
+      const { error } = await supabase
+        .from('oraculistas')
+        .update({ 
+          em_promocao: !oraculista.emPromocao,
+          preco_promocional: !oraculista.emPromocao ? precoPromocional : null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+
+      if (error) throw error
 
       set(state => ({
-        oraculistas: state.oraculistas.map(oraculista =>
-          oraculista.id === id
-            ? {
-                ...oraculista,
-                emPromocao: !oraculista.emPromocao,
-                precoPromocional: !oraculista.emPromocao ? precoPromocional : undefined,
+        oraculistas: state.oraculistas.map(o =>
+          o.id === id
+            ? { 
+                ...o, 
+                emPromocao: !o.emPromocao, 
+                precoPromocional: !o.emPromocao ? precoPromocional : undefined,
                 updatedAt: new Date()
               }
-            : oraculista
+            : o
         )
       }))
 
       return { success: true }
-    } catch (error) {
-      set({ error: 'Erro ao alterar promoção' })
-      return { success: false, error: 'Erro ao alterar promoção' }
-    } finally {
-      set({ loading: false })
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   },
 
   excluirOraculista: async (id) => {
     try {
-      set({ loading: true, error: null })
-      
-      await new Promise(resolve => setTimeout(resolve, 1000))
+      const { error } = await supabase
+        .from('oraculistas')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
 
       set(state => ({
-        oraculistas: state.oraculistas.filter(oraculista => oraculista.id !== id)
+        oraculistas: state.oraculistas.filter(o => o.id !== id)
       }))
 
       return { success: true }
-    } catch (error) {
-      set({ error: 'Erro ao excluir oraculista' })
-      return { success: false, error: 'Erro ao excluir oraculista' }
-    } finally {
-      set({ loading: false })
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   }
 }))

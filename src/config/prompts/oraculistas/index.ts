@@ -1,25 +1,31 @@
-import { prompt as magoNegroPrompt } from './mago-negro'
-import { prompt as voClausaPrompt } from './vo-cleusa'
-import { prompt as ciganaFloraPrompt } from './cigana-flora'
+import { supabase } from '@/lib/supabase'
+import { Oraculista } from '@/modules/oraculistas/types/oraculista'
 
-export const oraculistaPrompts = {
-  'mago-negro': magoNegroPrompt,
-  'vo-cleusa': voClausaPrompt,
-  'cigana-flora': ciganaFloraPrompt
+export function formatarPromptOraculista(oraculista: Oraculista): string {
+  return `Você é ${oraculista.nome}
+${oraculista.descricao}
+Suas Especialidades:
+${oraculista.especialidades.map(esp => `- ${esp}`).join('\n')}
+Instruções:
+${oraculista.prompt}`
 }
 
-export function getPromptByOraculista(oraculistaNome: string): string | undefined {
-  const normalizedName = oraculistaNome
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/\s+/g, '-')
+export async function atualizarPromptOraculista(oraculista: Oraculista) {
+  const promptFormatado = formatarPromptOraculista(oraculista)
   
-  return oraculistaPrompts[normalizedName]
-}
+  // Salva o prompt formatado no Supabase
+  const { error } = await supabase
+    .from('oraculistas')
+    .update({ 
+      prompt_formatado: promptFormatado,
+      updated_at: new Date().toISOString()
+    })
+    .eq('id', oraculista.id)
 
-export function savePromptForOraculista(oraculistaNome: string, promptContent: string): void {
-  // Esta função será implementada quando tivermos o backend
-  // Por enquanto, apenas simula o salvamento
-  console.log(`Salvando prompt para ${oraculistaNome}:`, promptContent)
+  if (error) {
+    console.error('Erro ao atualizar prompt do oraculista:', error)
+    throw error
+  }
+
+  return promptFormatado
 }

@@ -80,6 +80,36 @@
 - [ ] Configurar webhooks do Supabase
 - [ ] Implementar sistema de cache
 
+## [Não lançado]
+### Adicionado
+- Sistema de prompts dinâmicos para oraculistas e atendente
+- Coluna `prompt_formatado` na tabela `oraculistas`
+- Hook `usePrompt` para gerenciar prompts dinâmicos
+- Função `resolvePromptVariables` para substituir variáveis em prompts
+- Novas diretrizes no prompt da Priscila sobre promoções e valores
+- Botões de consulta dinâmicos no chat
+- Script SQL para adicionar oraculistas iniciais (Mago Negro e Vó Cleusa)
+- Links diretos para consulta com oraculistas
+- Nova página `/consulta/[nome]` para iniciar consultas diretas
+- Redirecionamento automático por comando no chat (ex: "me apssa pra cigana flora")
+- Nova diretriz para verificação de nomes de oraculistas por proximidade
+
+### Modificado
+- Atualizado o sistema de chat para usar prompts dinâmicos
+- Refatorado o serviço de chat para manter histórico internamente
+- Melhorado o tratamento de erros no chat
+- Atualizado o prompt da Priscila com novas diretrizes sobre promoções e valores
+- Melhorado o estilo dos botões de consulta com animações e sombras
+- Simplificado o prompt da Priscila removendo diretrizes redundantes
+- Modificado o formato de exibição dos oraculistas para incluir links diretos
+- Adicionada lógica de redirecionamento no ChatWindow
+
+### Corrigido
+- Erro ao tentar salvar oraculista com prompt personalizado
+- Problema de compatibilidade no ChatWindow com o novo sistema de prompts
+- Formatação dos nomes dos oraculistas nos botões de consulta
+- Remoção de colchetes extras no texto do chat
+
 ## Tecnologias e Padrões Utilizados
 - Next.js para estrutura do projeto
 - Zustand para gerenciamento de estado
