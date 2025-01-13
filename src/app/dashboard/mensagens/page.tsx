@@ -17,7 +17,11 @@ export default function MensagensPage() {
 
   // Adiciona mensagens de teste se não houver nenhuma
   useEffect(() => {
-    if (mensagens.length === 0) {
+    // Verifica se já existem mensagens com esses IDs
+    const mensagem1Existe = mensagens.some(m => m.id === '1')
+    const mensagem2Existe = mensagens.some(m => m.id === '2')
+
+    if (mensagens.length === 0 && !mensagem1Existe && !mensagem2Existe) {
       // Mensagem de pergunta
       adicionarMensagem({
         id: '1',
@@ -41,7 +45,7 @@ export default function MensagensPage() {
         threadId: '1'
       })
     }
-  }, [mensagens.length, adicionarMensagem])
+  }, []) // Removido mensagens.length e adicionarMensagem das dependências
 
   // Marca a mensagem como lida quando selecionada
   useEffect(() => {
@@ -51,21 +55,15 @@ export default function MensagensPage() {
   }, [mensagemAtual, marcarComoLida])
 
   return (
-    <div className="flex flex-col p-4">
-      {/* Cabeçalho */}
-      <div className="text-center mb-4">
-        <h1 className="text-2xl font-raleway font-bold text-primary">
-          Caixa de Mensagens
-        </h1>
-        <p className="text-sm text-gray-300">
-          Suas consultas e respostas dos oraculistas
-        </p>
+    <div className="flex flex-col h-full">
+      <div className="mb-8 text-center">
+        <h1 className="text-2xl font-bold text-primary">Caixa de Mensagens</h1>
+        <p className="text-gray-400">Suas consultas e respostas dos oraculistas</p>
       </div>
 
-      {/* Container Principal */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-2 gap-4 max-w-6xl mx-auto w-full">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Lista de Mensagens */}
-        <div className="lg:h-[450px]">
+        <div className="h-[600px]">
           <MensagemList
             mensagens={getMensagensFiltradas()}
             onSelectMensagem={setMensagemAtual}
@@ -73,40 +71,16 @@ export default function MensagensPage() {
           />
         </div>
 
-        {/* Visualização da Mensagem */}
-        <div className="hidden lg:block lg:h-[450px]">
-          <div className="h-full bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
-            {mensagemAtual ? (
-              <MensagemThread mensagem={mensagemAtual} />
-            ) : (
-              <div className="h-full flex items-center justify-center">
-                <p className="text-gray-500">
-                  Selecione uma mensagem para visualizar
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Visualização Mobile */}
-        {mensagemAtual && (
-          <div className="fixed inset-0 z-50 p-4 lg:hidden">
-            <div className="bg-black/95 backdrop-blur-md h-full rounded-2xl border border-primary/20">
-              <div className="flex justify-between items-center p-4 border-b border-primary/20">
-                <h2 className="text-primary font-semibold">Mensagem</h2>
-                <button 
-                  onClick={() => setMensagemAtual(null)}
-                  className="text-gray-400 hover:text-primary"
-                >
-                  Voltar
-                </button>
-              </div>
-              <div className="h-[calc(100%-4rem)]">
-                <MensagemThread mensagem={mensagemAtual} />
-              </div>
+        {/* Thread da Mensagem */}
+        <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
+          {mensagemAtual ? (
+            <MensagemThread mensagem={mensagemAtual} />
+          ) : (
+            <div className="h-full flex items-center justify-center text-gray-500">
+              Selecione uma mensagem para visualizar
             </div>
-          </div>
-        )}
+          )}
+        </div>
       </div>
     </div>
   )
