@@ -5,26 +5,59 @@ import { useRouter } from 'next/navigation'
 import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '../services/chatService'
 import { useChatStore } from '../store/chatStore'
+import { useAuthStore } from '@/stores/authStore'
+import { v4 as uuidv4 } from 'uuid';
 
 export function ChatWindow() {
   const router = useRouter()
-  const { isMinimized, messages, setMinimized, addMessage } = useChatStore()
+  const { isMinimized, messages, setMinimized, addMessage, threadId, setThreadId, resetChat } = useChatStore()
+  const user = useAuthStore(state => state.user)
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const chatService = useRef<ChatService | null>(null)
 
-  // Inicializa o serviço de chat
+  // Inicializa o serviço de chat e carrega o histórico
   useEffect(() => {
-    chatService.current = new ChatService()
-  }, [])
+    if (!chatService.current) {
+      chatService.current = new ChatService();
+    }
+    
+    if (user?.id && chatService.current) {
+      chatService.current.retrieveHistory(user.id).then(history => {
+        if (history.length > 0) {
+          history.forEach(msg => {
+            addMessage({
+              id: uuidv4(),
+              content: msg.content,
+              sender: msg.role === 'assistant' ? 'agent' : 'user',
+              timestamp: new Date()
+            });
+          });
+        }
+      });
+    }
+  }, [user?.id, addMessage])
+
+  useEffect(() => {
+    if (!threadId) {
+      const newThreadId = uuidv4();
+      setThreadId(newThreadId);
+      addMessage({
+        id: uuidv4(),
+        content: `Nova thread iniciada: ${newThreadId}.`,
+        sender: 'agent',
+        timestamp: new Date()
+      });
+    }
+  }, [threadId, setThreadId, addMessage])
 
   // Auto scroll para última mensagem
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
-  }, [messages])
+  }, [messages, isMinimized])
 
   const handleRedirect = (text: string) => {
     // Verifica se o texto contém "me apssa" ou "me transfere" seguido do nome do oraculista
@@ -39,66 +72,61 @@ export function ChatWindow() {
     return false
   }
 
-  const sendMessage = async () => {
-    if (!inputMessage.trim() || !chatService.current) return
-
-    // Verifica se é um comando de redirecionamento
-    if (handleRedirect(inputMessage)) {
-      setInputMessage('')
-      return
+  const handleAdminCommand = (command: string) => {
+    if (command === '/cleanup' && user?.isAdmin) {
+      const previousThreadId = threadId;
+      resetChat();
+      const newThreadId = uuidv4();
+      setThreadId(newThreadId);
+      addMessage({
+        id: uuidv4(),
+        content: `Chat limpo. Thread anterior: ${previousThreadId}. Nova thread: ${newThreadId}.`,
+        sender: 'agent',
+        timestamp: new Date()
+      });
     }
+  };
 
+  const handleSend = async () => {
+    if (!inputMessage.trim() || isTyping || !user?.id) return
+
+    setIsTyping(true)
+    const messageText = inputMessage.trim()
+    setInputMessage('')
+
+    // Adiciona mensagem do usuário
     const userMessage = {
-      id: Date.now().toString(),
-      content: inputMessage,
+      id: uuidv4(),
+      content: messageText,
       sender: 'user' as const,
       timestamp: new Date()
     }
-
     addMessage(userMessage)
-    setInputMessage('')
-    setIsTyping(true)
 
     try {
-      const response = await chatService.current.sendMessage(inputMessage)
-      
-      // Verifica se a resposta do assistente contém um redirecionamento
-      if (handleRedirect(response.content)) {
-        return
-      }
-      
-      // Quebra a resposta em balões separados
-      const sentences = response.content.split(/(?<=[.!?])\s+/)
-      
-      for (const sentence of sentences) {
-        if (!sentence.trim()) continue
+      if (chatService.current) {
+        const response = await chatService.current.sendMessage(messageText, user.id)
         
-        // Calcula o tempo de digitação baseado no tamanho da mensagem
-        const baseTime = Math.min(Math.max(sentence.length * 50, 1500), 3000)
-        const randomVariation = Math.random() * 500
-        const typingTime = baseTime + randomVariation
-        
-        await new Promise(resolve => setTimeout(resolve, typingTime))
-        
-        const agentMessage = {
-          id: Date.now().toString(),
-          content: sentence,
+        // Adiciona resposta do assistente
+        const assistantMessage = {
+          id: uuidv4(),
+          content: response.content,
           sender: 'agent' as const,
           timestamp: new Date()
         }
-        
-        addMessage(agentMessage)
-      }
+        addMessage(assistantMessage)
 
+        // Verifica redirecionamento
+        handleRedirect(response.content)
+      }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      const errorMessage = {
-        id: Date.now().toString(),
-        content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
-        sender: 'agent' as const,
+      addMessage({
+        id: uuidv4(),
+        content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
+        sender: 'agent',
         timestamp: new Date()
-      }
-      addMessage(errorMessage)
+      })
     } finally {
       setIsTyping(false)
     }
@@ -143,7 +171,7 @@ export function ChatWindow() {
               // Processa o código [CONSULTAR:nome] na mensagem
               let content = message.content
               const consultarMatch = content.match(/\[CONSULTAR:(.+?)\]/i)
-              
+　
               if (consultarMatch && message.sender === 'agent') {
                 const oraculistaNome = consultarMatch[1]
                 content = content.replace(
@@ -198,7 +226,7 @@ export function ChatWindow() {
             <form
               onSubmit={(e) => {
                 e.preventDefault()
-                sendMessage()
+                handleSend()
               }}
               className="flex space-x-2"
             >
