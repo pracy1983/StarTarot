@@ -70,29 +70,58 @@ export class ChatService {
   }
 
   async storeMessage(userId: string, message: Message) {
-    console.log('Enviando mensagem para o Supabase:', {
-      user_id: userId,
-      message: message.content,
-      sender: message.role,
-      timestamp: new Date()
-    });
+    try {
+      console.log('Enviando mensagem para o Supabase:', {
+        user_id: userId,
+        message: message.content,
+        sender: message.role,
+        timestamp: new Date()
+      });
 
-    await supabase.from('chat_history').insert({
-      user_id: userId,
-      message: message.content,
-      sender: message.role,
-      timestamp: new Date()
-    });
+      // Primeiro, verificamos quantas mensagens o usuário já tem
+      const { data: existingMessages, error: countError } = await supabase
+        .from('chat_history')
+        .select('id, timestamp')
+        .eq('user_id', userId)
+        .order('timestamp', { ascending: true });
 
-    const { data, error } = await supabase
-      .from('chat_history')
-      .select('id')
-      .eq('user_id', userId)
-      .order('timestamp', { ascending: true });
+      if (countError) {
+        throw countError;
+      }
 
-    if (data && data.length > 50) {
-      const idsToRemove = data.slice(0, data.length - 50).map((msg) => msg.id);
-      await supabase.from('chat_history').delete().in('id', idsToRemove);
+      // Se já temos 50 mensagens ou mais, removemos as mais antigas
+      if (existingMessages && existingMessages.length >= 50) {
+        const messagesToRemove = existingMessages.slice(0, existingMessages.length - 49);
+        const idsToRemove = messagesToRemove.map(msg => msg.id);
+        
+        // Remove as mensagens mais antigas
+        const { error: deleteError } = await supabase
+          .from('chat_history')
+          .delete()
+          .in('id', idsToRemove);
+
+        if (deleteError) {
+          throw deleteError;
+        }
+      }
+
+      // Insere a nova mensagem
+      const { error: insertError } = await supabase
+        .from('chat_history')
+        .insert({
+          user_id: userId,
+          message: message.content,
+          sender: message.role,
+          timestamp: new Date()
+        });
+
+      if (insertError) {
+        throw insertError;
+      }
+
+    } catch (error) {
+      console.error('Erro ao armazenar mensagem:', error);
+      throw error;
     }
   }
 
