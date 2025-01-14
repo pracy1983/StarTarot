@@ -8,7 +8,7 @@ export default function DashboardPage() {
   const user = useAuthStore(state => state.user)
 
   return (
-    <div className="min-h-screen bg-black text-white relative space-y-8">
+    <div className="min-h-screen text-white relative space-y-8">
       {/* Boas-vindas */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-raleway font-bold text-primary">
@@ -33,7 +33,7 @@ export default function DashboardPage() {
           />
           
           {/* Conteúdo do card */}
-          <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl
+          <div className="relative z-10 p-6 bg-black/20 backdrop-blur-md border border-primary/20 rounded-2xl
                         group-hover:border-primary transition-all duration-200 ease-in-out">
             <div className="space-y-4">
               <ChatBubbleLeftRightIcon className="h-8 w-8 text-primary" />
@@ -57,7 +57,7 @@ export default function DashboardPage() {
           />
           
           {/* Conteúdo do card */}
-          <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl
+          <div className="relative z-10 p-6 bg-black/20 backdrop-blur-md border border-primary/20 rounded-2xl
                         group-hover:border-primary transition-all duration-200 ease-in-out">
             <div className="space-y-4">
               <CreditCardIcon className="h-8 w-8 text-primary" />
@@ -81,7 +81,7 @@ export default function DashboardPage() {
           />
           
           {/* Conteúdo do card */}
-          <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl
+          <div className="relative z-10 p-6 bg-black/20 backdrop-blur-md border border-primary/20 rounded-2xl
                         group-hover:border-primary transition-all duration-200 ease-in-out">
             <div className="space-y-4">
               <UserGroupIcon className="h-8 w-8 text-primary" />
@@ -103,7 +103,7 @@ export default function DashboardPage() {
         />
         
         {/* Conteúdo da seção */}
-        <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
+        <div className="relative z-10 p-6 bg-black/20 backdrop-blur-md border border-primary/20 rounded-2xl">
           <h2 className="text-2xl font-semibold text-primary mb-4">Recado da Espiritualidade</h2>
           <p className="text-gray-300 text-center py-4 text-lg">
             "A vida é uma jornada de autodescoberta. Cada desafio é uma oportunidade de crescimento, e cada momento de paz é um presente do universo. Mantenha seu coração aberto às mensagens que o cosmos tem para você."
@@ -120,7 +120,7 @@ export default function DashboardPage() {
         />
         
         {/* Conteúdo da seção */}
-        <div className="relative z-10 p-6 bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
+        <div className="relative z-10 p-6 bg-black/20 backdrop-blur-md border border-primary/20 rounded-2xl">
           <h2 className="text-2xl font-semibold text-primary mb-4">Últimas Consultas</h2>
           <div className="space-y-4">
             <p className="text-gray-300 text-center py-8">
