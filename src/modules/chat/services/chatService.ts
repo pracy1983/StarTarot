@@ -39,6 +39,9 @@ export class ChatService {
       const userMessage: Message = { role: 'user', content }
       this.messages.push(userMessage)
 
+      // Salva apenas a mensagem do usuário no banco
+      await this.storeMessage(userId, userMessage)
+
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -60,8 +63,7 @@ export class ChatService {
       const data = await response.json()
       const assistantMessage: Message = data.choices[0].message
 
-      // Armazena a nova mensagem no histórico
-      await this.storeMessage(userId, assistantMessage)
+      // Removido o armazenamento da mensagem do assistente
       return assistantMessage
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
@@ -71,6 +73,9 @@ export class ChatService {
 
   async storeMessage(userId: string, message: Message) {
     try {
+      // Só armazena se for mensagem do usuário
+      if (message.role !== 'user') return;
+
       console.log('Enviando mensagem para o Supabase:', {
         user_id: userId,
         message: message.content,
