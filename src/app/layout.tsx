@@ -1,5 +1,6 @@
 import type { Metadata } from 'next'
 import { Montserrat, Raleway } from 'next/font/google'
+import { Toaster } from 'sonner'
 import './globals.css'
 import ClientLayout from './ClientLayout'
 
@@ -29,6 +30,7 @@ export default function RootLayout({
         <ClientLayout>
           {children}
         </ClientLayout>
+        <Toaster richColors position="top-right" />
       </body>
     </html>
   )

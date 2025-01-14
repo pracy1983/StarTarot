@@ -5,6 +5,7 @@ import { supabase } from '@/lib/supabase'
 interface User {
   id: string
   email: string
+  name?: string
   isAdmin: boolean
 }
 
@@ -14,7 +15,7 @@ interface AuthState {
   isLoading: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
-  checkAuth: () => Promise<void>
+  checkAuth: () => Promise<User | null>
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -30,22 +31,47 @@ export const useAuthStore = create<AuthState>()(
           
           if (session?.user) {
             const isAdmin = session.user.user_metadata?.isAdmin || false
+            const userData = {
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.name,
+              isAdmin
+            }
             
             set({
-              user: {
-                id: session.user.id,
-                email: session.user.email!,
-                isAdmin
-              },
+              user: userData,
               isAuthenticated: true,
               isLoading: false
             })
+
+            // Configura um listener para mudanças na autenticação
+            supabase.auth.onAuthStateChange((_event, session) => {
+              if (session?.user) {
+                const isAdmin = session.user.user_metadata?.isAdmin || false
+                set({
+                  user: {
+                    id: session.user.id,
+                    email: session.user.email!,
+                    name: session.user.user_metadata?.name,
+                    isAdmin
+                  },
+                  isAuthenticated: true,
+                  isLoading: false
+                })
+              } else {
+                set({ user: null, isAuthenticated: false, isLoading: false })
+              }
+            })
+
+            return userData
           } else {
             set({ user: null, isAuthenticated: false, isLoading: false })
+            return null
           }
         } catch (error) {
           console.error('Erro ao verificar autenticação:', error)
           set({ user: null, isAuthenticated: false, isLoading: false })
+          return null
         }
       },
 
@@ -64,6 +90,7 @@ export const useAuthStore = create<AuthState>()(
             user: {
               id: data.user.id,
               email: data.user.email!,
+              name: data.user.user_metadata?.name,
               isAdmin
             },
             isAuthenticated: true,

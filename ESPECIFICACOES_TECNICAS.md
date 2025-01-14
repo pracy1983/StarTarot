@@ -113,6 +113,53 @@
   - Asaas para pagamentos
   - SendGrid para emails
 
+## Integrações
+
+### DeepSeek API
+- **Configuração**:
+  - Modelo: deepseek-chat
+  - Temperatura: 0.7
+  - Max Tokens: 2048
+  - Top P: 0.95
+  - Frequency Penalty: 0.0
+  - Presence Penalty: 0.0
+  - Stop Sequences: Personalizadas por oraculista
+
+- **Rate Limiting**:
+  - Requests por minuto: 60
+  - Tokens por minuto: 90000
+  - Retry após: 60s
+
+- **Prompts**:
+  - Sistema base + Personalização por oraculista
+  - Validação de conteúdo sensível
+  - Formatação específica para respostas
+  - Sistema de fallback
+
+### Sistema de Cache
+
+- **Camadas**:
+  - Browser (localStorage)
+  - Memory Cache (Redis)
+  - CDN (Vercel Edge)
+
+- **Estratégias**:
+  - Stale-While-Revalidate
+  - Cache-Control Headers
+  - ETags
+
+- **Invalidação**:
+  - Por usuário
+  - Por rota
+  - Por recurso
+  - Purge automático
+
+- **Monitoramento**:
+  - Hit ratio
+  - Cache size
+  - Invalidation events
+  - Performance metrics
+
 ## Estrutura de Diretórios
 
 ```

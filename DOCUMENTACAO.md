@@ -26,6 +26,11 @@
   - [x] Envio e recebimento de mensagens
   - [x] Tratamento de erros
   - [x] Prompt personalizado para o agente
+  - [x] Sistema de rate limiting
+  - [x] Cache de respostas frequentes
+  - [x] Fallback para casos de indisponibilidade
+  - [x] Monitoramento de uso
+  - [x] Sistema de feedback de respostas
 - [x] Persistência
   - [x] Estado do chat (minimizado/maximizado)
   - [x] Histórico de mensagens
@@ -98,6 +103,35 @@
   - [x] Última consulta
   - [x] Status atual
   - [x] Créditos
+
+### 10. Sistema de Notificações
+- [x] Notificações em tempo real
+  - [x] Websockets via Supabase
+  - [x] Indicador visual de novas mensagens
+  - [x] Som de notificação configurável
+- [x] Notificações por email
+  - [x] Template personalizado
+  - [x] Integração com SendGrid
+- [x] Centro de notificações
+  - [x] Lista de notificações não lidas
+  - [x] Marcação automática como lida
+  - [x] Filtros por tipo
+
+### 11. Fluxo de Consultas
+- [x] Etapas do processo
+  1. Usuário seleciona oraculista ou é direcionado pela IA
+  2. Sistema verifica créditos disponíveis
+  3. Usuário preenche formulário de consulta
+  4. Sistema processa pergunta e envia para fila
+  5. IA processa resposta com prompt específico
+  6. Resposta é entregue na caixa de entrada
+  7. Sistema notifica usuário
+  8. Créditos são debitados após entrega
+- [x] Tratamento de erros
+  - [x] Retry automático em caso de falha
+  - [x] Notificação de erro ao usuário
+  - [x] Sistema de reembolso automático
+  - [x] Log de erros para análise
 
 ## Funcionalidades Pendentes
 

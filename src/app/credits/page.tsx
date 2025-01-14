@@ -1,7 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
+import { usePaymentStore } from '@/modules/payment/store/paymentStore'
+import { useAuthStore } from '@/stores/authStore'
+import { toast } from 'sonner'
 
 const creditOptions = [
   { value: 15, label: 'R$ 15' },
@@ -14,7 +17,53 @@ const creditOptions = [
 export default function Credits() {
   const router = useRouter()
   const [selectedValue, setSelectedValue] = useState<number | null>(null)
-  const currentBalance = 0 // TODO: Integrar com o backend
+  const { user } = useAuthStore()
+  const { createPayment, isLoading, error } = usePaymentStore()
+
+  // Debug log
+  useEffect(() => {
+    console.log('Dados do usuário:', user)
+  }, [user])
+
+  // TODO: Buscar saldo real do usuário
+  const currentBalance = 0
+
+  const handlePurchase = async () => {
+    if (!selectedValue || !user) {
+      toast.error('Você precisa estar logado para comprar créditos')
+      return
+    }
+
+    try {
+      const checkoutUrl = await createPayment({
+        userId: user.id,
+        amount: selectedValue,
+        credits: selectedValue, // 1 real = 1 crédito
+        customerName: user.name || user.email.split('@')[0], // Usa email se não tiver nome
+        customerEmail: user.email
+      })
+
+      if (checkoutUrl) {
+        window.location.href = checkoutUrl
+      } else {
+        toast.error('Erro ao criar pagamento')
+      }
+    } catch (err) {
+      console.error('Erro ao processar pagamento:', err)
+      toast.error('Erro ao processar pagamento')
+    }
+  }
+
+  // Redireciona para login se não estiver autenticado
+  useEffect(() => {
+    if (!user) {
+      router.push('/login')
+    }
+  }, [user, router])
+
+  if (!user) {
+    return null // Não renderiza nada enquanto redireciona
+  }
 
   return (
     <div className="p-6">
@@ -58,25 +107,29 @@ export default function Credits() {
 
         {/* Botão de Compra */}
         <button
-          onClick={() => {
-            if (selectedValue) {
-              // TODO: Integrar com gateway de pagamento
-              console.log(`Comprar ${selectedValue} créditos`)
-            }
-          }}
-          disabled={!selectedValue}
+          onClick={handlePurchase}
+          disabled={!selectedValue || isLoading}
           className={`
             w-full py-4 rounded-lg text-xl font-bold transition-all duration-300
-            ${selectedValue
+            ${selectedValue && !isLoading
               ? 'bg-primary text-black hover:bg-primary/90'
               : 'bg-black/40 backdrop-blur-md border border-primary/20 text-gray-500 cursor-not-allowed'
             }
           `}
         >
-          {selectedValue
-            ? `Comprar R$ ${selectedValue} em créditos`
-            : 'Selecione um valor'}
+          {isLoading 
+            ? 'Processando...'
+            : selectedValue
+              ? `Comprar R$ ${selectedValue} em créditos`
+              : 'Selecione um valor'
+          }
         </button>
+
+        {error && (
+          <p className="mt-4 text-red-500 text-center">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   )

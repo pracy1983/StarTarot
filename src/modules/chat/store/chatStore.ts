@@ -19,9 +19,11 @@ const INITIAL_MESSAGE: Message = {
 interface ChatState {
   isMinimized: boolean
   messages: Message[]
+  threadId: string | null
   setMinimized: (state: boolean) => void
   addMessage: (message: Message) => void
   resetChat: () => void
+  setThreadId: (id: string) => void
 }
 
 export const useChatStore = create<ChatState>()(
@@ -29,17 +31,27 @@ export const useChatStore = create<ChatState>()(
     (set) => ({
       isMinimized: false,
       messages: [INITIAL_MESSAGE],
+      threadId: null,
       setMinimized: (state) => set({ isMinimized: state }),
-      addMessage: (message) => set((state) => ({ 
-        messages: [...state.messages, message] 
-      })),
+      addMessage: (message) => set((state) => {
+        // Mantém apenas as últimas 10 mensagens no localStorage
+        const updatedMessages = [...state.messages, message].slice(-10)
+        return { messages: updatedMessages }
+      }),
       resetChat: () => set({ 
         messages: [INITIAL_MESSAGE],
         isMinimized: false 
-      })
+      }),
+      setThreadId: (id) => set({ threadId: id })
     }),
     {
       name: 'chat-storage',
+      partialize: (state) => ({
+        // Persiste apenas as últimas 10 mensagens e o estado minimizado
+        messages: state.messages.slice(-10),
+        isMinimized: state.isMinimized,
+        threadId: state.threadId
+      })
     }
   )
 )

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { usePerguntaStore } from '@/stores/perguntaStore'
@@ -8,11 +8,18 @@ import { usePerguntaStore } from '@/stores/perguntaStore'
 export default function PerguntaPage() {
   const router = useRouter()
   const user = useAuthStore(state => state.user)
+  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
   const enviarPergunta = usePerguntaStore(state => state.enviarPergunta)
   const [situacao, setSituacao] = useState('')
   const [pergunta, setPergunta] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      router.push('/login')
+    }
+  }, [isAuthenticated, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

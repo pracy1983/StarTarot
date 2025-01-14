@@ -76,3 +76,20 @@
     - Notificações por email
     - Notificações push (futuro mobile)
     - Importância: Alta
+
+16. **Diretrizes do Chat com IA**
+    - Prompts claros e objetivos
+    - Respostas humanizadas e empáticas
+    - Tratamento adequado de temas sensíveis
+    - Sistema de fallback para erros
+    - Monitoramento constante de qualidade
+    - Importância: Crítica
+
+17. **Diretrizes de Segurança Avançadas**
+    - Proteção contra ataques de injeção
+    - Rate limiting em endpoints sensíveis
+    - Validação rigorosa de inputs
+    - Logs de segurança detalhados
+    - Backup criptografado
+    - Auditoria regular de acessos
+    - Importância: Crítica
