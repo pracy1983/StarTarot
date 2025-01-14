@@ -1,6 +1,6 @@
 'use client'
 
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '../services/chatService'
@@ -17,6 +17,7 @@ export function ChatWindow() {
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
   const chatService = useRef<ChatService | null>(null)
+  const oraculistas = useOraculistasStore(state => state.oraculistas)
 
   // Inicializa o serviço de chat e carrega o histórico
   useEffect(() => {
@@ -98,6 +99,31 @@ export function ChatWindow() {
     }
   };
 
+  // Função para dividir a mensagem do agente em blocos
+  const splitAgentMessage = (content: string) => {
+    // Divide por pontos, mas mantém os pontos no texto
+    const sentences = content.split(/(?<=\.)/).filter(s => s.trim())
+    
+    // Agrupa em até 3 blocos
+    const blocks: string[] = []
+    let currentBlock = ''
+    
+    sentences.forEach((sentence, index) => {
+      if (blocks.length < 2) {
+        // Para os primeiros 2 blocos
+        blocks.push(sentence.trim())
+      } else {
+        // Último bloco recebe o resto das sentenças
+        currentBlock = (currentBlock + ' ' + sentence).trim()
+        if (index === sentences.length - 1) {
+          blocks.push(currentBlock)
+        }
+      }
+    })
+    
+    return blocks.length > 0 ? blocks : [content]
+  }
+
   const handleSend = async () => {
     if (!inputMessage.trim() || isTyping || !user?.id) return
 
@@ -116,16 +142,23 @@ export function ChatWindow() {
 
     try {
       if (chatService.current) {
-        const response = await chatService.current.sendMessage(messageText, user.id)
+        // Delay inicial para simular "pensamento"
+        await new Promise(resolve => setTimeout(resolve, 1000))
         
-        // Adiciona resposta do assistente
-        const assistantMessage = {
-          id: uuidv4(),
-          content: response.content,
-          sender: 'agent' as const,
-          timestamp: new Date()
+        const response = await chatService.current.sendMessage(messageText, user.id)
+        const messageBlocks = splitAgentMessage(response.content)
+
+        // Adiciona cada bloco como uma mensagem separada com delay
+        for (let i = 0; i < messageBlocks.length; i++) {
+          await new Promise(resolve => setTimeout(resolve, 800)) // Delay entre blocos
+          
+          addMessage({
+            id: uuidv4(),
+            content: messageBlocks[i],
+            sender: 'agent',
+            timestamp: new Date()
+          })
         }
-        addMessage(assistantMessage)
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
@@ -139,6 +172,54 @@ export function ChatWindow() {
       setIsTyping(false)
     }
   }
+
+  // Função para processar o conteúdo da mensagem
+  const processMessageContent = (content: string, isAgent: boolean) => {
+    if (!isAgent) return content
+
+    const consultarRegex = /\[CONSULTAR:(.+?)\]/g
+    const matches = content.match(consultarRegex)
+    
+    if (!matches) return content
+
+    // Remove todos os códigos [CONSULTAR:], textos entre ** e hífens isolados
+    const cleanContent = content
+      .replace(/\[CONSULTAR:[^\]]+\]/g, '')     // Remove [CONSULTAR:nome]
+      .replace(/\*\*[^*]+\*\*/g, '')            // Remove **nome**
+      .replace(/\s+-\s+/g, '')                  // Remove hífens isolados
+      .trim()
+    
+    // Adiciona os botões no final da mensagem
+    const buttons = matches.map(match => {
+      const oraculistaNome = match.match(/\[CONSULTAR:(.+?)\]/)?.[1] || ''
+      const nomeProcessado = oraculistaNome.toLowerCase().trim().replace(/^vó\s+/i, '')
+      
+      const oraculista = oraculistas.find(o => 
+        o.nome.toLowerCase().trim() === nomeProcessado ||
+        o.nome.toLowerCase().trim().replace(/^vó\s+/i, '') === nomeProcessado
+      )
+
+      if (oraculista) {
+        return `<button 
+          class="bg-black/80 backdrop-blur-sm hover:bg-primary/20 text-primary px-4 py-2 rounded-lg m-1 transition-all duration-300 transform hover:scale-105 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_10px_-1px_rgba(0,0,0,0.5)] border border-primary/20 font-medium inline-block"
+          onclick="window.location.href='/dashboard/pergunta?oraculista=${oraculista.id}'"
+        >
+          Consultar ${oraculistaNome}
+        </button>`
+      }
+      return ''
+    }).join('')
+    
+    return cleanContent + (cleanContent ? '<br><br>' : '') + buttons
+  }
+
+  // Memoize as mensagens processadas
+  const processedMessages = useMemo(() => 
+    messages.slice(-10).map(message => ({
+      ...message,
+      content: processMessageContent(message.content, message.sender === 'agent')
+    })), [messages, oraculistas]
+  )
 
   return (
     <div className={`fixed right-4 bottom-4 bg-black/95 backdrop-blur-md border border-primary/20 rounded-lg shadow-xl transition-all duration-300 ease-in-out z-[9999] ${
@@ -177,70 +258,27 @@ export function ChatWindow() {
               isMinimized ? 'hidden' : ''
             }`}
           >
-            {messages.map(message => {
-              let content = message.content
-
-              if (message.sender === 'agent') {
-                // Novo código: processa TODOS os links na mensagem
-                const consultarRegex = /\[CONSULTAR:(.+?)\]/g
-                const matches = content.match(consultarRegex)
-                
-                if (matches) {
-                  // Remove todos os códigos [CONSULTAR:], textos entre ** e hífens isolados
-                  content = content
-                    .replace(/\[CONSULTAR:[^\]]+\]/g, '')     // Remove [CONSULTAR:nome]
-                    .replace(/\*\*[^*]+\*\*/g, '')            // Remove **nome**
-                    .replace(/\s+-\s+/g, '')                  // Remove hífens isolados
-                    .trim()
-                  
-                  // Adiciona os botões no final da mensagem
-                  const buttons = matches.map(match => {
-                    const oraculistaNome = match.match(/\[CONSULTAR:(.+?)\]/)?.[1] || ''
-                    const { oraculistas } = useOraculistasStore.getState()
-                    const nomeProcessado = oraculistaNome.toLowerCase().trim().replace(/^vó\s+/i, '')
-                    
-                    const oraculista = oraculistas.find(o => 
-                      o.nome.toLowerCase().trim() === nomeProcessado ||
-                      o.nome.toLowerCase().trim().replace(/^vó\s+/i, '') === nomeProcessado
-                    )
-
-                    if (oraculista) {
-                      return `<button 
-                        class="bg-black/80 backdrop-blur-sm hover:bg-primary/20 text-primary px-4 py-2 rounded-lg m-1 transition-all duration-300 transform hover:scale-105 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_10px_-1px_rgba(0,0,0,0.5)] border border-primary/20 font-medium inline-block"
-                        onclick="window.location.href='/dashboard/pergunta?oraculista=${oraculista.id}'"
-                      >
-                        Consultar ${oraculistaNome}
-                      </button>`
-                    }
-                    return ''
-                  }).join('')
-                  
-                  // Adiciona os botões após o texto limpo
-                  content = content + (content ? '<br><br>' : '') + buttons
-                }
-              }
-
-              return (
+            {processedMessages.map(message => (
+              <div
+                key={message.id}
+                className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+              >
                 <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === 'user' ? 'justify-end' : 'justify-start'
-                  } mb-4`}
-                >
-                  <div
-                    className={`max-w-[80%] p-3 rounded-lg ${
-                      message.sender === 'user'
-                        ? 'bg-primary/50 text-white rounded-br-none'
-                        : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
-                    }`}
-                    dangerouslySetInnerHTML={{ __html: content }}
-                  />
-                </div>
-              )
-            })}
-
+                  className={`max-w-[80%] p-4 rounded-lg ${
+                    message.sender === 'user'
+                      ? 'bg-primary/20 text-white rounded-br-none'
+                      : 'bg-black/80 backdrop-blur-sm text-gray-200'
+                  }`}
+                  dangerouslySetInnerHTML={{ 
+                    __html: message.sender === 'agent' 
+                      ? message.content.replace(/\*\*([^*]+)\*\*/g, '<span class="font-bold text-yellow-400">$1</span>')
+                      : message.content 
+                  }}
+                />
+              </div>
+            ))}
             {isTyping && (
-              <div className="flex justify-start mb-4">
+              <div className="flex justify-start">
                 <div className="bg-gray-800/50 text-gray-300 p-3 rounded-lg rounded-bl-none">
                   <div className="flex space-x-1">
                     <div className="w-1 h-1 bg-gray-500 rounded-full animate-bounce"></div>
