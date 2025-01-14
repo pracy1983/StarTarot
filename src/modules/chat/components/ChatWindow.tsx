@@ -6,6 +6,7 @@ import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/
 import { ChatService } from '../services/chatService'
 import { useChatStore } from '../store/chatStore'
 import { useAuthStore } from '@/stores/authStore'
+import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore'
 import { v4 as uuidv4 } from 'uuid';
 
 export function ChatWindow() {
@@ -60,14 +61,24 @@ export function ChatWindow() {
   }, [messages, isMinimized])
 
   const handleRedirect = (text: string) => {
-    // Verifica se o texto contém "me apssa" ou "me transfere" seguido do nome do oraculista
-    const redirectRegex = /(?:me (?:apssa|transfere) pr[ao]|quero) (.+)/i
-    const match = text.match(redirectRegex)
+    // Verifica se o texto contém o código [CONSULTAR:nome-do-oraculista]
+    const consultarRegex = /\[CONSULTAR:(.+?)\]/i
+    const match = text.match(consultarRegex)
     
     if (match) {
       const oraculistaNome = match[1].toLowerCase().trim()
-      router.push(`/consulta/${encodeURIComponent(oraculistaNome)}`)
-      return true
+      const { oraculistas } = useOraculistasStore.getState()
+      
+      // Procura o oraculista pelo nome
+      const oraculista = oraculistas.find(o => 
+        o.nome.toLowerCase().trim() === oraculistaNome
+      )
+
+      if (oraculista) {
+        // Redireciona para a página de pergunta com o ID do oraculista
+        router.push(`/dashboard/pergunta?oraculista=${oraculista.id}`)
+        return true
+      }
     }
     return false
   }
@@ -115,9 +126,6 @@ export function ChatWindow() {
           timestamp: new Date()
         }
         addMessage(assistantMessage)
-
-        // Verifica redirecionamento
-        handleRedirect(response.content)
       }
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
@@ -165,29 +173,52 @@ export function ChatWindow() {
               backgroundRepeat: 'no-repeat',
               backgroundBlendMode: 'overlay'
             }}
-            className="flex-1 p-4 overflow-y-auto h-[calc(100%-8rem)] bg-black/80"
+            className={`flex-1 overflow-y-auto p-4 space-y-4 h-[calc(100%-8rem)] bg-black/80 ${
+              isMinimized ? 'hidden' : ''
+            }`}
           >
             {messages.map(message => {
-              // Processa o código [CONSULTAR:nome] na mensagem
               let content = message.content
-              const consultarMatch = content.match(/\[CONSULTAR:(.+?)\]/i)
-　
-              if (consultarMatch && message.sender === 'agent') {
-                const oraculistaNome = consultarMatch[1]
-                content = content.replace(
-                  consultarMatch[0],
-                  `<button 
-                    class="bg-black/80 backdrop-blur-sm hover:bg-primary/20 text-primary px-8 py-3 rounded-lg mt-4 mb-2 transition-all duration-300 transform hover:scale-105 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_10px_-1px_rgba(0,0,0,0.5)] border border-primary/20 font-medium"
-                    style="padding-left: calc(2rem + 5px); padding-right: calc(2rem + 5px);"
-                    onclick="window.location.href='/consulta/${encodeURIComponent(oraculistaNome.toLowerCase().trim())}'"
-                  >
-                    Consultar ${oraculistaNome.split('-').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}
-                  </button>`
-                )
-              }
 
-              // Remove colchetes extras que possam ter ficado
-              content = content.replace(/\[|\]/g, '')
+              if (message.sender === 'agent') {
+                // Novo código: processa TODOS os links na mensagem
+                const consultarRegex = /\[CONSULTAR:(.+?)\]/g
+                const matches = content.match(consultarRegex)
+                
+                if (matches) {
+                  // Remove todos os códigos [CONSULTAR:], textos entre ** e hífens isolados
+                  content = content
+                    .replace(/\[CONSULTAR:[^\]]+\]/g, '')     // Remove [CONSULTAR:nome]
+                    .replace(/\*\*[^*]+\*\*/g, '')            // Remove **nome**
+                    .replace(/\s+-\s+/g, '')                  // Remove hífens isolados
+                    .trim()
+                  
+                  // Adiciona os botões no final da mensagem
+                  const buttons = matches.map(match => {
+                    const oraculistaNome = match.match(/\[CONSULTAR:(.+?)\]/)?.[1] || ''
+                    const { oraculistas } = useOraculistasStore.getState()
+                    const nomeProcessado = oraculistaNome.toLowerCase().trim().replace(/^vó\s+/i, '')
+                    
+                    const oraculista = oraculistas.find(o => 
+                      o.nome.toLowerCase().trim() === nomeProcessado ||
+                      o.nome.toLowerCase().trim().replace(/^vó\s+/i, '') === nomeProcessado
+                    )
+
+                    if (oraculista) {
+                      return `<button 
+                        class="bg-black/80 backdrop-blur-sm hover:bg-primary/20 text-primary px-4 py-2 rounded-lg m-1 transition-all duration-300 transform hover:scale-105 shadow-[0_4px_6px_-1px_rgba(0,0,0,0.5)] hover:shadow-[0_8px_10px_-1px_rgba(0,0,0,0.5)] border border-primary/20 font-medium inline-block"
+                        onclick="window.location.href='/dashboard/pergunta?oraculista=${oraculista.id}'"
+                      >
+                        Consultar ${oraculistaNome}
+                      </button>`
+                    }
+                    return ''
+                  }).join('')
+                  
+                  // Adiciona os botões após o texto limpo
+                  content = content + (content ? '<br><br>' : '') + buttons
+                }
+              }
 
               return (
                 <div
