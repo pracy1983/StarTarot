@@ -6,7 +6,7 @@ import { PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { Mensagem } from '@/modules/mensagens/types/mensagem';
 
 export default function ConsultasAdminPage() {
-  const { mensagens, carregarMensagens, atualizarMensagem } = useMensagensStore();
+  const { mensagens, carregarMensagens, atualizarMensagem, deletarMensagem } = useMensagensStore();
   const [mensagemSelecionada, setMensagemSelecionada] = useState<Mensagem | null>(null);
   const [editando, setEditando] = useState(false);
   const [conteudoEditado, setConteudoEditado] = useState('');
@@ -31,8 +31,11 @@ export default function ConsultasAdminPage() {
   };
 
   const handleComplete = (mensagemId: string) => {
-    setMensagensEnviadas((prev) => [...prev, ...mensagens.filter(m => m.id === mensagemId)]);
-    setMensagens((prev) => prev.filter(m => m.id !== mensagemId));
+    const mensagemCompleta = mensagens.find(m => m.id === mensagemId);
+    if (mensagemCompleta) {
+      setMensagensEnviadas(prev => [...prev, mensagemCompleta]);
+      deletarMensagem(mensagemId);
+    }
   };
 
   interface ContadorRegresivoProps {
