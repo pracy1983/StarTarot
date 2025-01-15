@@ -2,6 +2,17 @@ export interface Oraculista {
   id: string
   nome: string
   foto: string
+  especialidades: string[]
+  descricao: string
+  preco: number
+  disponivel: boolean
+  prompt?: string
+  prompt_formatado?: string
+  emPromocao: boolean
+  precoPromocional?: number
+  consultas: number
+  createdAt: Date
+  updatedAt: Date
 }
 
 export interface Mensagem {
