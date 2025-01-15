@@ -89,7 +89,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: `Chat limpo. Thread anterior: ${previousThreadId}. Nova thread: ${newThreadId}.`,
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       });
     }
@@ -151,7 +151,7 @@ export function ChatWindow() {
           addMessage({
             id: uuidv4(),
             content: messageBlocks[i],
-            sender: 'agent',
+            sender: 'assistant',
             timestamp: new Date()
           })
         }
@@ -161,7 +161,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       })
     } finally {
