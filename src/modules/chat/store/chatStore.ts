@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { useAuthStore } from '@/stores/authStore'
+import { UIMessage } from '../types/message'
 
 interface Message {
   id: string
@@ -9,19 +10,19 @@ interface Message {
   timestamp: Date
 }
 
-const INITIAL_MESSAGE: Message = {
+const INITIAL_MESSAGE: UIMessage = {
   id: '0',
   content: 'Olá, vamos escolher o melhor oraculista pra você? Me fale um pouco no que acredita e que tipo de ajuda precisa.',
-  sender: 'agent',
+  sender: 'assistant',
   timestamp: new Date()
 }
 
 interface ChatState {
   isMinimized: boolean
-  messages: Message[]
+  messages: UIMessage[]
   threadId: string | null
   setMinimized: (state: boolean) => void
-  addMessage: (message: Message) => void
+  addMessage: (message: UIMessage) => void
   setThreadId: (threadId: string) => void
   resetChat: () => void
 }
