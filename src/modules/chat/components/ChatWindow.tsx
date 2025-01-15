@@ -141,8 +141,8 @@ export function ChatWindow() {
         // Delay inicial para simular "pensamento"
         await new Promise(resolve => setTimeout(resolve, 1000))
         
-        const response = await chatService.current.sendMessage(messageText, user.id)
-        const messageBlocks = splitAgentMessage(response.content)
+        const response = await chatService.current.sendMessage(messageText, messages)
+        const messageBlocks = splitAgentMessage(response)
 
         // Adiciona cada bloco como uma mensagem separada com delay
         for (let i = 0; i < messageBlocks.length; i++) {
