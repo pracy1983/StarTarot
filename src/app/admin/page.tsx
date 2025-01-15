@@ -16,7 +16,7 @@ const adminMenuItems = [
   {
     title: 'Usuários',
     description: 'Gerencie usuários e permissões',
-    icon: UserGroupIcon,
+    icon: UsersIcon,
     href: '/admin/users'
   },
   {
@@ -24,12 +24,6 @@ const adminMenuItems = [
     description: 'Visualize métricas e relatórios',
     icon: ChartBarIcon,
     href: '/admin/stats'
-  },
-  {
-    title: 'Pagamentos',
-    description: 'Gerencie transações e créditos',
-    icon: CreditCardIcon,
-    href: '/admin/payments'
   },
   {
     title: 'Consultas',
@@ -46,7 +40,7 @@ const adminMenuItems = [
   {
     title: 'Oraculistas',
     description: 'Gerencie oraculistas e especialidades',
-    icon: UsersIcon,
+    icon: UserGroupIcon,
     href: '/admin/oraculists'
   },
   {
