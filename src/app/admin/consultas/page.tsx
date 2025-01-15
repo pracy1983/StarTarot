@@ -74,8 +74,15 @@ export default function ConsultasAdminPage() {
               <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
-                    <p className="text-sm text-gray-500">Contador regressivo: <ContadorRegressivo initialTime={mensagem.delay || 20} onComplete={() => handleComplete(mensagem.id)} /></p>
+                    <p className="text-lg font-medium">
+                      De: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Não atribuído'}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Contador regressivo: <ContadorRegressivo 
+                        initialTime={20} 
+                        onComplete={() => handleComplete(mensagem.id)} 
+                      />
+                    </p>
                   </div>
                   <button
                     onClick={() => handleEditar(mensagem)}
@@ -103,24 +110,45 @@ export default function ConsultasAdminPage() {
             ))}
           </ul>
         )}
-        <h2 className="text-2xl font-bold text-primary mt-8">Mensagens Enviadas</h2>
-        <ul className="space-y-4">
-          {mensagensEnviadas.map((mensagem) => (
-            <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
+        <h2 className="text-2xl font-bold text-primary mt-8 mb-4">Mensagens Enviadas</h2>
+        {mensagensEnviadas.length === 0 ? (
+          <p className="text-center text-gray-400">Nenhuma mensagem enviada</p>
+        ) : (
+          <ul className="space-y-4">
+            {mensagensEnviadas.map((mensagem) => (
+              <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-lg font-medium">
+                      De: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Não atribuído'}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleEditar(mensagem)}
+                    className="text-primary hover:text-primary-dark"
+                  >
+                    <PencilIcon className="h-5 w-5" /> Editar
+                  </button>
                 </div>
-                <button
-                  onClick={() => handleEditar(mensagem)}
-                  className="text-primary hover:text-primary-dark"
-                >
-                  <PencilIcon className="h-5 w-5" /> Editar
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
+                {mensagemSelecionada?.id === mensagem.id && editando && (
+                  <div className="mt-4">
+                    <textarea
+                      className="w-full p-2 border rounded"
+                      value={conteudoEditado}
+                      onChange={(e) => setConteudoEditado(e.target.value)}
+                    />
+                    <button
+                      onClick={handleSalvar}
+                      className="mt-2 px-4 py-2 bg-primary text-white rounded"
+                    >
+                      Salvar
+                    </button>
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
       </div>
     </div>
   );
