@@ -3,21 +3,20 @@
 import { useState, useEffect } from 'react';
 import { useMensagensStore } from '@/modules/mensagens/store/mensagensStore';
 import { PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
+import { Mensagem } from '@/modules/mensagens/types/mensagem';
 
 export default function ConsultasAdminPage() {
-  const { mensagens, carregarMensagens, atualizarMensagem, user } = useMensagensStore();
-  const [mensagemSelecionada, setMensagemSelecionada] = useState(null);
+  const { mensagens, carregarMensagens, atualizarMensagem } = useMensagensStore();
+  const [mensagemSelecionada, setMensagemSelecionada] = useState<Mensagem | null>(null);
   const [editando, setEditando] = useState(false);
   const [conteudoEditado, setConteudoEditado] = useState('');
-  const [mensagensEnviadas, setMensagensEnviadas] = useState([]);
+  const [mensagensEnviadas, setMensagensEnviadas] = useState<Mensagem[]>([]);
 
   useEffect(() => {
-    if (user?.id) {
-      carregarMensagens(user.id);
-    }
-  }, [user?.id, carregarMensagens]);
+    carregarMensagens();
+  }, [carregarMensagens]);
 
-  const handleEditar = (mensagem) => {
+  const handleEditar = (mensagem: Mensagem) => {
     setMensagemSelecionada(mensagem);
     setConteudoEditado(mensagem.conteudo);
     setEditando(true);

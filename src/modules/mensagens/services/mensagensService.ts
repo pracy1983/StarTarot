@@ -20,28 +20,41 @@ async function verificarTabelasExistem() {
   }
 }
 
-export async function carregarMensagens(userId: string) {
+export async function carregarMensagens(userId?: string) {
   try {
     console.log('=== INÍCIO CARREGAMENTO ===')
     console.log('Carregando mensagens para usuário:', userId)
     await verificarTabelasExistem()
 
-    const { data: mensagens, error: mensagensError } = await supabase
+    let query = supabase
       .from('mensagens')
-      .select('*, oraculista:oraculistas ( id, nome, foto )')
-      .eq('user_id', userId)
+      .select(`
+        *,
+        oraculista:oraculistas (
+          id,
+          nome,
+          foto
+        )
+      `)
       .order('data', { ascending: false })
 
-    if (mensagensError) {
-      console.error('Erro ao carregar mensagens:', mensagensError)
-      throw mensagensError
+    // Se um userId for fornecido, filtra por ele
+    if (userId) {
+      query = query.eq('user_id', userId)
     }
 
-    console.log('Mensagens brutas do Supabase:', mensagens)
-    const mensagensFiltradas = mensagens?.filter(msg => msg !== null) || []
+    const { data, error } = await query
+
+    if (error) {
+      console.error('Erro ao carregar mensagens:', error)
+      throw error
+    }
+
+    console.log('Mensagens brutas do Supabase:', data)
+    const mensagensFiltradas = data?.filter(msg => msg !== null) || []
     console.log('Mensagens filtradas:', mensagensFiltradas.length)
     console.log('=== FIM CARREGAMENTO ===')
-    
+
     return mensagensFiltradas.map(formatarMensagem)
   } catch (error) {
     console.error('Erro ao carregar mensagens:', error)

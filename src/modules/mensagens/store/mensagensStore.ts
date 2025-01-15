@@ -14,13 +14,14 @@ interface MensagensState {
   setMensagemAtual: (mensagem: Mensagem | null) => void
   marcarComoLida: (id: string) => Promise<void>
   enviarPergunta: (userId: string, formData: MensagemFormData) => Promise<void>
-  carregarMensagens: (userId: string) => Promise<void>
+  carregarMensagens: (userId?: string) => Promise<void>
   setFiltro: (filtro: MensagemFiltro) => void
   getMensagensFiltradas: () => Mensagem[]
   adicionarMensagem: (mensagem: Mensagem) => void
   deletarMensagem: (id: string) => Promise<void>
   deletarMensagens: (ids: string[]) => Promise<void>
   limparMensagens: () => void
+  atualizarMensagem: (id: string, mensagemAtualizada: Partial<Mensagem>) => void
 }
 
 export const useMensagensStore = create<MensagensState>()((set, get) => ({
@@ -39,7 +40,7 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
     set({ mensagens: [], mensagemAtual: null, naoLidas: 0 })
   },
 
-  carregarMensagens: async (userId) => {
+  carregarMensagens: async (userId?: string) => {
     try {
       set({ loading: true, error: null })
       const mensagens = await MensagensService.carregarMensagens(userId)
@@ -196,5 +197,12 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
         naoLidas: novasMensagens.filter(msg => !msg.lida).length
       }
     })
-  }
+  },
+  atualizarMensagem: (id: string, mensagemAtualizada: Partial<Mensagem>) => {
+    set(state => ({
+      mensagens: state.mensagens.map(msg => 
+        msg.id === id ? { ...msg, ...mensagemAtualizada } : msg
+      )
+    }))
+  },
 }))
