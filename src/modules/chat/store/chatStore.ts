@@ -19,8 +19,10 @@ const INITIAL_MESSAGE: Message = {
 interface ChatState {
   isMinimized: boolean
   messages: Message[]
+  threadId: string | null
   setMinimized: (state: boolean) => void
   addMessage: (message: Message) => void
+  setThreadId: (threadId: string) => void
   resetChat: () => void
 }
 
@@ -29,13 +31,16 @@ export const useChatStore = create<ChatState>()(
     (set) => ({
       isMinimized: false,
       messages: [INITIAL_MESSAGE],
+      threadId: null,
       setMinimized: (state) => set({ isMinimized: state }),
       addMessage: (message) => set((state) => ({ 
         messages: [...state.messages, message] 
       })),
+      setThreadId: (threadId) => set({ threadId }),
       resetChat: () => set({ 
         messages: [INITIAL_MESSAGE],
-        isMinimized: false 
+        isMinimized: false,
+        threadId: null
       })
     }),
     {

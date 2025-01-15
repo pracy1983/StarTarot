@@ -48,7 +48,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: `Nova thread iniciada: ${newThreadId}.`,
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       });
     }
