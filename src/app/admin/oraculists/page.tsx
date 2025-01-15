@@ -148,7 +148,7 @@ export default function OraculistasAdminPage() {
                                     ? { 
                                         ...o, 
                                         emPromocao: false,
-                                        precoPromocional: null,
+                                        precoPromocional: undefined,
                                         descontoTemp: ''
                                       }
                                     : o
@@ -158,7 +158,7 @@ export default function OraculistasAdminPage() {
                               // Atualiza no banco de dados
                               await atualizarOraculista(oraculista.id, {
                                 emPromocao: false,
-                                precoPromocional: null
+                                precoPromocional: undefined
                               });
                             }}
                             className="px-2 py-1 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20 text-sm"
