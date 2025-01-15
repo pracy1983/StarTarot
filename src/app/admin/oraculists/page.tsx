@@ -192,8 +192,8 @@ export default function OraculistasAdminPage() {
                       <div className="text-sm text-gray-400">Avaliação</div>
                       <div className="flex items-center">
                         {[...Array(5)].map((_, i) => {
-                          const rating = oraculista.rating || 0;
-                          const filled = rating - i;
+                          const rating: number = Math.min(Math.max(oraculista.rating || 0, 0), 5);
+                          const filled: number = rating - i;
                           return (
                             <svg
                               key={i}

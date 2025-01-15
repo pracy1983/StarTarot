@@ -42,7 +42,10 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
         prompt_formatado: o.prompt_formatado || '',
         prompt: o.prompt || '',
         emPromocao: o.em_promocao || false,
-        precoPromocional: o.preco_promocional
+        precoPromocional: o.preco_promocional,
+        rating: o.rating || 0,
+        status: o.status || 'offline',
+        totalAvaliacoes: o.total_avaliacoes || 0
       }))
 
       console.log('Oraculistas formatados:', oraculistasFormatados)
