@@ -98,7 +98,7 @@ export default function OraculistasAdminPage() {
                           placeholder="Desconto"
                           className="w-24 px-2 py-1 bg-black/40 border border-primary/20 rounded text-sm"
                           value={oraculista.descontoTemp || ''}
-                          onChange={(e) => {
+                          onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                             const desconto = parseFloat(e.target.value);
                             useOraculistasStore.setState(state => ({
                               oraculistas: state.oraculistas.map(o => 

@@ -8,21 +8,21 @@ import { Mensagem } from '@/modules/mensagens/types/mensagem';
 export default function ConsultasAdminPage() {
   const { mensagens, carregarMensagens, atualizarMensagem, deletarMensagem } = useMensagensStore();
   const [mensagemSelecionada, setMensagemSelecionada] = useState<Mensagem | null>(null);
-  const [editando, setEditando] = useState(false);
-  const [conteudoEditado, setConteudoEditado] = useState('');
+  const [editando, setEditando] = useState<boolean>(false);
+  const [conteudoEditado, setConteudoEditado] = useState<string>('');
   const [mensagensEnviadas, setMensagensEnviadas] = useState<Mensagem[]>([]);
 
   useEffect(() => {
     carregarMensagens();
   }, [carregarMensagens]);
 
-  const handleEditar = (mensagem: Mensagem) => {
+  const handleEditar = (mensagem: Mensagem): void => {
     setMensagemSelecionada(mensagem);
     setConteudoEditado(mensagem.conteudo);
     setEditando(true);
   };
 
-  const handleSalvar = () => {
+  const handleSalvar = (): void => {
     if (mensagemSelecionada) {
       atualizarMensagem(mensagemSelecionada.id, { conteudo: conteudoEditado });
       setEditando(false);
@@ -30,7 +30,7 @@ export default function ConsultasAdminPage() {
     }
   };
 
-  const handleComplete = (mensagemId: string) => {
+  const handleComplete = (mensagemId: string): void => {
     const mensagemCompleta = mensagens.find(m => m.id === mensagemId);
     if (mensagemCompleta) {
       setMensagensEnviadas(prev => [...prev, mensagemCompleta]);
@@ -44,15 +44,17 @@ export default function ConsultasAdminPage() {
   }
 
   function ContadorRegressivo({ initialTime, onComplete }: ContadorRegresivoProps) {
-    const [timeLeft, setTimeLeft] = useState(initialTime);
+    const [timeLeft, setTimeLeft] = useState<number>(initialTime);
 
     useEffect(() => {
       const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev > 1) return prev - 1;
-          clearInterval(timer);
-          onComplete();
-          return 0;
+        setTimeLeft((prev: number) => {
+          if (prev <= 1) {
+            clearInterval(timer);
+            onComplete();
+            return 0;
+          }
+          return prev - 1;
         });
       }, 1000);
 
