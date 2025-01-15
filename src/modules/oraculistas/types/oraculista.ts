@@ -13,6 +13,7 @@ export interface Oraculista {
   consultas: number // Número total de consultas realizadas
   createdAt: Date
   updatedAt: Date
+  descontoTemp?: string // Campo temporário para armazenar o valor do desconto antes de aplicar
 }
 
 export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' | 'updatedAt' | 'consultas'> {
