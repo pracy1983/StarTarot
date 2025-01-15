@@ -30,12 +30,17 @@ export default function ConsultasAdminPage() {
     }
   };
 
-  const handleComplete = (mensagemId) => {
+  const handleComplete = (mensagemId: string) => {
     setMensagensEnviadas((prev) => [...prev, ...mensagens.filter(m => m.id === mensagemId)]);
     setMensagens((prev) => prev.filter(m => m.id !== mensagemId));
   };
 
-  function ContadorRegressivo({ initialTime, onComplete }) {
+  interface ContadorRegresivoProps {
+    initialTime: number;
+    onComplete: () => void;
+  }
+
+  function ContadorRegressivo({ initialTime, onComplete }: ContadorRegresivoProps) {
     const [timeLeft, setTimeLeft] = useState(initialTime);
 
     useEffect(() => {
