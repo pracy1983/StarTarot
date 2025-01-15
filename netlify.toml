@@ -1,13 +1,13 @@
 [build]
-  command = "pip install -r requirements.txt && npm install && npm run build"
-  publish = "dist"
-  functions = "functions"
+  command = "npm install && npm run build"
+  publish = ".next"
 
   [build.environment]
-RUST_VERSION = "stable"
-PYTHON_VERSION = "3.10"
+  NEXT_USE_NETLIFY_EDGE = "true"
+  NODE_VERSION = "18.17.0"
 
-
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 
 [[redirects]]
   from = "/api/*"
