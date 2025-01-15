@@ -24,7 +24,7 @@ export default function ConsultasAdminPage() {
 
   const handleSalvar = () => {
     if (mensagemSelecionada) {
-      atualizarMensagem(mensagemSelecionada.id, conteudoEditado);
+      atualizarMensagem(mensagemSelecionada.id, { conteudo: conteudoEditado });
       setEditando(false);
       setMensagemSelecionada(null);
     }
