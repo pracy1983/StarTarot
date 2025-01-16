@@ -43,6 +43,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [formModified, setFormModified] = useState(false)
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Carrega os oraculistas quando o modal abre
   useEffect(() => {
@@ -135,6 +136,15 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
+      const maxSize = 5 * 1024 * 1024; // 5MB
+      if (file.size > maxSize) {
+        setError('Imagem muito grande. Máximo de 5MB.');
+        return;
+      }
+      if (!file.type.startsWith('image/')) {
+        setError('Arquivo deve ser uma imagem.');
+        return;
+      }
       const reader = new FileReader()
       reader.onloadend = () => {
         const result = reader.result as string;
@@ -153,6 +163,8 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   }
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
     e.preventDefault()
     setLoading(true)
     setError(null)
@@ -188,10 +200,15 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       }
       onClose()
     } catch (err) {
-      const error = err as Error
-      setError(error.message || 'Erro ao salvar oraculista')
+      const error = err as Error;
+      if (error.message.includes('network') || error.message.includes('Network')) {
+        setError('Erro de conexão. Verifique sua internet.');
+      } else {
+        setError(error.message || 'Erro ao salvar oraculista');
+      }
     } finally {
-      setLoading(false)
+      setLoading(false);
+      setIsSubmitting(false);
     }
   }
 
@@ -360,8 +377,29 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       setError('Preço promocional deve ser menor que o preço normal');
       return false;
     }
+    if (!formData.especialidades?.length) {
+      setError('Adicione pelo menos uma especialidade');
+      return false;
+    }
+    if (!formData.descricao?.trim()) {
+      setError('Descrição é obrigatória');
+      return false;
+    }
     return true;
   }
+
+  const getInputValue = (value: number | null | undefined): string | number => {
+    if (value === null || value === undefined) return '';
+    return value;
+  }
+
+  useEffect(() => {
+    return () => {
+      if (previewImage) {
+        URL.revokeObjectURL(previewImage);
+      }
+    };
+  }, [previewImage]);
 
   return (
     <Dialog
@@ -551,9 +589,9 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <div className="flex-1">
                     <input
                       type="number"
-                      value={formData.precoPromocional ? formData.precoPromocional.toString() : ''}
+                      value={formData.precoPromocional === null ? '' : formData.precoPromocional}
                       onChange={handlePrecoPromocionalChange}
-                      className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                      className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2"
                       min="0"
                       step="0.01"
                       placeholder="Preço promocional"
