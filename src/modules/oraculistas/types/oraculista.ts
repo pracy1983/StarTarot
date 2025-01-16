@@ -1,3 +1,5 @@
+import { OptionalNumber } from '@/types/global'
+
 export interface Oraculista {
   id: string
   nome: string
@@ -28,7 +30,8 @@ export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' 
   em_promocao: boolean
   emPromocao: boolean
   preco_promocional?: number | null
-  precoPromocional?: number | null
+  precoPromocional: OptionalNumber;
+  preco: number;
 }
 
-export type OraculistaStatus = 'disponivel' | 'indisponivel'
+export type OraculistaStatus = 'online' | 'offline' | 'ocupado'

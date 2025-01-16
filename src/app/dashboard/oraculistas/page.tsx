@@ -30,7 +30,7 @@ const oraculistas: Oraculista[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     rating: 0,
-    status: 'offline',
+    status: 'offline' as const,
     totalAvaliacoes: 0
   },
   {
@@ -56,7 +56,7 @@ const oraculistas: Oraculista[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     rating: 0,
-    status: 'offline',
+    status: 'offline' as const,
     totalAvaliacoes: 0
   },
   {
@@ -82,7 +82,7 @@ const oraculistas: Oraculista[] = [
     createdAt: new Date(),
     updatedAt: new Date(),
     rating: 0,
-    status: 'offline',
+    status: 'offline' as const,
     totalAvaliacoes: 0
   }
 ]

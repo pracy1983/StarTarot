@@ -6,6 +6,7 @@ import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import { useOraculistasStore } from '../store/oraculistasStore'
 import { OraculistaFormData } from '../types/oraculista'
 import Image from 'next/image'
+import { NumericInput } from '@/components/common/NumericInput'
 
 interface OraculistaModalProps {
   isOpen: boolean
@@ -587,15 +588,17 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
 
                 {formData.emPromocao && (
                   <div className="flex-1">
-                    <input
-                      type="number"
-                      value={formData.precoPromocional === null ? '' : formData.precoPromocional}
-                      onChange={handlePrecoPromocionalChange}
+                    <NumericInput
+                      value={formData.precoPromocional}
+                      onChange={(value) => {
+                        handleFormChange({ 
+                          precoPromocional: value,
+                          preco_promocional: value 
+                        });
+                      }}
+                      min={0}
+                      step={0.01}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2"
-                      min="0"
-                      step="0.01"
-                      placeholder="Preço promocional"
-                      required
                     />
                   </div>
                 )}

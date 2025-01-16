@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { Oraculista, OraculistaFormData } from '../types/oraculista'
 import { supabase } from '@/lib/supabase'
+import { OraculistasService } from '../services/oraculistasService'
 
 interface OraculistasState {
   oraculistas: Oraculista[]
@@ -20,9 +21,8 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   error: null,
 
   carregarOraculistas: async () => {
-    set({ loading: true, error: null })
     try {
-      console.log('Iniciando carregamento dos oraculistas...')
+      set({ loading: true, error: null })
       const { data, error } = await supabase
         .from('oraculistas')
         .select('*')
@@ -30,32 +30,18 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
 
       if (error) throw error
 
-      console.log('Dados recebidos do Supabase:', data)
-
-      const oraculistasFormatados = data.map(o => ({
+      const oraculistasFormatados = (data || []).map(o => ({
         ...o,
-        especialidades: o.especialidades || [],
-        createdAt: new Date(o.created_at),
-        updatedAt: new Date(o.updated_at),
-        consultas: o.consultas || 0,
-        prompt_formatado: o.prompt_formatado || '',
-        prompt: o.prompt || '',
-        emPromocao: o.em_promocao || false,
-        precoPromocional: o.preco_promocional,
-        rating: typeof o.rating === 'number' ? o.rating : 0,
-        status: o.status || 'offline',
-        totalAvaliacoes: typeof o.total_avaliacoes === 'number' ? o.total_avaliacoes : 0
+        rating: o.rating || 0,
+        status: o.status || 'offline' as const,
+        totalAvaliacoes: o.totalAvaliacoes || 0,
+        especialidades: o.especialidades || []
       }))
 
-      console.log('Oraculistas formatados:', oraculistasFormatados)
-
-      set({ 
-        oraculistas: oraculistasFormatados,
-        loading: false 
-      })
+      set({ oraculistas: oraculistasFormatados, loading: false })
     } catch (error: any) {
-      console.error('Erro ao carregar oraculistas:', error)
-      set({ error: error.message, loading: false })
+      const err = error as Error
+      set({ error: err.message, loading: false })
     }
   },
 

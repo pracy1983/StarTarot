@@ -45,8 +45,11 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
       set({ loading: true, error: null })
       const mensagens = await MensagensService.carregarMensagens(userId)
       
-      // Remove duplicatas baseado no ID
-      const mensagensUnicas = mensagens.reduce((acc: Mensagem[], current) => {
+      // Garantir que não há mensagens nulas
+      const mensagensFiltradas = mensagens?.filter(msg => msg !== null) || []
+      
+      // Remover duplicatas com segurança
+      const mensagensUnicas = mensagensFiltradas.reduce((acc: Mensagem[], current) => {
         const exists = acc.find(msg => msg.id === current.id)
         if (!exists) {
           acc.push(current)
@@ -54,18 +57,13 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
         return acc
       }, [])
 
-      // Ordena por data, mais recentes primeiro
-      const mensagensOrdenadas = mensagensUnicas.sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-      )
-
       set({ 
-        mensagens: mensagensOrdenadas,
-        naoLidas: mensagensOrdenadas.filter(msg => !msg.lida).length,
+        mensagens: mensagensUnicas,
+        naoLidas: mensagensUnicas.filter(msg => !msg.lida).length,
         loading: false 
       })
     } catch (error: any) {
-      const err = error as Error | { message: string };
+      const err = error as Error
       set({ error: err.message, loading: false, mensagens: [] })
     }
   },
