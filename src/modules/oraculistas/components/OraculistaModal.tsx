@@ -13,6 +13,11 @@ interface OraculistaModalProps {
   oraculistaId?: string | null
 }
 
+interface EstadoOraculista extends Partial<OraculistaFormData> {
+  emPromocao: boolean;
+  precoPromocional?: number;
+}
+
 export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaModalProps) {
   const { oraculistas, adicionarOraculista, atualizarOraculista, carregarOraculistas } = useOraculistasStore()
   const [formData, setFormData] = useState<OraculistaFormData>({
@@ -172,6 +177,36 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       onClose()
     }
   }
+
+  const handleEmPromocaoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const novoEstado: EstadoOraculista = {
+      ...formData,
+      emPromocao: e.target.checked,
+      precoPromocional: e.target.checked ? formData.precoPromocional : undefined
+    };
+
+    handleFormChange(novoEstado);
+
+    // Salva imediatamente se houver um oraculistaId
+    if (oraculistaId) {
+      setLoading(true);
+      try {
+        const result = await atualizarOraculista(oraculistaId, novoEstado);
+        if (!result.success) {
+          setError(result.error || 'Erro ao atualizar promoção');
+          // Reverte a mudança em caso de erro
+          handleFormChange({ emPromocao: !e.target.checked });
+        }
+      } catch (err: any) {
+        console.error('Erro ao atualizar promoção:', err);
+        setError(err.message || 'Erro ao atualizar promoção');
+        // Reverte a mudança em caso de erro
+        handleFormChange({ emPromocao: !e.target.checked });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
 
   return (
     <Dialog
@@ -349,39 +384,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                     type="checkbox"
                     id="promocao"
                     checked={formData.emPromocao}
-                    onChange={async (e) => {
-                      const novoEstado = { emPromocao: e.target.checked };
-                      
-                      // Se desativar a promoção, remove o preço promocional
-                      if (!e.target.checked) {
-                        novoEstado.precoPromocional = undefined;
-                      }
-                      
-                      handleFormChange(novoEstado);
-                      
-                      // Salva imediatamente
-                      if (oraculistaId) {
-                        setLoading(true);
-                        try {
-                          const result = await atualizarOraculista(oraculistaId, {
-                            ...formData,
-                            ...novoEstado
-                          });
-                          if (!result.success) {
-                            setError(result.error || 'Erro ao atualizar promoção');
-                            // Reverte a mudança em caso de erro
-                            handleFormChange({ emPromocao: !e.target.checked });
-                          }
-                        } catch (err: any) {
-                          console.error('Erro ao atualizar promoção:', err);
-                          setError(err.message || 'Erro ao atualizar promoção');
-                          // Reverte a mudança em caso de erro
-                          handleFormChange({ emPromocao: !e.target.checked });
-                        } finally {
-                          setLoading(false);
-                        }
-                      }
-                    }}
+                    onChange={handleEmPromocaoChange}
                     className="rounded border-primary/20 text-primary focus:ring-primary"
                   />
                   <label htmlFor="promocao" className="text-sm text-gray-300">
