@@ -7,6 +7,9 @@ const nextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 176, 256, 384],
     formats: ['image/webp'],
   },
+  // Otimizações básicas
+  swcMinify: true,
+  poweredByHeader: false
 }
 
 module.exports = nextConfig

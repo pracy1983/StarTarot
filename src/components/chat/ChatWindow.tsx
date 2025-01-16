@@ -8,14 +8,14 @@ import { useRouter } from 'next/navigation'
 interface Message {
   id: string
   content: string
-  sender: 'user' | 'agent'
+  sender: 'user' | 'assistant'
   timestamp: Date
 }
 
 const INITIAL_MESSAGE: Message = {
   id: '0',
   content: 'Olá, vamos escolher o melhor oraculista pra você? Me fale um pouco no que acredita e que tipo de ajuda precisa',
-  sender: 'agent',
+  sender: 'assistant',
   timestamp: new Date()
 }
 
@@ -59,7 +59,7 @@ export function ChatWindow() {
 
     try {
       const history = messages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
+        role: msg.sender as 'user' | 'assistant',
         content: msg.content
       }))
 
@@ -80,7 +80,7 @@ export function ChatWindow() {
         const agentMessage: Message = {
           id: Date.now().toString(),
           content: sentence,
-          sender: 'agent',
+          sender: 'assistant',
           timestamp: new Date()
         }
         
@@ -92,7 +92,7 @@ export function ChatWindow() {
       const errorMessage: Message = {
         id: (Date.now() + 1).toString(),
         content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -151,7 +151,7 @@ export function ChatWindow() {
                   }`}
                 >
                   <p>{message.content}</p>
-                  {message.sender === 'agent' && message.content.toLowerCase().includes('consulta') && (
+                  {message.sender === 'assistant' && message.content.toLowerCase().includes('consulta') && (
                     <button
                       onClick={() => router.push('/credits')}
                       className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"

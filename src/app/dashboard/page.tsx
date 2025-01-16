@@ -12,7 +12,7 @@ export default function DashboardPage() {
       {/* Boas-vindas */}
       <div className="text-center space-y-4">
         <h1 className="text-4xl font-raleway font-bold text-primary">
-          Bem-vindo, {user?.name}
+          Bem-vindo, {user?.name || 'Visitante'}
         </h1>
         <p className="text-xl text-gray-300">
           O que você gostaria de fazer hoje?

@@ -3,17 +3,8 @@
 import Image from 'next/image'
 import { useRouter } from 'next/navigation'
 import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore';
+import { Oraculista } from '@/modules/oraculistas/types/oraculista';
 import { useEffect } from 'react';
-
-interface Oraculista {
-  id: string
-  nome: string
-  foto: string
-  especialidades: string[]
-  descricao: string
-  preco: number
-  disponivel: boolean
-}
 
 const oraculistas: Oraculista[] = [
   {
@@ -28,7 +19,19 @@ const oraculistas: Oraculista[] = [
     ],
     descricao: 'Especialista em questões mundanas e carnais, com abordagem direta e prática.',
     preco: 20,
-    disponivel: true
+    disponivel: true,
+    prompt: '',
+    prompt_formatado: '',
+    emPromocao: false,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
+    consultas: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline' as const,
+    totalAvaliacoes: 0
   },
   {
     id: '2',
@@ -42,20 +45,45 @@ const oraculistas: Oraculista[] = [
     ],
     descricao: 'Especialista em destino e missão de vida, com abordagem espiritual.',
     preco: 20,
-    disponivel: false
+    disponivel: false,
+    prompt: '',
+    prompt_formatado: '',
+    emPromocao: false,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
+    consultas: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline' as const,
+    totalAvaliacoes: 0
   },
   {
     id: '3',
     nome: 'CIGANA FLORA',
     foto: '/oraculistas/cigana-flora.jpg',
     especialidades: [
-      'Trabalha com baralho cigano e baralho das fadas',
-      'Especialista em amor, saúde e dinheiro',
-      'Abordagem mística'
+      'Trabalha com tarot cigano',
+      'Especialista em amor e relacionamentos',
+      'Foco em questões emocionais',
+      'Abordagem intuitiva e sensível'
     ],
-    descricao: 'Especialista em amor, saúde e dinheiro, com abordagem mística.',
-    preco: 15,
-    disponivel: true
+    descricao: 'Especialista em amor e relacionamentos, com abordagem intuitiva.',
+    preco: 20,
+    disponivel: true,
+    prompt: '',
+    prompt_formatado: '',
+    emPromocao: false,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
+    consultas: 0,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline' as const,
+    totalAvaliacoes: 0
   }
 ]
 

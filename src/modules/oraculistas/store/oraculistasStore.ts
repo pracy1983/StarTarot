@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { Oraculista, OraculistaFormData } from '../types/oraculista'
-import { getPromptByOraculista, atualizarPromptOraculista } from '@/config/prompts/oraculistas'
 import { supabase } from '@/lib/supabase'
+import { OraculistasService } from '../services/oraculistasService'
 
 interface OraculistasState {
   oraculistas: Oraculista[]
@@ -10,10 +10,24 @@ interface OraculistasState {
   adicionarOraculista: (data: OraculistaFormData) => Promise<{ success: boolean; error?: string }>
   atualizarOraculista: (id: string, data: Partial<OraculistaFormData>) => Promise<{ success: boolean; error?: string }>
   alternarDisponibilidade: (id: string) => Promise<{ success: boolean; error?: string }>
-  alternarPromocao: (id: string, precoPromocional?: number) => Promise<{ success: boolean; error?: string }>
+  alternarPromocao: (id: string, precoPromocional?: number | null) => Promise<{ success: boolean; error?: string }>
   excluirOraculista: (id: string) => Promise<{ success: boolean; error?: string }>
   carregarOraculistas: () => Promise<void>
 }
+
+// Garantir que os dados são formatados corretamente
+const formatOraculista = (data: any): Oraculista => ({
+  ...data,
+  createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+  updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
+  rating: data.rating || 0,
+  status: data.status || 'offline',
+  totalAvaliacoes: data.totalAvaliacoes || 0,
+  consultas: data.consultas || 0,
+  especialidades: data.especialidades || [],
+  emPromocao: data.em_promocao || false,
+  precoPromocional: data.preco_promocional || undefined
+})
 
 export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   oraculistas: [],
@@ -21,36 +35,16 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   error: null,
 
   carregarOraculistas: async () => {
-    set({ loading: true, error: null })
     try {
-      console.log('Iniciando carregamento dos oraculistas...')
-      const { data, error } = await supabase
-        .from('oraculistas')
-        .select('*')
-        .order('created_at', { ascending: false })
+      set({ loading: true, error: null })
+      
+      // Usar o service para carregar os dados
+      const oraculistas = await OraculistasService.carregarOraculistas()
 
-      if (error) throw error
+      // Garantir que todos os campos existem e estão no formato correto
+      const oraculistasFormatados = oraculistas.map(formatOraculista)
 
-      console.log('Dados recebidos do Supabase:', data)
-
-      const oraculistasFormatados = data.map(o => ({
-        ...o,
-        especialidades: o.especialidades || [],
-        createdAt: new Date(o.created_at),
-        updatedAt: new Date(o.updated_at),
-        consultas: o.consultas || 0,
-        prompt_formatado: o.prompt_formatado || '',
-        prompt: o.prompt || '',
-        emPromocao: o.em_promocao || false,
-        precoPromocional: o.preco_promocional
-      }))
-
-      console.log('Oraculistas formatados:', oraculistasFormatados)
-
-      set({ 
-        oraculistas: oraculistasFormatados,
-        loading: false 
-      })
+      set({ oraculistas: oraculistasFormatados, loading: false })
     } catch (error: any) {
       console.error('Erro ao carregar oraculistas:', error)
       set({ error: error.message, loading: false })
@@ -89,18 +83,7 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
         throw error
       }
 
-      const oraculista = {
-        ...newOraculista,
-        especialidades: newOraculista.especialidades || [],
-        createdAt: new Date(newOraculista.created_at),
-        updatedAt: new Date(newOraculista.updated_at),
-        emPromocao: newOraculista.em_promocao,
-        precoPromocional: newOraculista.preco_promocional,
-        consultas: 0
-      }
-
-      // Atualiza apenas o prompt do oraculista
-      await atualizarPromptOraculista(oraculista)
+      const oraculista = formatOraculista(newOraculista)
 
       set(state => ({
         oraculistas: [oraculista, ...state.oraculistas]

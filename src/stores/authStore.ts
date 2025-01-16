@@ -6,6 +6,7 @@ interface User {
   id: string
   email: string
   isAdmin: boolean
+  name?: string
 }
 
 interface AuthState {
@@ -30,12 +31,14 @@ export const useAuthStore = create<AuthState>()(
           
           if (session?.user) {
             const isAdmin = session.user.user_metadata?.isAdmin || false
+            const name = session.user.user_metadata?.name || session.user.email?.split('@')[0] || 'Usuário'
             
             set({
               user: {
                 id: session.user.id,
                 email: session.user.email!,
-                isAdmin
+                isAdmin,
+                name
               },
               isAuthenticated: true,
               isLoading: false

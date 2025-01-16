@@ -1,0 +1,31 @@
+[build]
+  command = "npm install && npm run build"
+  publish = ".next"
+  ignore = "git diff --quiet $CACHED_COMMIT_REF $COMMIT_REF . ':(exclude)package-lock.json'"
+
+  [build.environment]
+  NEXT_USE_NETLIFY_EDGE = "true"
+  NODE_VERSION = "18.17.0"
+  NEXT_CACHE = "enabled"
+
+  [build.processing]
+    skip_processing = false
+
+  [build.processing.css]
+    bundle = true
+    minify = true
+
+  [build.processing.js]
+    bundle = true
+    minify = true
+
+  [build.processing.images]
+    compress = true
+
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/:splat"
+  status = 200

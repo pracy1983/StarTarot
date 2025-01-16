@@ -7,7 +7,8 @@ import { ChatService } from '../services/chatService'
 import { useChatStore } from '../store/chatStore'
 import { useAuthStore } from '@/stores/authStore'
 import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore'
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from 'uuid'
+import { UIMessage, convertChatToUIMessage } from '../types/message'
 
 export function ChatWindow() {
   const router = useRouter()
@@ -29,12 +30,7 @@ export function ChatWindow() {
       chatService.current.retrieveHistory(user.id).then(history => {
         if (history.length > 0) {
           history.forEach(msg => {
-            addMessage({
-              id: uuidv4(),
-              content: msg.content,
-              sender: msg.role === 'assistant' ? 'agent' : 'user',
-              timestamp: new Date()
-            });
+            addMessage(convertChatToUIMessage(msg));
           });
         }
       });
@@ -48,7 +44,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: `Nova thread iniciada: ${newThreadId}.`,
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       });
     }
@@ -93,7 +89,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: `Chat limpo. Thread anterior: ${previousThreadId}. Nova thread: ${newThreadId}.`,
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       });
     }
@@ -132,10 +128,10 @@ export function ChatWindow() {
     setInputMessage('')
 
     // Adiciona mensagem do usuário
-    const userMessage = {
+    const userMessage: UIMessage = {
       id: uuidv4(),
       content: messageText,
-      sender: 'user' as const,
+      sender: 'user',
       timestamp: new Date()
     }
     addMessage(userMessage)
@@ -145,8 +141,8 @@ export function ChatWindow() {
         // Delay inicial para simular "pensamento"
         await new Promise(resolve => setTimeout(resolve, 1000))
         
-        const response = await chatService.current.sendMessage(messageText, user.id)
-        const messageBlocks = splitAgentMessage(response.content)
+        const response = await chatService.current.sendMessage(messageText, messages)
+        const messageBlocks = splitAgentMessage(response)
 
         // Adiciona cada bloco como uma mensagem separada com delay
         for (let i = 0; i < messageBlocks.length; i++) {
@@ -155,7 +151,7 @@ export function ChatWindow() {
           addMessage({
             id: uuidv4(),
             content: messageBlocks[i],
-            sender: 'agent',
+            sender: 'assistant',
             timestamp: new Date()
           })
         }
@@ -165,7 +161,7 @@ export function ChatWindow() {
       addMessage({
         id: uuidv4(),
         content: 'Desculpe, ocorreu um erro ao processar sua mensagem. Por favor, tente novamente.',
-        sender: 'agent',
+        sender: 'assistant',
         timestamp: new Date()
       })
     } finally {
@@ -217,7 +213,7 @@ export function ChatWindow() {
   const processedMessages = useMemo(() => 
     messages.slice(-10).map(message => ({
       ...message,
-      content: processMessageContent(message.content, message.sender === 'agent')
+      content: processMessageContent(message.content, message.sender === 'assistant')
     })), [messages, oraculistas]
   )
 
@@ -270,7 +266,7 @@ export function ChatWindow() {
                       : 'bg-black/80 backdrop-blur-sm text-gray-200'
                   }`}
                   dangerouslySetInnerHTML={{ 
-                    __html: message.sender === 'agent' 
+                    __html: message.sender === 'assistant' 
                       ? message.content.replace(/\*\*([^*]+)\*\*/g, '<span class="font-bold text-yellow-400">$1</span>')
                       : message.content 
                   }}
