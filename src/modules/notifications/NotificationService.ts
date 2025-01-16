@@ -42,10 +42,10 @@ class NotificationService implements INotificationService {
     try {
       const response = await axios.get<NotificationResponse>('/api/notifications');
       const notifications = response.data;
-      // Atualize o estado do sininho de notificações aqui
       console.log('Novas notificações:', notifications);
-    } catch (error) {
-      console.error('Erro ao verificar atualizações:', error);
+    } catch (error: any) {
+      const err = error as Error | { message: string };
+      console.error('Erro ao verificar atualizações:', err.message);
     }
   }
 }

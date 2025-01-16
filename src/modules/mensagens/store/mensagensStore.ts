@@ -80,7 +80,8 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
         naoLidas: state.mensagens.filter(msg => !msg.lida && msg.id !== id).length
       }))
     } catch (error: any) {
-      set({ error: error.message })
+      const err = error as Error | { message: string };
+      set({ error: err.message })
     }
   },
 
