@@ -19,12 +19,13 @@ export interface Oraculista {
   totalAvaliacoes?: number // Total de avaliações recebidas
   created_at?: string // Campo do banco de dados
   updated_at?: string // Campo do banco de dados
-  em_promocao?: boolean // Campo do banco de dados
-  preco_promocional?: number | null // Campo do banco de dados
+  em_promocao: boolean
+  preco_promocional?: number | null
 }
 
 export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' | 'updatedAt' | 'consultas'> {
   fotoFile?: File
+  precoPromocional?: number | null
 }
 
 export type OraculistaStatus = 'disponivel' | 'indisponivel'

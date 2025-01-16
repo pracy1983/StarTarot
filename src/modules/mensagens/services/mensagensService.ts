@@ -336,7 +336,12 @@ function formatarMensagem(data: any): Mensagem {
     oraculista: data.oraculista ? {
       id: data.oraculista.id,
       nome: data.oraculista.nome,
-      foto: data.oraculista.foto
+      foto: data.oraculista.foto,
+      especialidades: [],
+      descricao: '',
+      preco: 0,
+      disponivel: true,
+      emPromocao: false
     } : undefined
   }
 }

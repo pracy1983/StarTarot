@@ -1,6 +1,5 @@
 import { create } from 'zustand'
 import { Oraculista, OraculistaFormData } from '../types/oraculista'
-import { getPromptByOraculista, atualizarPromptOraculista } from '@/config/prompts/oraculistas'
 import { supabase } from '@/lib/supabase'
 
 interface OraculistasState {
@@ -10,7 +9,7 @@ interface OraculistasState {
   adicionarOraculista: (data: OraculistaFormData) => Promise<{ success: boolean; error?: string }>
   atualizarOraculista: (id: string, data: Partial<OraculistaFormData>) => Promise<{ success: boolean; error?: string }>
   alternarDisponibilidade: (id: string) => Promise<{ success: boolean; error?: string }>
-  alternarPromocao: (id: string, precoPromocional?: number) => Promise<{ success: boolean; error?: string }>
+  alternarPromocao: (id: string, precoPromocional?: number | null) => Promise<{ success: boolean; error?: string }>
   excluirOraculista: (id: string) => Promise<{ success: boolean; error?: string }>
   carregarOraculistas: () => Promise<void>
 }
@@ -43,9 +42,9 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
         prompt: o.prompt || '',
         emPromocao: o.em_promocao || false,
         precoPromocional: o.preco_promocional,
-        rating: o.rating || 0,
+        rating: typeof o.rating === 'number' ? o.rating : 0,
         status: o.status || 'offline',
-        totalAvaliacoes: o.total_avaliacoes || 0
+        totalAvaliacoes: typeof o.total_avaliacoes === 'number' ? o.total_avaliacoes : 0
       }))
 
       console.log('Oraculistas formatados:', oraculistasFormatados)
@@ -101,9 +100,6 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
         precoPromocional: newOraculista.preco_promocional,
         consultas: 0
       }
-
-      // Atualiza apenas o prompt do oraculista
-      await atualizarPromptOraculista(oraculista)
 
       set(state => ({
         oraculistas: [oraculista, ...state.oraculistas]
