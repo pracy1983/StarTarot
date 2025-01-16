@@ -551,7 +551,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <div className="flex-1">
                     <input
                       type="number"
-                      value={formData.precoPromocional?.toString() ?? ''}
+                      value={formData.precoPromocional ? formData.precoPromocional.toString() : ''}
                       onChange={handlePrecoPromocionalChange}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                       min="0"
