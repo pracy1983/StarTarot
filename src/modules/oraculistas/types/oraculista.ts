@@ -6,8 +6,8 @@ export interface Oraculista {
   descricao: string
   preco: number
   disponivel: boolean
-  prompt?: string
-  prompt_formatado?: string
+  prompt?: string | null
+  prompt_formatado?: string | null
   emPromocao: boolean
   precoPromocional?: number | null
   consultas: number // Número total de consultas realizadas
@@ -25,6 +25,9 @@ export interface Oraculista {
 
 export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' | 'updatedAt' | 'consultas'> {
   fotoFile?: File
+  em_promocao: boolean
+  emPromocao: boolean
+  preco_promocional?: number | null
   precoPromocional?: number | null
 }
 

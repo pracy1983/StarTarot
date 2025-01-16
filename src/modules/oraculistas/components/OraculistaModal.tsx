@@ -29,7 +29,9 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     disponivel: true,
     prompt: '',
     emPromocao: false,
-    precoPromocional: undefined
+    em_promocao: false,
+    precoPromocional: undefined,
+    preco_promocional: undefined
   })
   const [novaEspecialidade, setNovaEspecialidade] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -51,7 +53,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
 
   // Atualiza o formulário quando um oraculista é selecionado
   useEffect(() => {
-    if (oraculistaId) {
+    if (oraculistaId && oraculistas) {
       console.log('Procurando oraculista:', oraculistaId)
       console.log('Oraculistas disponíveis:', oraculistas.map(o => ({ id: o.id, nome: o.nome })))
       
@@ -84,7 +86,9 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         disponivel: true,
         prompt: '',
         emPromocao: false,
-        precoPromocional: undefined
+        em_promocao: false,
+        precoPromocional: undefined,
+        preco_promocional: undefined
       })
       setPreviewImage(null)
       setFormModified(false) // Reseta o estado de modificação
