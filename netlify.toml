@@ -6,6 +6,7 @@
   [build.environment]
   NEXT_USE_NETLIFY_EDGE = "true"
   NODE_VERSION = "18.17.0"
+  NEXT_CACHE = "enabled"
 
   [build.processing]
     skip_processing = false

@@ -169,7 +169,7 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
     const state = get()
     return state.mensagens.filter(msg => {
       switch (state.filtroAtual) {
-        case 'nao-lidas':
+        case 'nao_lidas':
           return !msg.lida
         case 'respondidas':
           return msg.tipo === 'resposta'
