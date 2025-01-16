@@ -15,7 +15,9 @@ interface OraculistaModalProps {
 
 interface EstadoOraculista extends Partial<OraculistaFormData> {
   emPromocao: boolean;
+  em_promocao: boolean;
   precoPromocional?: number | null;
+  preco_promocional?: number | null;
 }
 
 export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaModalProps) {
@@ -31,7 +33,10 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     emPromocao: false,
     em_promocao: false,
     precoPromocional: undefined,
-    preco_promocional: undefined
+    preco_promocional: undefined,
+    rating: 0,
+    status: 'offline',
+    totalAvaliacoes: 0
   })
   const [novaEspecialidade, setNovaEspecialidade] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
@@ -84,7 +89,10 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         emPromocao: false,
         em_promocao: false,
         precoPromocional: undefined,
-        preco_promocional: undefined
+        preco_promocional: undefined,
+        rating: 0,
+        status: 'offline',
+        totalAvaliacoes: 0
       })
       setPreviewImage(null)
       setFormModified(false) // Reseta o estado de modificação
@@ -119,7 +127,8 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         const result = await atualizarOraculista(oraculistaId, {
           ...formData,
           em_promocao: formData.emPromocao,
-          preco_promocional: formData.precoPromocional
+          preco_promocional: formData.precoPromocional,
+          prompt_formatado: formData.prompt
         })
         if (!result.success) {
           setError(result.error || 'Erro ao atualizar oraculista')
@@ -146,8 +155,18 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   }
 
   const handleFormChange = (newData: Partial<OraculistaFormData>) => {
-    setFormData(prev => ({ ...prev, ...newData }))
-    setFormModified(true)
+    setFormData(prev => {
+      const updated = { ...prev, ...newData };
+      // Garantir que campos do banco são atualizados junto
+      if ('emPromocao' in newData) {
+        updated.em_promocao = newData.emPromocao;
+      }
+      if ('precoPromocional' in newData) {
+        updated.preco_promocional = newData.precoPromocional;
+      }
+      return updated;
+    });
+    setFormModified(true);
   }
 
   const adicionarEspecialidade = () => {
@@ -214,10 +233,10 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const handlePrecoPromocionalChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const novoPreco = e.target.value === '' ? null : Number(e.target.value);
     
-    // Atualiza o estado local primeiro
     const novoFormData = {
       ...formData,
-      precoPromocional: novoPreco
+      precoPromocional: novoPreco,
+      preco_promocional: novoPreco
     };
     handleFormChange(novoFormData);
     
