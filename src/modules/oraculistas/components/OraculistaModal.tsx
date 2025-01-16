@@ -195,7 +195,6 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       const updated = { 
         ...prev, 
         ...newData,
-        // Garantir tipos corretos
         precoPromocional: newData.precoPromocional ?? prev.precoPromocional,
         preco_promocional: newData.preco_promocional ?? prev.preco_promocional,
         emPromocao: newData.emPromocao ?? prev.emPromocao,
