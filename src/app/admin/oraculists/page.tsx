@@ -13,7 +13,10 @@ import {
 } from '@heroicons/react/24/outline'
 import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore'
 import Image from 'next/image'
-import { formatarPreco } from '@/utils/format'
+import { formatCurrency } from '@/utils/format'
+import { formatDate } from '@/utils/date'
+import { LoadingState } from '@/components/common/LoadingState'
+import { ErrorState } from '@/components/common/ErrorState'
 import { OraculistaModal } from '@/modules/oraculistas/components/OraculistaModal'
 import { Dialog, Transition } from '@headlessui/react'
 import { Fragment } from 'react'
@@ -21,13 +24,40 @@ import { OraculistaFormData } from '@/modules/oraculistas/types/oraculista'
 
 export default function OraculistasAdminPage() {
   const router = useRouter()
-  const { oraculistas, loading, carregarOraculistas, excluirOraculista, atualizarOraculista } = useOraculistasStore()
+  const { oraculistas, loading, error, carregarOraculistas } = useOraculistasStore()
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedOraculistaId, setSelectedOraculistaId] = useState<string | null>(null)
 
   useEffect(() => {
     carregarOraculistas()
   }, [carregarOraculistas])
+
+  // Mostrar loading
+  if (loading) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // Mostrar erro se houver
+  if (error) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div className="text-red-500">Erro ao carregar oraculistas: {error}</div>
+      </div>
+    )
+  }
+
+  // Garantir que oraculistas existe
+  if (!oraculistas) {
+    return (
+      <div className="min-h-screen p-6 flex items-center justify-center">
+        <div>Nenhum oraculista encontrado</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen p-6">
@@ -185,7 +215,7 @@ export default function OraculistasAdminPage() {
                     <div>
                       <div className="text-sm text-gray-400">Adicionado em</div>
                       <div className="text-lg font-semibold text-primary">
-                        {oraculista.createdAt.toLocaleDateString('pt-BR')}
+                        {formatDate(oraculista.createdAt)}
                       </div>
                     </div>
                     <div>

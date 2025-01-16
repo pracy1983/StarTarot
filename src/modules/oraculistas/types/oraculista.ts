@@ -13,8 +13,8 @@ export interface Oraculista {
   emPromocao: boolean
   precoPromocional?: number | null
   consultas: number // Número total de consultas realizadas
-  createdAt: Date
-  updatedAt: Date
+  createdAt: Date | string
+  updatedAt: Date | string
   descontoTemp?: string // Campo temporário para armazenar o valor do desconto antes de aplicar
   rating: number // Avaliação do oraculista (0-5)
   status: 'online' | 'offline' | 'ocupado' // Status de disponibilidade
@@ -35,3 +35,10 @@ export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' 
 }
 
 export type OraculistaStatus = 'online' | 'offline' | 'ocupado'
+
+interface EstadoOraculista extends Omit<Partial<OraculistaFormData>, 'precoPromocional'> {
+  emPromocao: boolean;
+  em_promocao: boolean;
+  precoPromocional: OptionalNumber;
+  preco_promocional: OptionalNumber;
+}

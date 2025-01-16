@@ -1,4 +1,4 @@
-import { NumericInputProps } from '@/types/global'
+import { OptionalNumber, NumericInputProps } from '@/types/global'
 
 export function NumericInput({
   value,
@@ -15,8 +15,8 @@ export function NumericInput({
       type="number"
       value={value ?? ''}
       onChange={(e) => {
-        const newValue = e.target.value === '' ? undefined : Number(e.target.value);
-        onChange(newValue);
+        const newValue = e.target.value === '' ? undefined : Number(e.target.value)
+        onChange(newValue)
       }}
       min={min}
       max={max}

@@ -15,6 +15,20 @@ interface OraculistasState {
   carregarOraculistas: () => Promise<void>
 }
 
+// Garantir que os dados são formatados corretamente
+const formatOraculista = (data: any): Oraculista => ({
+  ...data,
+  createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+  updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
+  rating: data.rating || 0,
+  status: data.status || 'offline',
+  totalAvaliacoes: data.totalAvaliacoes || 0,
+  consultas: data.consultas || 0,
+  especialidades: data.especialidades || [],
+  emPromocao: data.em_promocao || false,
+  precoPromocional: data.preco_promocional || undefined
+})
+
 export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   oraculistas: [],
   loading: false,
@@ -23,25 +37,17 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
   carregarOraculistas: async () => {
     try {
       set({ loading: true, error: null })
-      const { data, error } = await supabase
-        .from('oraculistas')
-        .select('*')
-        .order('created_at', { ascending: false })
+      
+      // Usar o service para carregar os dados
+      const oraculistas = await OraculistasService.carregarOraculistas()
 
-      if (error) throw error
-
-      const oraculistasFormatados = (data || []).map(o => ({
-        ...o,
-        rating: o.rating || 0,
-        status: o.status || 'offline' as const,
-        totalAvaliacoes: o.totalAvaliacoes || 0,
-        especialidades: o.especialidades || []
-      }))
+      // Garantir que todos os campos existem e estão no formato correto
+      const oraculistasFormatados = oraculistas.map(formatOraculista)
 
       set({ oraculistas: oraculistasFormatados, loading: false })
     } catch (error: any) {
-      const err = error as Error
-      set({ error: err.message, loading: false })
+      console.error('Erro ao carregar oraculistas:', error)
+      set({ error: error.message, loading: false })
     }
   },
 
@@ -77,15 +83,7 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
         throw error
       }
 
-      const oraculista = {
-        ...newOraculista,
-        especialidades: newOraculista.especialidades || [],
-        createdAt: new Date(newOraculista.created_at),
-        updatedAt: new Date(newOraculista.updated_at),
-        emPromocao: newOraculista.em_promocao,
-        precoPromocional: newOraculista.preco_promocional,
-        consultas: 0
-      }
+      const oraculista = formatOraculista(newOraculista)
 
       set(state => ({
         oraculistas: [oraculista, ...state.oraculistas]

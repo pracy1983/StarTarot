@@ -7,6 +7,11 @@ import { useOraculistasStore } from '../store/oraculistasStore'
 import { OraculistaFormData } from '../types/oraculista'
 import Image from 'next/image'
 import { NumericInput } from '@/components/common/NumericInput'
+import { OptionalNumber } from '@/types/global'
+import { formatCurrency } from '@/utils/format'
+import { LoadingState } from '@/components/common/LoadingState'
+import { ErrorState } from '@/components/common/ErrorState'
+import { formatDate } from '@/utils/date'
 
 interface OraculistaModalProps {
   isOpen: boolean
@@ -14,31 +19,33 @@ interface OraculistaModalProps {
   oraculistaId?: string | null
 }
 
-interface EstadoOraculista extends Partial<OraculistaFormData> {
+interface EstadoOraculista {
   emPromocao: boolean;
   em_promocao: boolean;
-  precoPromocional?: number | null;
-  preco_promocional?: number | null;
+  precoPromocional: OptionalNumber;
+  preco_promocional: OptionalNumber;
+}
+
+const initialState: OraculistaFormData = {
+  nome: '',
+  foto: '',
+  especialidades: [],
+  descricao: '',
+  preco: 0,
+  disponivel: true,
+  prompt: '',
+  emPromocao: false,
+  em_promocao: false,
+  precoPromocional: undefined,
+  preco_promocional: undefined,
+  rating: 0,
+  status: 'offline',
+  totalAvaliacoes: 0
 }
 
 export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaModalProps) {
   const { oraculistas, adicionarOraculista, atualizarOraculista, carregarOraculistas } = useOraculistasStore()
-  const [formData, setFormData] = useState<OraculistaFormData>({
-    nome: '',
-    foto: '',
-    especialidades: [],
-    descricao: '',
-    preco: 0,
-    disponivel: true,
-    prompt: '',
-    emPromocao: false,
-    em_promocao: false,
-    precoPromocional: undefined,
-    preco_promocional: undefined,
-    rating: 0,
-    status: 'offline',
-    totalAvaliacoes: 0
-  })
+  const [formData, setFormData] = useState<OraculistaFormData>(initialState)
   const [novaEspecialidade, setNovaEspecialidade] = useState('')
   const [previewImage, setPreviewImage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
@@ -89,22 +96,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       }
     } else {
       // Limpa o form quando fecha o modal
-      setFormData({
-        nome: '',
-        foto: '',
-        especialidades: [],
-        descricao: '',
-        preco: 0,
-        disponivel: true,
-        prompt: '',
-        emPromocao: false,
-        em_promocao: false,
-        precoPromocional: undefined,
-        preco_promocional: undefined,
-        rating: 0,
-        status: 'offline',
-        totalAvaliacoes: 0
-      })
+      setFormData(initialState)
       setPreviewImage(null)
       setFormModified(false) // Reseta o estado de modificação
     }
@@ -112,22 +104,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
 
   useEffect(() => {
     if (!isOpen) {
-      setFormData({
-        nome: '',
-        foto: '',
-        especialidades: [],
-        descricao: '',
-        preco: 0,
-        disponivel: true,
-        prompt: '',
-        emPromocao: false,
-        em_promocao: false,
-        precoPromocional: null,
-        preco_promocional: null,
-        rating: 0,
-        status: 'offline',
-        totalAvaliacoes: 0
-      });
+      setFormData(initialState);
       setPreviewImage(null);
       setError(null);
       setFormModified(false);
@@ -215,16 +192,18 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
 
   const handleFormChange = (newData: Partial<OraculistaFormData>) => {
     setFormData(prev => {
-      const updated = { ...prev, ...newData };
-      if ('emPromocao' in newData) {
-        updated.em_promocao = newData.emPromocao || false;
+      const updated = { 
+        ...prev, 
+        ...newData,
+        // Garantir tipos corretos
+        precoPromocional: newData.precoPromocional ?? prev.precoPromocional,
+        preco_promocional: newData.preco_promocional ?? prev.preco_promocional,
+        emPromocao: newData.emPromocao ?? prev.emPromocao,
+        em_promocao: newData.em_promocao ?? prev.em_promocao
       }
-      if ('precoPromocional' in newData) {
-        updated.preco_promocional = newData.precoPromocional || null;
-      }
-      return updated;
-    });
-    setFormModified(true);
+      return updated
+    })
+    setFormModified(true)
   }
 
   const adicionarEspecialidade = () => {
@@ -259,22 +238,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     }
     
     const limparForm = () => {
-      setFormData({
-        nome: '',
-        foto: '',
-        especialidades: [],
-        descricao: '',
-        preco: 0,
-        disponivel: true,
-        prompt: '',
-        emPromocao: false,
-        em_promocao: false,
-        precoPromocional: null,
-        preco_promocional: null,
-        rating: 0,
-        status: 'offline',
-        totalAvaliacoes: 0
-      });
+      setFormData(initialState);
       setPreviewImage(null);
       setError(null);
       setFormModified(false);
@@ -402,6 +366,18 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     };
   }, [previewImage]);
 
+  if (loading && !formModified) {
+    return <LoadingState />
+  }
+
+  if (error && !formModified) {
+    return <ErrorState message={error} />
+  }
+
+  // Atualizar formatação de preços
+  const displayPrice = formatCurrency(formData.preco)
+  const displayPromoPrice = formData.precoPromocional ? formatCurrency(formData.precoPromocional) : '-'
+
   return (
     <Dialog
       open={isOpen}
@@ -477,14 +453,13 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <label className="block text-sm font-medium text-gray-300 mb-1">
                     Preço da Consulta
                   </label>
-                  <input
-                    type="number"
+                  <NumericInput
                     value={formData.preco}
-                    onChange={handlePrecoChange}
-                    className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    min="0"
-                    step="0.01"
+                    onChange={(value) => handleFormChange({ preco: value || 0 })}
+                    min={0}
+                    step={0.01}
                     required
+                    className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2"
                   />
                 </div>
               </div>
@@ -594,9 +569,10 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                         handleFormChange({ 
                           precoPromocional: value,
                           preco_promocional: value 
-                        });
+                        })
                       }}
                       min={0}
+                      max={formData.preco}
                       step={0.01}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2"
                     />
