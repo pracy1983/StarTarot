@@ -6,6 +6,17 @@ interface INotificationService {
   checkForUpdates(): Promise<void>;
 }
 
+interface NotificationData {
+  id: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  timestamp: Date;
+}
+
+interface NotificationResponse {
+  data: NotificationData[];
+}
+
 class NotificationService implements INotificationService {
   private pollingInterval: number;
   private intervalId: NodeJS.Timeout | null = null;
@@ -29,7 +40,7 @@ class NotificationService implements INotificationService {
 
   public async checkForUpdates(): Promise<void> {
     try {
-      const response = await axios.get('/api/notifications');
+      const response = await axios.get<NotificationResponse>('/api/notifications');
       const notifications = response.data;
       // Atualize o estado do sininho de notificações aqui
       console.log('Novas notificações:', notifications);

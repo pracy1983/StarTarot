@@ -23,10 +23,15 @@ const oraculistas: Oraculista[] = [
     prompt: '',
     prompt_formatado: '',
     emPromocao: false,
-    precoPromocional: undefined,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
     consultas: 0,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline',
+    totalAvaliacoes: 0
   },
   {
     id: '2',
@@ -44,10 +49,15 @@ const oraculistas: Oraculista[] = [
     prompt: '',
     prompt_formatado: '',
     emPromocao: false,
-    precoPromocional: undefined,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
     consultas: 0,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline',
+    totalAvaliacoes: 0
   },
   {
     id: '3',
@@ -65,10 +75,15 @@ const oraculistas: Oraculista[] = [
     prompt: '',
     prompt_formatado: '',
     emPromocao: false,
-    precoPromocional: undefined,
+    em_promocao: false,
+    precoPromocional: null,
+    preco_promocional: null,
     consultas: 0,
     createdAt: new Date(),
-    updatedAt: new Date()
+    updatedAt: new Date(),
+    rating: 0,
+    status: 'offline',
+    totalAvaliacoes: 0
   }
 ]
 

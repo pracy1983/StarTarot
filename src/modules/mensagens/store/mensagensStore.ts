@@ -65,7 +65,8 @@ export const useMensagensStore = create<MensagensState>()((set, get) => ({
         loading: false 
       })
     } catch (error: any) {
-      set({ error: error.message, loading: false, mensagens: [] })
+      const err = error as Error | { message: string };
+      set({ error: err.message, loading: false, mensagens: [] })
     }
   },
 

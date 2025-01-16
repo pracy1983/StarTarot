@@ -62,15 +62,11 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       
       if (oraculista) {
         setFormData({
-          nome: oraculista.nome,
-          foto: oraculista.foto,
-          especialidades: [...oraculista.especialidades],
-          descricao: oraculista.descricao,
-          preco: oraculista.preco,
-          disponivel: oraculista.disponivel,
-          prompt: oraculista.prompt_formatado || oraculista.prompt || '',
-          emPromocao: oraculista.emPromocao,
-          precoPromocional: oraculista.precoPromocional
+          ...oraculista,
+          emPromocao: oraculista.em_promocao,
+          em_promocao: oraculista.em_promocao,
+          precoPromocional: oraculista.preco_promocional,
+          preco_promocional: oraculista.preco_promocional
         })
         setPreviewImage(oraculista.foto)
         setFormModified(false) // Reseta o estado de modificação
@@ -122,7 +118,8 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         // Atualizar oraculista existente
         const result = await atualizarOraculista(oraculistaId, {
           ...formData,
-          prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
+          em_promocao: formData.emPromocao,
+          preco_promocional: formData.precoPromocional
         })
         if (!result.success) {
           setError(result.error || 'Erro ao atualizar oraculista')
@@ -186,7 +183,9 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     const novoEstado: EstadoOraculista = {
       ...formData,
       emPromocao: e.target.checked,
-      precoPromocional: e.target.checked && formData.precoPromocional ? formData.precoPromocional : undefined
+      em_promocao: e.target.checked,
+      precoPromocional: e.target.checked ? formData.precoPromocional : null,
+      preco_promocional: e.target.checked ? formData.preco_promocional : null
     };
 
     handleFormChange(novoEstado);
@@ -431,7 +430,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <div className="flex-1">
                     <input
                       type="number"
-                      value={formData.precoPromocional || ''}
+                      value={formData.precoPromocional?.toString() || ''}
                       onChange={handlePrecoPromocionalChange}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                       min="0"

@@ -1,6 +1,13 @@
 import { supabase } from '@/lib/supabase'
 import { Mensagem, MensagemFormData } from '../types/mensagem'
 
+// Tipagem do OraculistaMensagem precisa ser consistente
+interface OraculistaMensagem {
+  id: string;
+  nome: string;
+  foto: string;
+}
+
 // Função auxiliar para verificar se as tabelas existem
 async function verificarTabelasExistem() {
   const { error: mensagensError } = await supabase
@@ -328,11 +335,11 @@ function formatarMensagem(data: any): Mensagem {
     titulo: data.titulo,
     conteudo: data.conteudo,
     lida: data.lida,
-    data: new Date(data.data),
+    data: data.data ? new Date(data.data) : new Date(),
     tipo: data.tipo,
     threadId: data.thread_id,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    createdAt: data.created_at ? new Date(data.created_at) : new Date(),
+    updatedAt: data.updated_at ? new Date(data.updated_at) : new Date(),
     oraculista: data.oraculista ? {
       id: data.oraculista.id,
       nome: data.oraculista.nome,
