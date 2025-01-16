@@ -48,9 +48,15 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   useEffect(() => {
     if (isOpen) {
       const loadData = async () => {
-        console.log('Carregando oraculistas...')
-        await carregarOraculistas()
-        console.log('Oraculistas carregados:', oraculistas.length)
+        try {
+          console.log('Carregando oraculistas...')
+          await carregarOraculistas()
+          console.log('Oraculistas carregados:', oraculistas.length)
+        } catch (err) {
+          const error = err as Error;
+          console.error('Erro ao carregar oraculistas:', error);
+          setError(error.message || 'Erro ao carregar oraculistas');
+        }
       }
       loadData()
     }
@@ -68,10 +74,13 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
       if (oraculista) {
         setFormData({
           ...oraculista,
-          emPromocao: oraculista.em_promocao,
-          em_promocao: oraculista.em_promocao,
-          precoPromocional: oraculista.preco_promocional,
-          preco_promocional: oraculista.preco_promocional
+          emPromocao: oraculista.em_promocao || false,
+          em_promocao: oraculista.em_promocao || false,
+          precoPromocional: oraculista.preco_promocional || null,
+          preco_promocional: oraculista.preco_promocional || null,
+          rating: oraculista.rating || 0,
+          status: oraculista.status || 'offline',
+          totalAvaliacoes: oraculista.totalAvaliacoes || 0
         })
         setPreviewImage(oraculista.foto)
         setFormModified(false) // Reseta o estado de modificação
@@ -99,56 +108,88 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     }
   }, [oraculistaId, oraculistas])
 
+  useEffect(() => {
+    if (!isOpen) {
+      setFormData({
+        nome: '',
+        foto: '',
+        especialidades: [],
+        descricao: '',
+        preco: 0,
+        disponivel: true,
+        prompt: '',
+        emPromocao: false,
+        em_promocao: false,
+        precoPromocional: null,
+        preco_promocional: null,
+        rating: 0,
+        status: 'offline',
+        totalAvaliacoes: 0
+      });
+      setPreviewImage(null);
+      setError(null);
+      setFormModified(false);
+    }
+  }, [isOpen]);
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        setPreviewImage(reader.result as string)
-        setFormData(prev => ({
-          ...prev,
-          foto: reader.result as string,
-          fotoFile: file
-        }))
-        setFormModified(true)
+        const result = reader.result as string;
+        if (result) {
+          setPreviewImage(result)
+          setFormData(prev => ({
+            ...prev,
+            foto: result,
+            fotoFile: file
+          }))
+          setFormModified(true)
+        }
       }
       reader.readAsDataURL(file)
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     setLoading(true)
     setError(null)
 
+    if (!validateForm()) {
+      setLoading(false)
+      return
+    }
+
     try {
+      const dataToSend: OraculistaFormData = {
+        ...formData,
+        em_promocao: formData.emPromocao || false,
+        preco_promocional: formData.precoPromocional || null,
+        prompt_formatado: formData.prompt || '',
+        rating: formData.rating || 0,
+        status: formData.status || 'offline',
+        totalAvaliacoes: formData.totalAvaliacoes || 0
+      }
+      
       if (oraculistaId) {
-        // Atualizar oraculista existente
-        const result = await atualizarOraculista(oraculistaId, {
-          ...formData,
-          em_promocao: formData.emPromocao,
-          preco_promocional: formData.precoPromocional,
-          prompt_formatado: formData.prompt
-        })
+        const result = await atualizarOraculista(oraculistaId, dataToSend)
         if (!result.success) {
           setError(result.error || 'Erro ao atualizar oraculista')
           return
         }
       } else {
-        // Adicionar novo oraculista
-        const result = await adicionarOraculista({
-          ...formData,
-          prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
-        })
+        const result = await adicionarOraculista(dataToSend)
         if (!result.success) {
           setError(result.error || 'Erro ao salvar oraculista')
           return
         }
       }
       onClose()
-    } catch (err: any) {
-      console.error('Erro ao salvar oraculista:', err)
-      setError(err.message || 'Erro ao salvar oraculista')
+    } catch (err) {
+      const error = err as Error
+      setError(error.message || 'Erro ao salvar oraculista')
     } finally {
       setLoading(false)
     }
@@ -157,12 +198,11 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   const handleFormChange = (newData: Partial<OraculistaFormData>) => {
     setFormData(prev => {
       const updated = { ...prev, ...newData };
-      // Garantir que campos do banco são atualizados junto
       if ('emPromocao' in newData) {
-        updated.em_promocao = newData.emPromocao;
+        updated.em_promocao = newData.emPromocao || false;
       }
       if ('precoPromocional' in newData) {
-        updated.preco_promocional = newData.precoPromocional;
+        updated.preco_promocional = newData.precoPromocional || null;
       }
       return updated;
     });
@@ -170,31 +210,66 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
   }
 
   const adicionarEspecialidade = () => {
-    if (novaEspecialidade.trim() && !formData.especialidades.includes(novaEspecialidade.trim())) {
+    const especialidadeTrimmed = novaEspecialidade?.trim();
+    if (!especialidadeTrimmed) {
+      setError('Especialidade não pode estar vazia');
+      return;
+    }
+    if (especialidadeTrimmed && 
+        !formData.especialidades?.includes(especialidadeTrimmed) &&
+        formData.especialidades?.length < 10) {
       setFormData(prev => ({
         ...prev,
-        especialidades: [...prev.especialidades, novaEspecialidade.trim()]
+        especialidades: [...(prev.especialidades || []), especialidadeTrimmed]
       }))
       setNovaEspecialidade('')
-      setFormModified(true)
+      setError(null)
     }
   }
 
   const removerEspecialidade = (index: number) => {
     setFormData(prev => ({
       ...prev,
-      especialidades: prev.especialidades.filter((_, i) => i !== index)
+      especialidades: prev.especialidades?.filter((_, i) => i !== index) || []
     }))
     setFormModified(true)
   }
 
   const handleClose = () => {
+    if (loading) {
+      return;
+    }
+    
+    const limparForm = () => {
+      setFormData({
+        nome: '',
+        foto: '',
+        especialidades: [],
+        descricao: '',
+        preco: 0,
+        disponivel: true,
+        prompt: '',
+        emPromocao: false,
+        em_promocao: false,
+        precoPromocional: null,
+        preco_promocional: null,
+        rating: 0,
+        status: 'offline',
+        totalAvaliacoes: 0
+      });
+      setPreviewImage(null);
+      setError(null);
+      setFormModified(false);
+      setNovaEspecialidade('');
+      onClose();
+    };
+
     if (formModified) {
       if (window.confirm('Existem alterações não salvas. Deseja realmente sair?')) {
-        onClose()
+        limparForm();
       }
     } else {
-      onClose()
+      limparForm();
     }
   }
 
@@ -216,13 +291,12 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         const result = await atualizarOraculista(oraculistaId, novoEstado);
         if (!result.success) {
           setError(result.error || 'Erro ao atualizar promoção');
-          // Reverte a mudança em caso de erro
           handleFormChange({ emPromocao: !e.target.checked });
         }
-      } catch (err: any) {
-        console.error('Erro ao atualizar promoção:', err);
-        setError(err.message || 'Erro ao atualizar promoção');
-        // Reverte a mudança em caso de erro
+      } catch (err) {
+        const error = err as Error;
+        console.error('Erro ao atualizar promoção:', error);
+        setError(error.message || 'Erro ao atualizar promoção');
         handleFormChange({ emPromocao: !e.target.checked });
       } finally {
         setLoading(false);
@@ -232,6 +306,11 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
 
   const handlePrecoPromocionalChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const novoPreco = e.target.value === '' ? null : Number(e.target.value);
+    
+    if (novoPreco !== null && novoPreco >= formData.preco) {
+      setError('Preço promocional deve ser menor que o preço normal');
+      return;
+    }
     
     const novoFormData = {
       ...formData,
@@ -247,19 +326,42 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         const result = await atualizarOraculista(oraculistaId, novoFormData);
         if (!result.success) {
           setError(result.error || 'Erro ao atualizar preço promocional');
-          // Reverte em caso de erro
           handleFormChange({ ...formData });
         }
-      } catch (err: any) {
-        console.error('Erro ao atualizar preço promocional:', err);
-        setError(err.message || 'Erro ao atualizar preço promocional');
-        // Reverte em caso de erro
+      } catch (err) {
+        const error = err as Error;
+        console.error('Erro ao atualizar preço promocional:', error);
+        setError(error.message || 'Erro ao atualizar preço promocional');
         handleFormChange({ ...formData });
       } finally {
         setLoading(false);
       }
     }
   };
+
+  // Validar preço
+  const handlePrecoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const valor = Number(e.target.value);
+    if (valor >= 0) {
+      handleFormChange({ preco: valor });
+    }
+  }
+
+  const validateForm = (): boolean => {
+    if (!formData.nome.trim()) {
+      setError('Nome é obrigatório');
+      return false;
+    }
+    if (formData.preco <= 0) {
+      setError('Preço deve ser maior que zero');
+      return false;
+    }
+    if (formData.emPromocao && (!formData.precoPromocional || formData.precoPromocional >= formData.preco)) {
+      setError('Preço promocional deve ser menor que o preço normal');
+      return false;
+    }
+    return true;
+  }
 
   return (
     <Dialog
@@ -339,7 +441,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <input
                     type="number"
                     value={formData.preco}
-                    onChange={e => handleFormChange({ preco: Number(e.target.value) })}
+                    onChange={handlePrecoChange}
                     className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                     min="0"
                     step="0.01"
@@ -449,7 +551,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                   <div className="flex-1">
                     <input
                       type="number"
-                      value={formData.precoPromocional?.toString() || ''}
+                      value={formData.precoPromocional?.toString() ?? ''}
                       onChange={handlePrecoPromocionalChange}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                       min="0"
@@ -461,8 +563,14 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                 )}
               </div>
 
+              {loading && (
+                <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-primary"></div>
+                </div>
+              )}
+
               {error && (
-                <div className="mt-2 text-red-500 text-sm">
+                <div className="mt-2 p-2 bg-red-500/10 border border-red-500/20 rounded text-red-500 text-sm">
                   {error}
                 </div>
               )}
@@ -479,8 +587,12 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors duration-200 disabled:opacity-50"
                   disabled={loading}
+                  className={`px-4 py-2 rounded-lg ${
+                    loading 
+                      ? 'bg-gray-600 cursor-not-allowed' 
+                      : 'bg-primary hover:bg-primary/80'
+                  }`}
                 >
                   {loading ? 'Salvando...' : 'Salvar'}
                 </button>
