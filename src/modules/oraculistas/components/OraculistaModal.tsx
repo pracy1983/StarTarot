@@ -15,7 +15,7 @@ interface OraculistaModalProps {
 
 interface EstadoOraculista extends Partial<OraculistaFormData> {
   emPromocao: boolean;
-  precoPromocional?: number;
+  precoPromocional?: number | null;
 }
 
 export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaModalProps) {
@@ -202,6 +202,37 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         setError(err.message || 'Erro ao atualizar promoção');
         // Reverte a mudança em caso de erro
         handleFormChange({ emPromocao: !e.target.checked });
+      } finally {
+        setLoading(false);
+      }
+    }
+  };
+
+  const handlePrecoPromocionalChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const novoPreco = e.target.value === '' ? null : Number(e.target.value);
+    
+    // Atualiza o estado local primeiro
+    const novoFormData = {
+      ...formData,
+      precoPromocional: novoPreco
+    };
+    handleFormChange(novoFormData);
+    
+    // Salva no banco se houver um oraculistaId
+    if (oraculistaId) {
+      setLoading(true);
+      try {
+        const result = await atualizarOraculista(oraculistaId, novoFormData);
+        if (!result.success) {
+          setError(result.error || 'Erro ao atualizar preço promocional');
+          // Reverte em caso de erro
+          handleFormChange({ ...formData });
+        }
+      } catch (err: any) {
+        console.error('Erro ao atualizar preço promocional:', err);
+        setError(err.message || 'Erro ao atualizar preço promocional');
+        // Reverte em caso de erro
+        handleFormChange({ ...formData });
       } finally {
         setLoading(false);
       }
@@ -397,36 +428,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                     <input
                       type="number"
                       value={formData.precoPromocional || ''}
-                      onChange={async (e) => {
-                        const novoPreco = Number(e.target.value);
-                        
-                        // Atualiza o estado local primeiro
-                        const novoFormData = {
-                          ...formData,
-                          precoPromocional: novoPreco
-                        };
-                        handleFormChange(novoFormData);
-                        
-                        // Salva no banco
-                        if (oraculistaId) {
-                          setLoading(true);
-                          try {
-                            const result = await atualizarOraculista(oraculistaId, novoFormData);
-                            if (!result.success) {
-                              setError(result.error || 'Erro ao atualizar preço promocional');
-                              // Reverte em caso de erro
-                              handleFormChange({ ...formData });
-                            }
-                          } catch (err: any) {
-                            console.error('Erro ao atualizar preço promocional:', err);
-                            setError(err.message || 'Erro ao atualizar preço promocional');
-                            // Reverte em caso de erro
-                            handleFormChange({ ...formData });
-                          } finally {
-                            setLoading(false);
-                          }
-                        }
-                      }}
+                      onChange={handlePrecoPromocionalChange}
                       className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
                       min="0"
                       step="0.01"
