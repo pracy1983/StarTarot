@@ -182,7 +182,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     const novoEstado: EstadoOraculista = {
       ...formData,
       emPromocao: e.target.checked,
-      precoPromocional: e.target.checked ? formData.precoPromocional : undefined
+      precoPromocional: e.target.checked && formData.precoPromocional ? formData.precoPromocional : undefined
     };
 
     handleFormChange(novoEstado);
