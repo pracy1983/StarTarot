@@ -2,6 +2,7 @@ export interface Oraculista {
   id: string
   nome: string
   foto: string
+  descontoTemp?: number | string
 }
 
 export interface Mensagem {
@@ -16,7 +17,9 @@ export interface Mensagem {
   threadId?: string
   createdAt: Date
   updatedAt: Date
-  oraculista?: Oraculista
+  oraculista: Oraculista
+  de: string
+  delay?: number
 }
 
 export type MensagemFiltro = 'todas' | 'nao_lidas' | 'respondidas'

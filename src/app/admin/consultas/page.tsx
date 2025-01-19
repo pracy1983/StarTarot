@@ -24,18 +24,32 @@ export default function ConsultasAdminPage() {
 
   const handleSalvar = () => {
     if (mensagemSelecionada) {
-      atualizarMensagem(mensagemSelecionada.id, conteudoEditado);
+      const mensagemAtualizada = {
+        ...mensagemSelecionada,
+        conteudo: conteudoEditado,
+        updatedAt: new Date()
+      };
+      atualizarMensagem(mensagemAtualizada.id, mensagemAtualizada);
       setEditando(false);
       setMensagemSelecionada(null);
     }
   };
 
-  const handleComplete = (mensagemId) => {
-    setMensagensEnviadas((prev) => [...prev, ...mensagens.filter(m => m.id === mensagemId)]);
-    setMensagens((prev) => prev.filter(m => m.id !== mensagemId));
+  const handleComplete = (mensagemId: string) => {
+    setMensagensEnviadas((prev: Mensagem[]) => [
+      ...prev,
+      ...mensagens.filter((m: Mensagem) => m.id === mensagemId)
+    ]);
+    // Remover mensagem da lista original
+    carregarMensagens();
   };
 
-  function ContadorRegressivo({ initialTime, onComplete }) {
+  interface ContadorRegressivoProps {
+    initialTime: number;
+    onComplete: () => void;
+  }
+
+  function ContadorRegressivo({ initialTime, onComplete }: ContadorRegressivoProps) {
     const [timeLeft, setTimeLeft] = useState(initialTime);
 
     useEffect(() => {

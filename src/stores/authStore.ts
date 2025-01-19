@@ -2,11 +2,7 @@ import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import { supabase } from '@/lib/supabase'
 
-interface User {
-  id: string
-  email: string
-  isAdmin: boolean
-}
+import { User } from '@/modules/users/types/user'
 
 interface AuthState {
   user: User | null
@@ -32,11 +28,14 @@ export const useAuthStore = create<AuthState>()(
             const isAdmin = session.user.user_metadata?.isAdmin || false
             
             set({
-              user: {
-                id: session.user.id,
-                email: session.user.email!,
-                isAdmin
-              },
+            user: {
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.user_metadata?.name || '',
+              role: session.user.user_metadata?.isAdmin ? 'admin' : 'user',
+              createdAt: new Date(),
+              updatedAt: new Date()
+            },
               isAuthenticated: true,
               isLoading: false
             })
@@ -61,11 +60,14 @@ export const useAuthStore = create<AuthState>()(
           const isAdmin = data.user?.user_metadata?.isAdmin || false
 
           set({
-            user: {
-              id: data.user.id,
-              email: data.user.email!,
-              isAdmin
-            },
+          user: {
+            id: data.user.id,
+            email: data.user.email!,
+            name: data.user.user_metadata?.name || '',
+            role: data.user.user_metadata?.isAdmin ? 'admin' : 'user',
+            createdAt: new Date(),
+            updatedAt: new Date()
+          },
             isAuthenticated: true,
             isLoading: false
           })

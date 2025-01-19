@@ -5,7 +5,7 @@ import { ChatBubbleLeftRightIcon, CreditCardIcon, UserGroupIcon } from '@heroico
 import Link from 'next/link'
 
 export default function DashboardPage() {
-  const user = useAuthStore(state => state.user)
+  const { user } = useAuthStore()
 
   return (
     <div className="min-h-screen text-white relative space-y-8">

@@ -111,7 +111,7 @@ export default function OraculistasAdminPage() {
                         />
                         <button
                           onClick={async () => {
-                            const novoPreco = parseFloat(oraculista.descontoTemp || '0');
+                            const novoPreco = parseFloat(String(oraculista.descontoTemp) || '0');
                             if (!isNaN(novoPreco)) {
                               // Atualiza o estado local
                               useOraculistasStore.setState(state => ({
