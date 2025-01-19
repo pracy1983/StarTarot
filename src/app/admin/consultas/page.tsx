@@ -6,7 +6,7 @@ import { PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { Mensagem } from '@/modules/mensagens/types/mensagem';
 
 export default function ConsultasAdminPage() {
-  const { mensagens, carregarMensagens, atualizarMensagem } = useMensagensStore();
+  const { mensagens, carregarMensagens, atualizarMensagem, deletarMensagem } = useMensagensStore();
   const [mensagemSelecionada, setMensagemSelecionada] = useState<Mensagem | null>(null);
   const [editando, setEditando] = useState(false);
   const [conteudoEditado, setConteudoEditado] = useState('');
@@ -24,18 +24,22 @@ export default function ConsultasAdminPage() {
 
   const handleSalvar = () => {
     if (mensagemSelecionada) {
-      atualizarMensagem(mensagemSelecionada.id, conteudoEditado);
+      atualizarMensagem(mensagemSelecionada.id, { conteudo: conteudoEditado });
       setEditando(false);
       setMensagemSelecionada(null);
     }
   };
 
-  const handleComplete = (mensagemId) => {
-    setMensagensEnviadas((prev) => [...prev, ...mensagens.filter(m => m.id === mensagemId)]);
-    setMensagens((prev) => prev.filter(m => m.id !== mensagemId));
+  const handleComplete = async (mensagemId: string) => {
+    const mensagem = mensagens.find(m => m.id === mensagemId);
+    if (mensagem) {
+      setMensagensEnviadas(prev => [...prev, mensagem]);
+      await deletarMensagem(mensagemId);
+      carregarMensagens();
+    }
   };
 
-  function ContadorRegressivo({ initialTime, onComplete }) {
+  function ContadorRegressivo({ initialTime, onComplete }: { initialTime: number, onComplete: () => void }) {
     const [timeLeft, setTimeLeft] = useState(initialTime);
 
     useEffect(() => {
@@ -66,8 +70,7 @@ export default function ConsultasAdminPage() {
               <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
                 <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
-                    <p className="text-sm text-gray-500">Contador regressivo: <ContadorRegressivo initialTime={mensagem.delay || 20} onComplete={() => handleComplete(mensagem.id)} /></p>
+                    <p className="text-lg font-medium">ID do Usuário: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Oraculista não definido'}</p>
                   </div>
                   <button
                     onClick={() => handleEditar(mensagem)}
@@ -101,7 +104,7 @@ export default function ConsultasAdminPage() {
             <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
               <div className="flex justify-between items-center">
                 <div>
-                  <p className="text-lg font-medium">De: {mensagem.de} | Para: {mensagem.oraculista.nome}</p>
+                  <p className="text-lg font-medium">ID do Usuário: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Oraculista não definido'}</p>
                 </div>
                 <button
                   onClick={() => handleEditar(mensagem)}

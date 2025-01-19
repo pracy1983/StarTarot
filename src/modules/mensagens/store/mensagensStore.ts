@@ -24,7 +24,7 @@ interface MensagensState {
   atualizarMensagem: (id: string, mensagemAtualizada: Partial<Mensagem>) => void
 }
 
-export const useMensagensStore = create<MensagensState>()((set, get) => ({
+export const useMensagensStore = create<MensagensState>((set, get) => ({
   mensagens: [],
   mensagemAtual: null,
   filtroAtual: 'todas',
