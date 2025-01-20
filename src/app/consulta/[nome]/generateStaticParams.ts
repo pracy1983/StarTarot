@@ -1,8 +1,7 @@
-import { Oraculista } from './page'
+import { Oraculista } from './types'
+import oraculistas from '../../../../public/oraculistas/oraculistas.json'
 
 export async function generateStaticParams() {
-  const oraculistas = (await import('../../../../public/oraculistas/oraculistas.json')).default
-  
   return oraculistas.map((o: Oraculista) => ({
     nome: o.nome
   }))

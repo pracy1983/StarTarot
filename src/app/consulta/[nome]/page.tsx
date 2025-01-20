@@ -4,9 +4,7 @@ import { generateStaticParams } from './generateStaticParams'
 
 export const dynamicParams = false // Ensure only statically generated params are used
 
-export interface Oraculista {
-  nome: string
-}
+import { Oraculista } from './types'
 
 export default async function ConsultaPage({
   params,
@@ -15,7 +13,7 @@ export default async function ConsultaPage({
 }) {
   // Verify if the param is valid
   const staticParams = await generateStaticParams()
-  const isValidParam = staticParams.some(p => 
+  const isValidParam = staticParams.some((p: { nome: string }) => 
     p.nome === encodeURIComponent(params.nome)
   )
 

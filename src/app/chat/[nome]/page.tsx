@@ -1,13 +1,9 @@
 import { ChatWindow } from '@/components/chat/ChatWindow'
-import { supabase } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { generateStaticParams } from './generateStaticParams'
+import { Oraculista } from './types'
 
 export const dynamicParams = false // Ensure only statically generated params are used
-
-export interface Oraculista {
-  nome: string
-}
 
 export default async function ChatPage({
   params,
@@ -16,7 +12,7 @@ export default async function ChatPage({
 }) {
   // Verify if the param is valid
   const staticParams = await generateStaticParams()
-  const isValidParam = staticParams.some(p => 
+  const isValidParam = staticParams.some((p: { nome: string }) =>
     p.nome === encodeURIComponent(params.nome)
   )
 
@@ -25,18 +21,6 @@ export default async function ChatPage({
   }
 
   const nome = decodeURIComponent(params.nome)
-  
-  const { data: oraculistas } = await supabase
-    .from('oraculistas')
-    .select('nome')
-
-  const oraculista = oraculistas?.find(o => 
-    o.nome.toLowerCase() === nome.toLowerCase()
-  )
-
-  if (!oraculista) {
-    redirect('/')
-  }
 
   return (
     <div className="min-h-screen bg-black text-white p-4">
