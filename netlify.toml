@@ -9,9 +9,6 @@
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    enableFunctions = true
-    enableISR = true
 
 [cache]
   directory = ".next/cache"
