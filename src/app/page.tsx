@@ -121,10 +121,10 @@ export default function LoginPage() {
 
           {/* Links */}
           <div className="flex justify-between text-sm">
-            <Link href="/criar-conta" className="text-primary hover:text-primary/80">
+            <Link href="/cadastro" className="text-primary hover:text-primary/80">
               Criar conta
             </Link>
-            <Link href="/esqueceu-senha" className="text-primary hover:text-primary/80">
+            <Link href="/esqueci-senha" className="text-primary hover:text-primary/80">
               Esqueceu a senha?
             </Link>
           </div>
