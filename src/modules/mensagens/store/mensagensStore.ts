@@ -1,208 +1,227 @@
 import { create } from 'zustand'
-import { Mensagem, MensagemFiltro, MensagemFormData } from '../types/mensagem'
-import * as MensagensService from '../services/mensagensService'
+import { Mensagem, MensagemFormData } from '../types/mensagem'
+import { supabase } from '@/lib/supabase'
 
 interface MensagensState {
   mensagens: Mensagem[]
   mensagemAtual: Mensagem | null
-  filtroAtual: MensagemFiltro
-  loading: boolean
-  error: string | null
-  naoLidas: number
-  
-  // Ações
-  setMensagemAtual: (mensagem: Mensagem | null) => void
-  marcarComoLida: (id: string) => Promise<void>
-  enviarPergunta: (userId: string, formData: MensagemFormData) => Promise<void>
+  carregando: boolean
+  erro: string | null
   carregarMensagens: (userId?: string) => Promise<void>
-  setFiltro: (filtro: MensagemFiltro) => void
-  getMensagensFiltradas: () => Mensagem[]
-  adicionarMensagem: (mensagem: Mensagem) => void
+  enviarMensagem: (userId: string, mensagem: MensagemFormData) => Promise<void>
   deletarMensagem: (id: string) => Promise<void>
-  deletarMensagens: (ids: string[]) => Promise<void>
+  marcarComoLida: (id: string) => Promise<void>
+  setMensagemAtual: (mensagem: Mensagem | null) => void
+  atualizarMensagem: (id: string, dados: Partial<Mensagem>) => Promise<void>
+  getMensagensFiltradas: (filtro: 'todas' | 'nao_lidas' | 'respondidas') => Mensagem[]
   limparMensagens: () => void
-  atualizarMensagem: (id: string, mensagemAtualizada: Partial<Mensagem>) => void
 }
 
 export const useMensagensStore = create<MensagensState>((set, get) => ({
   mensagens: [],
   mensagemAtual: null,
-  filtroAtual: 'todas',
-  loading: false,
-  error: null,
-  naoLidas: 0,
+  carregando: false,
+  erro: null,
+
+  carregarMensagens: async (userId?: string) => {
+    try {
+      set({ carregando: true, erro: null })
+
+      let query = supabase
+        .from('mensagens')
+        .select(`
+          *,
+          oraculista:oraculista_id (
+            id,
+            nome,
+            foto
+          )
+        `)
+        .order('created_at', { ascending: false })
+
+      if (userId) {
+        query = query.eq('user_id', userId)
+      }
+
+      const { data: mensagensData, error } = await query
+
+      if (error) throw error
+
+      const mensagens: Mensagem[] = mensagensData.map(msg => ({
+        id: msg.id,
+        userId: msg.user_id,
+        oraculistaId: msg.oraculista_id,
+        titulo: msg.titulo,
+        conteudo: msg.conteudo,
+        lida: msg.lida,
+        data: new Date(msg.data),
+        tipo: msg.tipo,
+        threadId: msg.thread_id,
+        createdAt: new Date(msg.created_at),
+        updatedAt: new Date(msg.updated_at),
+        oraculista: msg.oraculista,
+        de: msg.tipo === 'pergunta' ? 'Usuário' : msg.oraculista?.nome || 'Oraculista'
+      }))
+
+      set({ mensagens, carregando: false })
+    } catch (error) {
+      console.error('Erro ao carregar mensagens:', error)
+      set({ erro: 'Erro ao carregar mensagens', carregando: false })
+    }
+  },
+
+  enviarMensagem: async (userId: string, mensagemData: MensagemFormData) => {
+    try {
+      set({ carregando: true, erro: null })
+
+      const now = new Date()
+      const { data: newMensagem, error } = await supabase
+        .from('mensagens')
+        .insert([{
+          user_id: userId,
+          oraculista_id: mensagemData.oraculistaId,
+          titulo: mensagemData.titulo,
+          conteudo: mensagemData.conteudo,
+          lida: false,
+          data: now,
+          tipo: 'pergunta',
+          created_at: now,
+          updated_at: now
+        }])
+        .select(`
+          *,
+          oraculista:oraculista_id (
+            id,
+            nome,
+            foto
+          )
+        `)
+        .single()
+
+      if (error) throw error
+
+      const mensagem: Mensagem = {
+        id: newMensagem.id,
+        userId: newMensagem.user_id,
+        oraculistaId: newMensagem.oraculista_id,
+        titulo: newMensagem.titulo,
+        conteudo: newMensagem.conteudo,
+        lida: newMensagem.lida,
+        data: new Date(newMensagem.data),
+        tipo: newMensagem.tipo,
+        threadId: newMensagem.thread_id,
+        createdAt: new Date(newMensagem.created_at),
+        updatedAt: new Date(newMensagem.updated_at),
+        oraculista: newMensagem.oraculista,
+        de: newMensagem.tipo === 'pergunta' ? 'Usuário' : newMensagem.oraculista?.nome || 'Oraculista'
+      }
+
+      set(state => ({
+        mensagens: [mensagem, ...state.mensagens],
+        carregando: false
+      }))
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error)
+      set({ erro: 'Erro ao enviar mensagem', carregando: false })
+      throw error
+    }
+  },
+
+  deletarMensagem: async (id: string) => {
+    try {
+      set({ carregando: true, erro: null })
+
+      const { error } = await supabase
+        .from('mensagens')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      set(state => ({
+        mensagens: state.mensagens.filter(m => m.id !== id),
+        mensagemAtual: state.mensagemAtual?.id === id ? null : state.mensagemAtual,
+        carregando: false
+      }))
+    } catch (error) {
+      console.error('Erro ao deletar mensagem:', error)
+      set({ erro: 'Erro ao deletar mensagem', carregando: false })
+      throw error
+    }
+  },
+
+  marcarComoLida: async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('mensagens')
+        .update({
+          lida: true,
+          updated_at: new Date()
+        })
+        .eq('id', id)
+
+      if (error) throw error
+
+      set(state => ({
+        mensagens: state.mensagens.map(m =>
+          m.id === id
+            ? { ...m, lida: true, updatedAt: new Date() }
+            : m
+        )
+      }))
+    } catch (error) {
+      console.error('Erro ao marcar mensagem como lida:', error)
+      throw error
+    }
+  },
 
   setMensagemAtual: (mensagem) => {
     set({ mensagemAtual: mensagem })
   },
 
-  limparMensagens: () => {
-    set({ mensagens: [], mensagemAtual: null, naoLidas: 0 })
-  },
-
-  carregarMensagens: async (userId?: string) => {
+  atualizarMensagem: async (id: string, dados: Partial<Mensagem>) => {
     try {
-      set({ loading: true, error: null })
-      const mensagens = await MensagensService.carregarMensagens(userId)
-      
-      // Remove duplicatas baseado no ID
-      const mensagensUnicas = mensagens.reduce((acc: Mensagem[], current) => {
-        const exists = acc.find(msg => msg.id === current.id)
-        if (!exists) {
-          acc.push(current)
-        }
-        return acc
-      }, [])
+      set({ carregando: true, erro: null })
 
-      // Ordena por data, mais recentes primeiro
-      const mensagensOrdenadas = mensagensUnicas.sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-      )
+      const now = new Date()
+      const { error } = await supabase
+        .from('mensagens')
+        .update({
+          ...dados,
+          updated_at: now
+        })
+        .eq('id', id)
 
-      set({ 
-        mensagens: mensagensOrdenadas,
-        naoLidas: mensagensOrdenadas.filter(msg => !msg.lida).length,
-        loading: false 
-      })
-    } catch (error: any) {
-      set({ error: error.message, loading: false, mensagens: [] })
-    }
-  },
+      if (error) throw error
 
-  marcarComoLida: async (id) => {
-    try {
-      await MensagensService.marcarComoLida(id)
       set(state => ({
-        mensagens: state.mensagens.map(msg =>
-          msg.id === id ? { ...msg, lida: true } : msg
+        mensagens: state.mensagens.map(m =>
+          m.id === id
+            ? { ...m, ...dados, updatedAt: now }
+            : m
         ),
-        naoLidas: state.mensagens.filter(msg => !msg.lida && msg.id !== id).length
+        carregando: false
       }))
-    } catch (error: any) {
-      set({ error: error.message })
-    }
-  },
-
-  enviarPergunta: async (userId, formData) => {
-    try {
-      const novaMensagem = await MensagensService.enviarPergunta(userId, formData)
-      set(state => ({
-        mensagens: [novaMensagem, ...state.mensagens]
-      }))
-    } catch (error: any) {
-      set({ error: error.message })
-    }
-  },
-
-  deletarMensagem: async (id) => {
-    try {
-      const state = get()
-      const mensagem = state.mensagens.find(msg => msg.id === id)
-      
-      if (!mensagem) {
-        throw new Error('Mensagem não encontrada no estado')
-      }
-
-      const userId = mensagem.userId
-      if (!userId) {
-        throw new Error('Usuário não encontrado para esta mensagem')
-      }
-
-      await MensagensService.deletarMensagem(id, userId)
-
-      // Atualiza o estado local após confirmação do Supabase
-      set(state => {
-        const novasMensagens = state.mensagens.filter(msg => msg.id !== id)
-        return {
-          mensagens: novasMensagens,
-          mensagemAtual: state.mensagemAtual?.id === id ? null : state.mensagemAtual,
-          naoLidas: novasMensagens.filter(msg => !msg.lida).length
-        }
-      })
-    } catch (error: any) {
-      console.error('Erro ao deletar mensagem:', error)
-      set({ error: error.message })
+    } catch (error) {
+      console.error('Erro ao atualizar mensagem:', error)
+      set({ erro: 'Erro ao atualizar mensagem', carregando: false })
       throw error
     }
   },
 
-  deletarMensagens: async (ids: string[]) => {
-    try {
-      const state = get()
-      const mensagens = state.mensagens
-      
-      for (const id of ids) {
-        const mensagem = mensagens.find(msg => msg.id === id)
-        if (!mensagem) {
-          throw new Error('Mensagem não encontrada: ' + id)
-        }
-        
-        const userId = mensagem.userId
-        if (!userId) {
-          throw new Error('Usuário não encontrado para a mensagem: ' + id)
-        }
-
-        await MensagensService.deletarMensagem(id, userId)
-      }
-
-      // Atualiza o estado local após confirmação do Supabase
-      set(state => {
-        const novasMensagens = state.mensagens.filter(msg => !ids.includes(msg.id))
-        return {
-          mensagens: novasMensagens,
-          mensagemAtual: state.mensagemAtual && ids.includes(state.mensagemAtual.id) ? null : state.mensagemAtual,
-          naoLidas: novasMensagens.filter(msg => !msg.lida).length
-        }
-      })
-    } catch (error: any) {
-      console.error('Erro ao deletar mensagens:', error)
-      set({ error: error.message })
-      throw error
-    }
-  },
-
-  setFiltro: (filtro) => {
-    set({ filtroAtual: filtro })
-  },
-
-  getMensagensFiltradas: () => {
+  getMensagensFiltradas: (filtro) => {
     const state = get()
-    return state.mensagens.filter(msg => {
-      switch (state.filtroAtual) {
-        case 'nao-lidas':
-          return !msg.lida
-        case 'respondidas':
-          return msg.tipo === 'resposta'
-        default:
-          return true
-      }
-    })
+    switch (filtro) {
+      case 'nao_lidas':
+        return state.mensagens.filter(m => !m.lida)
+      case 'respondidas':
+        return state.mensagens.filter(m => m.tipo === 'resposta')
+      default:
+        return state.mensagens
+    }
   },
 
-  adicionarMensagem: (mensagem) => {
-    set(state => {
-      // Verifica se a mensagem já existe
-      const mensagemExiste = state.mensagens.some(msg => msg.id === mensagem.id)
-      if (mensagemExiste) {
-        return state
-      }
-
-      // Adiciona a nova mensagem e ordena por data
-      const novasMensagens = [mensagem, ...state.mensagens].sort(
-        (a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()
-      )
-
-      return {
-        mensagens: novasMensagens,
-        naoLidas: novasMensagens.filter(msg => !msg.lida).length
-      }
-    })
-  },
-  atualizarMensagem: (id: string, mensagemAtualizada: Partial<Mensagem>) => {
-    set(state => ({
-      mensagens: state.mensagens.map(msg => 
-        msg.id === id ? { ...msg, ...mensagemAtualizada } : msg
-      )
-    }))
-  },
+  limparMensagens: () => {
+    set({ mensagens: [], mensagemAtual: null })
+  }
 }))

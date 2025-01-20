@@ -17,6 +17,7 @@ export interface Mensagem {
   createdAt: Date
   updatedAt: Date
   oraculista?: Oraculista
+  de: string
 }
 
 export type MensagemFiltro = 'todas' | 'nao_lidas' | 'respondidas'

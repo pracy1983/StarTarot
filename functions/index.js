@@ -1,11 +1,12 @@
 const functions = require('firebase-functions');
-const { default: next } = require('next');
+const next = require('next');
 const path = require('path');
 
 const nextjsDistDir = path.join('src', '.next');
 
 const nextjsServer = next({
   dev: false,
+  dir: path.join(__dirname, '..'),
   conf: {
     distDir: nextjsDistDir,
   },

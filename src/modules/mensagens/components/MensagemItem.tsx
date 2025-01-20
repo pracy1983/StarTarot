@@ -1,21 +1,22 @@
-'use client'
-
+import React from 'react'
 import { Mensagem } from '../types/mensagem'
-import { MouseEvent } from 'react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 interface MensagemItemProps {
   mensagem: Mensagem
   selecionada: boolean
-  onClick: (event: MouseEvent) => void
+  onClick: (event: React.MouseEvent) => void
 }
 
-export function MensagemItem({ mensagem, selecionada, onClick }: MensagemItemProps) {
+export const MensagemItem: React.FC<MensagemItemProps> = ({
+  mensagem,
+  selecionada,
+  onClick
+}) => {
   const formatarData = (data: Date) => {
-    return new Date(data).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return format(data, "dd 'de' MMMM", {
+      locale: ptBR
     })
   }
 

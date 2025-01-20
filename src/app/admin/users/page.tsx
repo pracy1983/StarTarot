@@ -2,11 +2,25 @@
 
 import { useUsersStore } from '@/modules/users/store/usersStore'
 import AddAdminModal from './components/AddAdminModal'
+import { useEffect } from 'react'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function UsersPage() {
-  const { users, filters, setFilters, setIsModalOpen, setSelectedUserId } = useUsersStore()
+  const { users, filters, setFilters, setIsModalOpen, setSelectedUserId, carregarUsuarios } = useUsersStore()
   const admins = users.filter((user) => user.isAdmin)
   const regularUsers = users.filter((user) => !user.isAdmin)
+
+  useEffect(() => {
+    carregarUsuarios()
+  }, [carregarUsuarios])
+
+  const formatarData = (data: Date | string) => {
+    const date = data instanceof Date ? data : new Date(data)
+    return format(date, "dd 'de' MMMM 'de' yyyy", {
+      locale: ptBR
+    })
+  }
 
   const filteredUsers = regularUsers.filter((user) => {
     if (filters.status && user.isOnline !== (filters.status === 'online')) return false
@@ -70,7 +84,7 @@ export default function UsersPage() {
                       </span>
                     </td>
                     <td className="py-3 px-4 text-primary">
-                      {admin.lastOnline.toLocaleString('pt-BR')}
+                      {formatarData(admin.lastOnline)}
                     </td>
                     <td className="py-3 px-4">
                       <button
@@ -201,10 +215,10 @@ export default function UsersPage() {
                     </td>
                     <td className="py-3 px-4 text-primary">{user.credits}</td>
                     <td className="py-3 px-4 text-primary">
-                      {user.lastOnline.toLocaleString('pt-BR')}
+                      {formatarData(user.lastOnline)}
                     </td>
                     <td className="py-3 px-4 text-primary">
-                      {user.lastConsultation?.toLocaleString('pt-BR') || '-'}
+                      {user.lastConsultation ? formatarData(user.lastConsultation) : '-'}
                     </td>
                     <td className="py-3 px-4">
                       <button
@@ -254,8 +268,9 @@ export default function UsersPage() {
             </div>
           )}
         </div>
+
+        <AddAdminModal />
       </div>
-      <AddAdminModal />
     </>
   )
 }

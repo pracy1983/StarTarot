@@ -4,24 +4,22 @@ import { useState, useRef, useEffect } from 'react'
 import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '@/services/deepseek/chatService'
 import { useRouter } from 'next/navigation'
+import { Message as ChatMessage } from '@/modules/chat/types/message'
 
-interface Message {
-  id: string
-  content: string
-  sender: 'user' | 'agent'
-  timestamp: Date
-}
-
-const INITIAL_MESSAGE: Message = {
+const INITIAL_MESSAGE: ChatMessage = {
   id: '0',
   content: 'Olá, vamos escolher o melhor oraculista pra você? Me fale um pouco no que acredita e que tipo de ajuda precisa',
-  sender: 'agent',
+  role: 'assistant',
   timestamp: new Date()
 }
 
-export function ChatWindow() {
+interface ChatWindowProps {
+  oraculista: string
+}
+
+export function ChatWindow({ oraculista }: ChatWindowProps) {
   const [isMinimized, setIsMinimized] = useState(false)
-  const [messages, setMessages] = useState<Message[]>([INITIAL_MESSAGE])
+  const [messages, setMessages] = useState<ChatMessage[]>([INITIAL_MESSAGE])
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
@@ -43,13 +41,13 @@ export function ChatWindow() {
     }
   }, [messages])
 
-  const sendMessage = async () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim() || !chatService.current) return
 
-    const userMessage: Message = {
+    const userMessage: ChatMessage = {
       id: Date.now().toString(),
       content: inputMessage,
-      sender: 'user',
+      role: 'user',
       timestamp: new Date()
     }
 
@@ -59,8 +57,10 @@ export function ChatWindow() {
 
     try {
       const history = messages.map(msg => ({
-        role: msg.sender === 'user' ? 'user' : 'assistant',
-        content: msg.content
+        id: msg.id,
+        role: msg.role,
+        content: msg.content,
+        timestamp: msg.timestamp || new Date()
       }))
 
       const response = await chatService.current.sendMessage(inputMessage, history)
@@ -77,10 +77,10 @@ export function ChatWindow() {
         
         await new Promise(resolve => setTimeout(resolve, typingTime))
         
-        const agentMessage: Message = {
+        const agentMessage: ChatMessage = {
           id: Date.now().toString(),
           content: sentence,
-          sender: 'agent',
+          role: 'assistant',
           timestamp: new Date()
         }
         
@@ -89,10 +89,10 @@ export function ChatWindow() {
 
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
-      const errorMessage: Message = {
+      const errorMessage: ChatMessage = {
         id: (Date.now() + 1).toString(),
         content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
-        sender: 'agent',
+        role: 'assistant',
         timestamp: new Date()
       }
       setMessages(prev => [...prev, errorMessage])
@@ -140,18 +140,18 @@ export function ChatWindow() {
               <div
                 key={message.id}
                 className={`flex ${
-                  message.sender === 'user' ? 'justify-end' : 'justify-start'
+                  message.role === 'user' ? 'justify-end' : 'justify-start'
                 } mb-4`}
               >
                 <div
                   className={`p-3 rounded-lg ${
-                    message.sender === 'user'
+                    message.role === 'user'
                       ? 'bg-primary text-black rounded-br-none'
                       : 'bg-gray-800/50 text-gray-300 rounded-bl-none'
                   }`}
                 >
                   <p>{message.content}</p>
-                  {message.sender === 'agent' && message.content.toLowerCase().includes('consulta') && (
+                  {message.role === 'assistant' && message.content.toLowerCase().includes('consulta') && (
                     <button
                       onClick={() => router.push('/credits')}
                       className="mt-2 text-sm text-primary hover:text-primary/80 transition-colors"
@@ -182,12 +182,12 @@ export function ChatWindow() {
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                 placeholder="Digite sua mensagem..."
                 className="flex-1 bg-gray-800/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
               />
               <button
-                onClick={sendMessage}
+                onClick={handleSendMessage}
                 className="text-primary hover:text-primary/80 transition-colors"
               >
                 <PaperAirplaneIcon className="w-6 h-6 transform rotate-90" />

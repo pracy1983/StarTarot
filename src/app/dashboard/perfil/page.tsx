@@ -3,6 +3,8 @@
 import { useAuthStore } from '@/stores/authStore'
 import { useEffect, useState } from 'react'
 import Image from 'next/image'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 interface UserProfile {
   nome: string
@@ -25,6 +27,13 @@ export default function PerfilPage() {
     ultimaConsulta: null, // Será dinâmico
     foto: null // Será dinâmico
   })
+
+  const formatarData = (data: Date | string) => {
+    const date = data instanceof Date ? data : new Date(data)
+    return format(date, "dd 'de' MMMM 'de' yyyy", {
+      locale: ptBR
+    })
+  }
 
   useEffect(() => {
     // Aqui virá a chamada para API que buscará os dados do perfil
@@ -65,7 +74,7 @@ export default function PerfilPage() {
               </h1>
               <p className="text-gray-300">{profile.email}</p>
               <p className="text-sm text-gray-400 mt-1">
-                Membro desde {new Date(profile.dataCadastro).toLocaleDateString()}
+                Membro desde {formatarData(profile.dataCadastro)}
               </p>
             </div>
           </div>
@@ -94,7 +103,7 @@ export default function PerfilPage() {
             <h3 className="text-primary font-medium mb-2">Última consulta</h3>
             <p className="text-2xl font-semibold text-white">
               {profile.ultimaConsulta
-                ? new Date(profile.ultimaConsulta).toLocaleDateString()
+                ? formatarData(profile.ultimaConsulta)
                 : 'Nenhuma consulta'}
             </p>
           </div>

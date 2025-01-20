@@ -1,3 +1,4 @@
+import { ChatWindow } from '@/components/chat/ChatWindow'
 import { supabase } from '@/lib/supabase'
 import { redirect } from 'next/navigation'
 import { generateStaticParams } from './generateStaticParams'
@@ -8,7 +9,7 @@ export interface Oraculista {
   nome: string
 }
 
-export default async function ConsultaPage({
+export default async function ChatPage({
   params,
 }: {
   params: { nome: string }
@@ -40,12 +41,7 @@ export default async function ConsultaPage({
   return (
     <div className="min-h-screen bg-black text-white p-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-primary mb-4">
-          Iniciando consulta...
-        </h1>
-        <p className="text-gray-400">
-          Aguarde enquanto conectamos você com {nome}
-        </p>
+        <ChatWindow oraculista={nome} />
       </div>
     </div>
   )

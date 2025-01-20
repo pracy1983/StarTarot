@@ -66,7 +66,7 @@ export default function MensagensPage() {
         {/* Lista de Mensagens */}
         <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
           <MensagemList
-            mensagens={getMensagensFiltradas()}
+            mensagens={getMensagensFiltradas('todas')}
             onSelectMensagem={setMensagemAtual}
             mensagemSelecionada={mensagemAtual}
           />

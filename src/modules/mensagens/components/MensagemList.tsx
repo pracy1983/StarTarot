@@ -14,7 +14,7 @@ interface MensagemListProps {
 
 export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada }: MensagemListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const deletarMensagens = useMensagensStore(state => state.deletarMensagens)
+  const deletarMensagem = useMensagensStore(state => state.deletarMensagem)
 
   // Limpa seleções quando as mensagens mudam
   useEffect(() => {
@@ -51,7 +51,9 @@ export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada 
   const handleDeleteSelected = async () => {
     if (selectedIds.size === 0) return
     if (window.confirm(`Tem certeza que deseja deletar ${selectedIds.size} mensagem(ns)?`)) {
-      await deletarMensagens(Array.from(selectedIds))
+      for (const id of selectedIds) {
+        await deletarMensagem(id)
+      }
       setSelectedIds(new Set())
       onSelectMensagem(null)
     }

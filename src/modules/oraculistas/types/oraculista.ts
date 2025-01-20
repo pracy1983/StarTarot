@@ -13,6 +13,8 @@ export interface Oraculista {
   consultas: number // Número total de consultas realizadas
   createdAt: Date
   updatedAt: Date
+  desconto_temp?: number // Valor do desconto temporário aplicado ao oraculista
+  rating?: number // Avaliação do oraculista (0-5)
 }
 
 export interface OraculistaFormData extends Omit<Oraculista, 'id' | 'createdAt' | 'updatedAt' | 'consultas'> {

@@ -4,13 +4,29 @@ import { useState, useEffect } from 'react';
 import { useMensagensStore } from '@/modules/mensagens/store/mensagensStore';
 import { PencilIcon, CheckCircleIcon } from '@heroicons/react/24/outline';
 import { Mensagem } from '@/modules/mensagens/types/mensagem';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 export default function ConsultasAdminPage() {
-  const { mensagens, carregarMensagens, atualizarMensagem, deletarMensagem } = useMensagensStore();
+  const { 
+    mensagens, 
+    carregarMensagens, 
+    atualizarMensagem, 
+    deletarMensagem,
+    carregando 
+  } = useMensagensStore();
+  
   const [mensagemSelecionada, setMensagemSelecionada] = useState<Mensagem | null>(null);
   const [editando, setEditando] = useState(false);
   const [conteudoEditado, setConteudoEditado] = useState('');
   const [mensagensEnviadas, setMensagensEnviadas] = useState<Mensagem[]>([]);
+
+  const formatarData = (data: Date | string) => {
+    const date = data instanceof Date ? data : new Date(data)
+    return format(date, "dd 'de' MMMM 'de' yyyy", {
+      locale: ptBR
+    })
+  }
 
   useEffect(() => {
     carregarMensagens();
@@ -22,11 +38,12 @@ export default function ConsultasAdminPage() {
     setEditando(true);
   };
 
-  const handleSalvar = () => {
+  const handleSalvar = async () => {
     if (mensagemSelecionada) {
-      atualizarMensagem(mensagemSelecionada.id, { conteudo: conteudoEditado });
+      await atualizarMensagem(mensagemSelecionada.id, { conteudo: conteudoEditado });
       setEditando(false);
       setMensagemSelecionada(null);
+      await carregarMensagens();
     }
   };
 
@@ -35,87 +52,82 @@ export default function ConsultasAdminPage() {
     if (mensagem) {
       setMensagensEnviadas(prev => [...prev, mensagem]);
       await deletarMensagem(mensagemId);
-      carregarMensagens();
+      await carregarMensagens();
     }
   };
 
-  function ContadorRegressivo({ initialTime, onComplete }: { initialTime: number, onComplete: () => void }) {
-    const [timeLeft, setTimeLeft] = useState(initialTime);
-
-    useEffect(() => {
-      const timer = setInterval(() => {
-        setTimeLeft((prev) => {
-          if (prev > 1) return prev - 1;
-          clearInterval(timer);
-          onComplete();
-          return 0;
-        });
-      }, 1000);
-
-      return () => clearInterval(timer);
-    }, [onComplete]);
-
-    return <span>{timeLeft}s</span>;
+  if (carregando) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary"></div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen p-6 bg-black/40 backdrop-blur-md">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold text-primary mb-6">Consultas</h1>
-        {mensagens.length === 0 ? (
-          <p className="text-center text-gray-400">Não há novas mensagens</p>
-        ) : (
-          <ul className="space-y-4">
-            {mensagens.map((mensagem) => (
-              <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
-                <div className="flex justify-between items-center">
-                  <div>
-                    <p className="text-lg font-medium">ID do Usuário: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Oraculista não definido'}</p>
-                  </div>
-                  <button
-                    onClick={() => handleEditar(mensagem)}
-                    className="text-primary hover:text-primary-dark"
-                  >
-                    <PencilIcon className="h-5 w-5" /> Editar
-                  </button>
-                </div>
-                {mensagemSelecionada?.id === mensagem.id && (
-                  <div className="mt-4">
-                    <textarea
-                      className="w-full p-2 border rounded"
-                      value={conteudoEditado}
-                      onChange={(e) => setConteudoEditado(e.target.value)}
-                    />
-                    <button
-                      onClick={handleSalvar}
-                      className="mt-2 px-4 py-2 bg-primary text-white rounded"
-                    >
-                      Salvar
-                    </button>
-                  </div>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        <h2 className="text-2xl font-bold text-primary mt-8">Mensagens Enviadas</h2>
-        <ul className="space-y-4">
-          {mensagensEnviadas.map((mensagem) => (
-            <li key={mensagem.id} className="bg-white/10 p-4 rounded-lg shadow">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-lg font-medium">ID do Usuário: {mensagem.userId} | Para: {mensagem.oraculista?.nome || 'Oraculista não definido'}</p>
-                </div>
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-2xl font-bold mb-6">Gerenciar Consultas</h1>
+      
+      <div className="grid gap-6">
+        {mensagens.map((mensagem) => (
+          <div
+            key={mensagem.id}
+            className="bg-white rounded-lg shadow-md p-6"
+          >
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold">{mensagem.titulo}</h3>
+                <p className="text-sm text-gray-500">
+                  {formatarData(mensagem.data)}
+                </p>
+              </div>
+              <div className="flex space-x-2">
                 <button
                   onClick={() => handleEditar(mensagem)}
-                  className="text-primary hover:text-primary-dark"
+                  className="p-2 text-gray-600 hover:text-primary transition-colors"
                 >
-                  <PencilIcon className="h-5 w-5" /> Editar
+                  <PencilIcon className="h-5 w-5" />
+                </button>
+                <button
+                  onClick={() => handleComplete(mensagem.id)}
+                  className="p-2 text-gray-600 hover:text-green-500 transition-colors"
+                >
+                  <CheckCircleIcon className="h-5 w-5" />
                 </button>
               </div>
-            </li>
-          ))}
-        </ul>
+            </div>
+
+            {editando && mensagemSelecionada?.id === mensagem.id ? (
+              <div>
+                <textarea
+                  value={conteudoEditado}
+                  onChange={(e) => setConteudoEditado(e.target.value)}
+                  className="w-full p-2 border border-gray-300 rounded-md mb-2"
+                  rows={4}
+                />
+                <div className="flex justify-end space-x-2">
+                  <button
+                    onClick={() => setEditando(false)}
+                    className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={handleSalvar}
+                    className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
+                  >
+                    Salvar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div
+                className="prose max-w-none"
+                dangerouslySetInnerHTML={{ __html: mensagem.conteudo }}
+              />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

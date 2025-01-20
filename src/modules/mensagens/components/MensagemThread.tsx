@@ -1,67 +1,85 @@
-'use client'
-
+import React from 'react'
 import { Mensagem } from '../types/mensagem'
-import { useMensagensStore } from '../store/mensagensStore'
-import { Trash2 } from 'lucide-react'
+import { format, formatDistance } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 interface MensagemThreadProps {
   mensagem: Mensagem
+  onDelete?: (id: string) => void
+  onMarcarLida?: (id: string) => void
 }
 
-export function MensagemThread({ mensagem }: MensagemThreadProps) {
-  const deletarMensagem = useMensagensStore(state => state.deletarMensagem)
-
+export const MensagemThread: React.FC<MensagemThreadProps> = ({
+  mensagem,
+  onDelete,
+  onMarcarLida
+}) => {
   const formatarData = (data: Date) => {
-    return new Date(data).toLocaleDateString('pt-BR', {
-      day: '2-digit',
-      month: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit'
+    return format(data, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
+      locale: ptBR
     })
   }
 
-  const handleDeletar = async () => {
-    if (window.confirm('Tem certeza que deseja deletar esta mensagem?')) {
-      await deletarMensagem(mensagem.id)
-    }
-  }
-
   return (
-    <div className="h-full flex flex-col">
-      {/* Cabeçalho */}
-      <div className="p-3 border-b border-primary/20">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-primary">
-            {mensagem.titulo}
-          </h2>
-          <button
-            onClick={handleDeletar}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-            title="Deletar mensagem"
-          >
-            <Trash2 size={18} />
-          </button>
+    <div className="bg-white rounded-lg shadow-md p-6 mb-4">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center">
+          {mensagem.oraculista && (
+            <img
+              src={mensagem.oraculista.foto}
+              alt={mensagem.oraculista.nome}
+              className="w-10 h-10 rounded-full mr-4"
+            />
+          )}
+          <div>
+            <h3 className="text-lg font-semibold">{mensagem.titulo}</h3>
+            <p className="text-sm text-gray-500">
+              {mensagem.oraculista ? mensagem.oraculista.nome : 'Oraculista'}
+            </p>
+          </div>
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <div className="text-sm text-gray-500">
           {formatarData(mensagem.data)}
-        </p>
-      </div>
-
-      {/* Conteúdo */}
-      <div className="flex-1 p-3 overflow-y-auto">
-        <div className="prose prose-invert max-w-none">
-          <div 
-            className="text-gray-300 text-sm"
-            dangerouslySetInnerHTML={{ __html: mensagem.conteudo }}
-          />
         </div>
       </div>
 
-      {/* Rodapé */}
-      <div className="p-3 border-t border-primary/20">
-        <p className="text-xs text-gray-500">
-          {mensagem.tipo === 'pergunta' ? 'Pergunta enviada' : 'Resposta recebida'} em {formatarData(mensagem.data)}
-        </p>
+      <div className="prose max-w-none mb-4">
+        <div
+          dangerouslySetInnerHTML={{ __html: mensagem.conteudo }}
+          className="text-gray-700"
+        />
+      </div>
+
+      <div className="flex justify-between items-center mt-4 pt-4 border-t border-gray-200">
+        <div className="flex space-x-4">
+          {!mensagem.lida && onMarcarLida && (
+            <button
+              onClick={() => onMarcarLida(mensagem.id)}
+              className="text-blue-600 hover:text-blue-800"
+            >
+              Marcar como lida
+            </button>
+          )}
+          {onDelete && (
+            <button
+              onClick={() => onDelete(mensagem.id)}
+              className="text-red-600 hover:text-red-800"
+            >
+              Excluir
+            </button>
+          )}
+        </div>
+        <div className="flex items-center">
+          <span
+            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+              mensagem.lida
+                ? 'bg-green-100 text-green-800'
+                : 'bg-yellow-100 text-yellow-800'
+            }`}
+          >
+            {mensagem.lida ? 'Lida' : 'Não lida'}
+          </span>
+        </div>
       </div>
     </div>
   )

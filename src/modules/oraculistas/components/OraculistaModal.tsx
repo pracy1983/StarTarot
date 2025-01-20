@@ -5,6 +5,8 @@ import { Dialog } from '@headlessui/react'
 import { XMarkIcon, PhotoIcon } from '@heroicons/react/24/outline'
 import { useOraculistasStore } from '../store/oraculistasStore'
 import { OraculistaFormData } from '../types/oraculista'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import Image from 'next/image'
 
 interface OraculistaModalProps {
@@ -173,6 +175,12 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     }
   }
 
+  const formatarData = (data: string) => {
+    return format(new Date(data), "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
+      locale: ptBR
+    })
+  }
+
   return (
     <Dialog
       open={isOpen}
@@ -202,258 +210,218 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
                 <label className="block text-sm font-medium text-gray-300">
                   Foto do Oraculista
                 </label>
-                <div className="flex items-center gap-4">
-                  <div className="relative w-24 h-24 rounded-full overflow-hidden bg-primary/10">
-                    {previewImage ? (
-                      <Image
-                        src={previewImage}
-                        alt="Preview"
-                        fill
-                        className="object-cover"
-                      />
-                    ) : (
-                      <PhotoIcon className="w-12 h-12 text-primary/40 absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
-                    )}
-                  </div>
+                <div className="mt-1 flex items-center gap-x-3">
+                  {previewImage ? (
+                    <Image
+                      src={previewImage}
+                      alt="Preview"
+                      width={96}
+                      height={96}
+                      className="h-24 w-24 rounded-lg object-cover"
+                    />
+                  ) : (
+                    <PhotoIcon className="h-24 w-24 text-gray-300" aria-hidden="true" />
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => document.getElementById('foto-input')?.click()}
+                    className="rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-white/20"
+                  >
+                    Alterar
+                  </button>
                   <input
                     type="file"
+                    id="foto-input"
                     accept="image/*"
                     onChange={handleImageChange}
-                    className="block w-full text-sm text-gray-300
-                      file:mr-4 file:py-2 file:px-4
-                      file:rounded-full file:border-0
-                      file:text-sm file:font-semibold
-                      file:bg-primary/10 file:text-primary
-                      hover:file:bg-primary/20"
+                    className="hidden"
                   />
                 </div>
               </div>
 
-              {/* Dados Básicos */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Nome
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.nome}
-                    onChange={e => handleFormChange({ nome: e.target.value })}
-                    className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-300 mb-1">
-                    Preço da Consulta
-                  </label>
-                  <input
-                    type="number"
-                    value={formData.preco}
-                    onChange={e => handleFormChange({ preco: Number(e.target.value) })}
-                    className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    min="0"
-                    step="0.01"
-                    required
-                  />
-                </div>
+              {/* Nome */}
+              <div>
+                <label htmlFor="nome" className="block text-sm font-medium text-gray-300">
+                  Nome
+                </label>
+                <input
+                  type="text"
+                  id="nome"
+                  value={formData.nome}
+                  onChange={(e) => handleFormChange({ nome: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
+                  required
+                />
               </div>
 
               {/* Especialidades */}
-              <div className="space-y-2">
+              <div>
                 <label className="block text-sm font-medium text-gray-300">
                   Especialidades
                 </label>
-                <div className="flex flex-wrap gap-2 mb-2">
-                  {formData.especialidades.map((esp, index) => (
-                    <span
-                      key={index}
-                      className="inline-flex items-center gap-1 px-3 py-1 bg-primary/10 rounded-full text-sm text-primary"
+                <div className="mt-2 space-y-2">
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={novaEspecialidade}
+                      onChange={(e) => setNovaEspecialidade(e.target.value)}
+                      onKeyPress={(e) => e.key === 'Enter' && (e.preventDefault(), adicionarEspecialidade())}
+                      className="flex-1 rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
+                      placeholder="Nova especialidade..."
+                    />
+                    <button
+                      type="button"
+                      onClick={adicionarEspecialidade}
+                      className="rounded-md bg-primary/20 px-3 py-2 text-sm font-semibold text-primary shadow-sm hover:bg-primary/30"
                     >
-                      {esp}
-                      <button
-                        type="button"
-                        onClick={() => removerEspecialidade(index)}
-                        className="text-primary hover:text-primary/80"
-                      >
-                        <XMarkIcon className="h-4 w-4" />
-                      </button>
-                    </span>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={novaEspecialidade}
-                    onChange={e => setNovaEspecialidade(e.target.value)}
-                    onKeyPress={e => e.key === 'Enter' && (e.preventDefault(), adicionarEspecialidade())}
-                    className="flex-1 bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                    placeholder="Digite uma especialidade e pressione Enter"
-                  />
-                  <button
-                    type="button"
-                    onClick={adicionarEspecialidade}
-                    className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors duration-200"
-                  >
-                    Adicionar
-                  </button>
+                      Adicionar
+                    </button>
+                  </div>
+                  <div className="space-y-2">
+                    {formData.especialidades.map((esp, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="flex-1 text-sm text-gray-300">{esp}</span>
+                        <button
+                          type="button"
+                          onClick={() => removerEspecialidade(index)}
+                          className="text-red-500 hover:text-red-400"
+                        >
+                          <XMarkIcon className="h-5 w-5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
 
               {/* Descrição */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
+                <label htmlFor="descricao" className="block text-sm font-medium text-gray-300">
                   Descrição
                 </label>
                 <textarea
-                  value={formData.descricao}
-                  onChange={e => handleFormChange({ descricao: e.target.value })}
-                  className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                  id="descricao"
                   rows={3}
+                  value={formData.descricao}
+                  onChange={(e) => handleFormChange({ descricao: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
                   required
                 />
               </div>
 
-              {/* Prompt */}
+              {/* Preço */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Prompt Personalizado
+                <label htmlFor="preco" className="block text-sm font-medium text-gray-300">
+                  Preço por consulta (R$)
                 </label>
-                <textarea
-                  value={formData.prompt}
-                  onChange={e => handleFormChange({ prompt: e.target.value })}
-                  className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
-                  rows={5}
-                  placeholder="Digite o prompt que será usado para personalizar as respostas deste oraculista..."
+                <input
+                  type="number"
+                  id="preco"
+                  value={formData.preco}
+                  onChange={(e) => handleFormChange({ preco: Number(e.target.value) })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
+                  required
+                  min="0"
+                  step="0.01"
                 />
               </div>
 
-              {/* Status e Promoção */}
-              <div className="flex flex-col md:flex-row gap-6">
-                <div className="flex items-center gap-2">
+              {/* Promoção */}
+              <div className="space-y-4">
+                <div className="flex items-center">
                   <input
                     type="checkbox"
-                    id="disponivel"
-                    checked={formData.disponivel}
-                    onChange={e => handleFormChange({ disponivel: e.target.checked })}
-                    className="rounded border-primary/20 text-primary focus:ring-primary"
-                  />
-                  <label htmlFor="disponivel" className="text-sm text-gray-300">
-                    Disponível para consultas
-                  </label>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    id="promocao"
+                    id="emPromocao"
                     checked={formData.emPromocao}
-                    onChange={async (e) => {
-                      const novoEstado = { emPromocao: e.target.checked };
-                      
-                      // Se desativar a promoção, remove o preço promocional
-                      if (!e.target.checked) {
-                        novoEstado.precoPromocional = undefined;
-                      }
-                      
-                      handleFormChange(novoEstado);
-                      
-                      // Salva imediatamente
-                      if (oraculistaId) {
-                        setLoading(true);
-                        try {
-                          const result = await atualizarOraculista(oraculistaId, {
-                            ...formData,
-                            ...novoEstado
-                          });
-                          if (!result.success) {
-                            setError(result.error || 'Erro ao atualizar promoção');
-                            // Reverte a mudança em caso de erro
-                            handleFormChange({ emPromocao: !e.target.checked });
-                          }
-                        } catch (err: any) {
-                          console.error('Erro ao atualizar promoção:', err);
-                          setError(err.message || 'Erro ao atualizar promoção');
-                          // Reverte a mudança em caso de erro
-                          handleFormChange({ emPromocao: !e.target.checked });
-                        } finally {
-                          setLoading(false);
-                        }
-                      }
-                    }}
-                    className="rounded border-primary/20 text-primary focus:ring-primary"
+                    onChange={(e) => handleFormChange({ 
+                      emPromocao: e.target.checked,
+                      precoPromocional: e.target.checked ? formData.precoPromocional : undefined 
+                    })}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
                   />
-                  <label htmlFor="promocao" className="text-sm text-gray-300">
-                    Ativar preço promocional
+                  <label htmlFor="emPromocao" className="ml-2 block text-sm font-medium text-gray-300">
+                    Em promoção
                   </label>
                 </div>
 
                 {formData.emPromocao && (
-                  <div className="flex-1">
+                  <div>
+                    <label htmlFor="precoPromocional" className="block text-sm font-medium text-gray-300">
+                      Preço promocional (R$)
+                    </label>
                     <input
                       type="number"
+                      id="precoPromocional"
                       value={formData.precoPromocional || ''}
-                      onChange={async (e) => {
-                        const novoPreco = Number(e.target.value);
-                        
-                        // Atualiza o estado local primeiro
-                        const novoFormData = {
-                          ...formData,
-                          precoPromocional: novoPreco
-                        };
-                        handleFormChange(novoFormData);
-                        
-                        // Salva no banco
-                        if (oraculistaId) {
-                          setLoading(true);
-                          try {
-                            const result = await atualizarOraculista(oraculistaId, novoFormData);
-                            if (!result.success) {
-                              setError(result.error || 'Erro ao atualizar preço promocional');
-                              // Reverte em caso de erro
-                              handleFormChange({ ...formData });
-                            }
-                          } catch (err: any) {
-                            console.error('Erro ao atualizar preço promocional:', err);
-                            setError(err.message || 'Erro ao atualizar preço promocional');
-                            // Reverte em caso de erro
-                            handleFormChange({ ...formData });
-                          } finally {
-                            setLoading(false);
-                          }
-                        }
-                      }}
-                      className="w-full bg-black border border-primary/20 rounded-lg px-4 py-2 text-gray-300 focus:border-primary focus:ring-1 focus:ring-primary"
+                      onChange={(e) => handleFormChange({ precoPromocional: Number(e.target.value) })}
+                      className="mt-1 block w-full rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
+                      required={formData.emPromocao}
                       min="0"
                       step="0.01"
-                      placeholder="Preço promocional"
-                      required
                     />
                   </div>
                 )}
               </div>
 
+              {/* Disponibilidade */}
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="disponivel"
+                  checked={formData.disponivel}
+                  onChange={(e) => handleFormChange({ disponivel: e.target.checked })}
+                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+                />
+                <label htmlFor="disponivel" className="ml-2 block text-sm font-medium text-gray-300">
+                  Disponível para consultas
+                </label>
+              </div>
+
+              {/* Prompt */}
+              <div>
+                <label htmlFor="prompt" className="block text-sm font-medium text-gray-300">
+                  Prompt de personalidade
+                </label>
+                <textarea
+                  id="prompt"
+                  rows={5}
+                  value={formData.prompt}
+                  onChange={(e) => handleFormChange({ prompt: e.target.value })}
+                  className="mt-1 block w-full rounded-md border border-gray-300 bg-white/5 py-2 px-3 shadow-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary sm:text-sm text-white"
+                  placeholder="Descreva a personalidade e características do oraculista..."
+                />
+              </div>
+
               {error && (
-                <div className="mt-2 text-red-500 text-sm">
-                  {error}
+                <div className="rounded-md bg-red-500/10 p-4">
+                  <div className="flex">
+                    <div className="flex-shrink-0">
+                      {/* Ícone de erro aqui */}
+                    </div>
+                    <div className="ml-3">
+                      <h3 className="text-sm font-medium text-red-800">
+                        Erro ao salvar oraculista
+                      </h3>
+                      <div className="mt-2 text-sm text-red-700">
+                        <p>{error}</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
 
-              {/* Botões */}
-              <div className="flex justify-end gap-4 pt-4">
+              <div className="flex justify-end gap-x-3">
                 <button
                   type="button"
                   onClick={handleClose}
-                  className="px-4 py-2 text-gray-300 hover:text-white"
-                  disabled={loading}
+                  className="rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-white/20"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary/10 hover:bg-primary/20 text-primary rounded-lg transition-colors duration-200 disabled:opacity-50"
                   disabled={loading}
+                  className="rounded-md bg-primary px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Salvando...' : 'Salvar'}
                 </button>

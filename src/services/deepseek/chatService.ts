@@ -1,4 +1,5 @@
 import { chatAgentPrompt } from '@/config/prompts/chatAgentPrompt'
+import { Message, ApiMessage } from '@/modules/chat/types/message'
 
 interface ChatMessage {
   role: 'user' | 'assistant'
@@ -13,7 +14,7 @@ export class ChatService {
     this.apiKey = apiKey
   }
 
-  async sendMessage(message: string, conversationHistory: ChatMessage[] = []): Promise<string> {
+  async sendMessage(message: string, conversationHistory: Array<Message | ApiMessage> = []): Promise<string> {
     try {
       const messages = [
         { role: 'system', content: chatAgentPrompt },

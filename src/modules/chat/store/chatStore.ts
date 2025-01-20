@@ -1,25 +1,18 @@
 import { create } from 'zustand'
-import { persist } from 'zustand/middleware'
-import { useAuthStore } from '@/stores/authStore'
-
-interface Message {
-  id: string
-  content: string
-  sender: 'user' | 'agent'
-  timestamp: Date
-}
+import { persist, createJSONStorage } from 'zustand/middleware'
+import { Message } from '../types/message'
 
 const INITIAL_MESSAGE: Message = {
   id: '0',
   content: 'Olá, vamos escolher o melhor oraculista pra você? Me fale um pouco no que acredita e que tipo de ajuda precisa.',
-  sender: 'agent',
+  role: 'assistant',
   timestamp: new Date()
 }
 
 interface ChatState {
   isMinimized: boolean
   messages: Message[]
-  setMinimized: (state: boolean) => void
+  setMinimized: (isMinimized: boolean) => void
   addMessage: (message: Message) => void
   resetChat: () => void
 }
@@ -29,17 +22,22 @@ export const useChatStore = create<ChatState>()(
     (set) => ({
       isMinimized: false,
       messages: [INITIAL_MESSAGE],
-      setMinimized: (state) => set({ isMinimized: state }),
+      setMinimized: (isMinimized) => set({ isMinimized }),
       addMessage: (message) => set((state) => ({ 
         messages: [...state.messages, message] 
       })),
       resetChat: () => set({ 
         messages: [INITIAL_MESSAGE],
-        isMinimized: false 
+        isMinimized: false
       })
     }),
     {
       name: 'chat-storage',
+      storage: createJSONStorage(() => localStorage),
+      partialize: (state) => ({
+        messages: state.messages,
+        isMinimized: state.isMinimized
+      })
     }
   )
 )

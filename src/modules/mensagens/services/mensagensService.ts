@@ -87,8 +87,10 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
         titulo: formData.titulo,
         conteudo: formData.conteudo,
         tipo: 'pergunta',
-        data: new Date().toISOString(),
-        lida: false
+        data: new Date(),
+        lida: false,
+        created_at: new Date(),
+        updated_at: new Date()
       })
       .select(`
         *,
@@ -150,8 +152,10 @@ export async function enviarResposta(mensagemId: string, oraculistaId: string, c
         conteudo: conteudo,
         tipo: 'resposta',
         thread_id: mensagemId,
-        data: new Date().toISOString(),
-        lida: false
+        data: new Date(),
+        lida: false,
+        created_at: new Date(),
+        updated_at: new Date()
       })
       .select(`
         *,
@@ -337,6 +341,7 @@ function formatarMensagem(data: any): Mensagem {
       id: data.oraculista.id,
       nome: data.oraculista.nome,
       foto: data.oraculista.foto
-    } : undefined
+    } : undefined,
+    de: data.tipo === 'pergunta' ? 'Usuário' : data.oraculista?.nome || 'Oraculista'
   }
 }

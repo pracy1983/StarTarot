@@ -1,0 +1,47 @@
+[
+  {
+    "id": 1,
+    "nome": "cigana-flora",
+    "nomeCompleto": "Cigana Flora",
+    "descricao": "Especialista em leitura de cartas e tarô",
+    "imagem": "/oraculistas/cigana-flora.jpg",
+    "foto": "/oraculistas/cigana-flora.jpg",
+    "especialidades": ["Tarô", "Cartas", "Previsões"],
+    "preco": 50.0,
+    "disponivel": true,
+    "avaliacao": 4.8,
+    "totalAvaliacoes": 120,
+    "idiomas": ["Português"],
+    "experiencia": "10 anos"
+  },
+  {
+    "id": 2,
+    "nome": "mago-negro",
+    "nomeCompleto": "Mago Negro",
+    "descricao": "Mestre em magia e feitiçaria",
+    "imagem": "/oraculistas/mago-negro.jpg",
+    "foto": "/oraculistas/mago-negro.jpg",
+    "especialidades": ["Magia", "Feitiços", "Proteção"],
+    "preco": 60.0,
+    "disponivel": true,
+    "avaliacao": 4.9,
+    "totalAvaliacoes": 150,
+    "idiomas": ["Português"],
+    "experiencia": "15 anos"
+  },
+  {
+    "id": 3,
+    "nome": "vo-cleusa",
+    "nomeCompleto": "Vó Cleusa",
+    "descricao": "Especialista em benzeduras e simpatias",
+    "imagem": "/oraculistas/vo-cleusa.jpg",
+    "foto": "/oraculistas/vo-cleusa.jpg",
+    "especialidades": ["Benzeduras", "Simpatias", "Proteção"],
+    "preco": 40.0,
+    "disponivel": true,
+    "avaliacao": 4.7,
+    "totalAvaliacoes": 200,
+    "idiomas": ["Português"],
+    "experiencia": "20 anos"
+  }
+]

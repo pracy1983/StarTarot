@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { Oraculista, OraculistaFormData } from '../types/oraculista'
-import { getPromptByOraculista, atualizarPromptOraculista } from '@/config/prompts/oraculistas'
+import { formatarPromptOraculista, atualizarPromptOraculista } from '@/config/prompts/oraculistas'
 import { supabase } from '@/lib/supabase'
 
 interface OraculistasState {
@@ -13,9 +13,10 @@ interface OraculistasState {
   alternarPromocao: (id: string, precoPromocional?: number) => Promise<{ success: boolean; error?: string }>
   excluirOraculista: (id: string) => Promise<{ success: boolean; error?: string }>
   carregarOraculistas: () => Promise<void>
+  getOraculistaByNome: (nome: string) => Promise<Oraculista | null>
 }
 
-export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
+export const useOraculistasStore = create<OraculistasState>((set, get) => ({
   oraculistas: [],
   loading: false,
   error: null,
@@ -197,18 +198,24 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
     }
   },
 
-  alternarPromocao: async (id, precoPromocional) => {
+  alternarPromocao: async (id, precoPromocional?: number) => {
     const oraculista = get().oraculistas.find(o => o.id === id)
     if (!oraculista) return { success: false, error: 'Oraculista não encontrado' }
 
     try {
+      const updateData: Record<string, any> = {
+        em_promocao: !oraculista.emPromocao,
+        updated_at: new Date().toISOString()
+      }
+
+      // Só atualiza o preço promocional se for fornecido
+      if (precoPromocional !== undefined) {
+        updateData.preco_promocional = precoPromocional
+      }
+
       const { error } = await supabase
         .from('oraculistas')
-        .update({ 
-          em_promocao: !oraculista.emPromocao,
-          preco_promocional: !oraculista.emPromocao ? precoPromocional : null,
-          updated_at: new Date().toISOString()
-        })
+        .update(updateData)
         .eq('id', id)
 
       if (error) throw error
@@ -219,7 +226,7 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
             ? { 
                 ...o, 
                 emPromocao: !o.emPromocao, 
-                precoPromocional: !o.emPromocao ? precoPromocional : undefined,
+                precoPromocional: precoPromocional ?? o.precoPromocional,
                 updatedAt: new Date()
               }
             : o
@@ -232,24 +239,51 @@ export const useOraculistasStore = create<OraculistasState>()((set, get) => ({
     }
   },
 
-  excluirOraculista: async (id: string) => {
+  getOraculistaByNome: async (nome) => {
     try {
       const { data, error } = await supabase
         .from('oraculistas')
-        .delete()
-        .eq('id', id);
+        .select('*')
+        .ilike('nome', nome)
+        .single()
 
-      if (error) throw error;
+      if (error) throw error
 
-      // Atualiza o estado removendo o oraculista
-      set((state) => ({
-        oraculistas: state.oraculistas.filter((o) => o.id !== id)
-      }));
+      if (!data) return null
 
-      return { success: true };
-    } catch (error: any) {
-      console.error('Erro ao excluir oraculista:', error);
-      return { success: false, error: error.message };
+      return {
+        ...data,
+        especialidades: data.especialidades || [],
+        createdAt: new Date(data.created_at),
+        updatedAt: new Date(data.updated_at),
+        consultas: data.consultas || 0,
+        prompt_formatado: data.prompt_formatado || '',
+        prompt: data.prompt || '',
+        emPromocao: data.em_promocao || false,
+        precoPromocional: data.preco_promocional
+      }
+    } catch (error) {
+      console.error('Erro ao buscar oraculista:', error)
+      return null
     }
   },
+
+  excluirOraculista: async (id) => {
+    try {
+      const { error } = await supabase
+        .from('oraculistas')
+        .delete()
+        .eq('id', id)
+
+      if (error) throw error
+
+      set(state => ({
+        oraculistas: state.oraculistas.filter(o => o.id !== id)
+      }))
+
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  }
 }))

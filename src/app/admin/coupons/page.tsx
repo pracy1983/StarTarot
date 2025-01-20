@@ -2,9 +2,17 @@
 
 import { useCouponsStore } from '@/modules/coupons/store/couponsStore'
 import { AddCouponModal } from './components/AddCouponModal'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 export default function CouponsPage() {
   const { coupons, isModalOpen, setIsModalOpen, toggleCouponStatus } = useCouponsStore()
+
+  const formatarData = (data: Date) => {
+    return format(data, "dd 'de' MMMM 'de' yyyy", {
+      locale: ptBR
+    })
+  }
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -72,7 +80,7 @@ export default function CouponsPage() {
                     <div>
                       <div className="text-sm text-gray-400">Expira em</div>
                       <div className="text-lg font-semibold text-primary">
-                        {coupon.expiresAt.toLocaleDateString('pt-BR')}
+                        {formatarData(coupon.expiresAt)}
                       </div>
                     </div>
                   )}
