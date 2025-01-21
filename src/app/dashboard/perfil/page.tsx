@@ -5,27 +5,41 @@ import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
-
-interface UserProfile {
-  nome: string
-  email: string
-  dataCadastro: string
-  creditos: number
-  consultasRealizadas: number
-  ultimaConsulta: string | null
-  foto: string | null
-}
+import { ProfileService } from '@/modules/profile/services/profileService'
+import { ProfileData } from '@/modules/profile/types/profile'
+import { getZodiacSign } from '@/modules/profile/utils/zodiac'
+import { PencilIcon, CameraIcon } from '@heroicons/react/24/outline'
+import { PhotoUpload } from '@/modules/profile/components/PhotoUpload'
 
 export default function PerfilPage() {
   const { user } = useAuthStore()
-  const [profile, setProfile] = useState<UserProfile>({
-    nome: user?.name || 'Usuário',
+  const [isEditing, setIsEditing] = useState(false)
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false)
+  const [profile, setProfile] = useState<ProfileData>({
+    primeiroNome: '',
+    sobrenome: '',
     email: user?.email || '',
-    dataCadastro: '2024-01-01', // Será dinâmico
-    creditos: 0, // Será dinâmico
-    consultasRealizadas: 0, // Será dinâmico
-    ultimaConsulta: null, // Será dinâmico
-    foto: null // Será dinâmico
+    dataCadastro: new Date().toISOString(),
+    creditos: 0,
+    consultasRealizadas: 0,
+    ultimaConsulta: null,
+    telefone: {
+      codigoPais: '+55',
+      ddd: '',
+      numero: ''
+    },
+    dataNascimento: '',
+    foto: null
+  })
+
+  const [editForm, setEditForm] = useState({
+    primeiroNome: '',
+    sobrenome: '',
+    telefone: {
+      ddd: '',
+      numero: ''
+    },
+    dataNascimento: ''
   })
 
   const formatarData = (data: Date | string) => {
@@ -35,10 +49,75 @@ export default function PerfilPage() {
     })
   }
 
+  const formatarTelefone = (tel: { ddd: string, numero: string }) => {
+    return `(${tel.ddd}) ${tel.numero.replace(/(\d{5})(\d{4})/, '$1-$2')}`
+  }
+
   useEffect(() => {
-    // Aqui virá a chamada para API que buscará os dados do perfil
-    // Por enquanto, usando dados mockados
-  }, [])
+    const loadProfile = async () => {
+      if (user) {
+        const profileService = new ProfileService()
+        const data = await profileService.getProfile(user.id)
+        if (data) {
+          setProfile(data)
+          setEditForm({
+            primeiroNome: data.primeiroNome,
+            sobrenome: data.sobrenome,
+            telefone: {
+              ddd: data.telefone.ddd,
+              numero: data.telefone.numero
+            },
+            dataNascimento: data.dataNascimento
+          })
+        }
+      }
+    }
+    loadProfile()
+  }, [user])
+
+  const handleSave = async () => {
+    if (user) {
+      const profileService = new ProfileService()
+      const success = await profileService.updateProfile(user.id, {
+        primeiroNome: editForm.primeiroNome,
+        sobrenome: editForm.sobrenome,
+        telefone: {
+          codigoPais: '+55',
+          ...editForm.telefone
+        },
+        dataNascimento: editForm.dataNascimento
+      })
+
+      if (success) {
+        // Buscar os dados atualizados do perfil
+        const updatedProfile = await profileService.getProfile(user.id)
+        if (updatedProfile) {
+          setProfile(updatedProfile)
+          setEditForm({
+            primeiroNome: updatedProfile.primeiroNome,
+            sobrenome: updatedProfile.sobrenome,
+            telefone: {
+              ddd: updatedProfile.telefone.ddd,
+              numero: updatedProfile.telefone.numero
+            },
+            dataNascimento: updatedProfile.dataNascimento
+          })
+        }
+        setIsEditing(false)
+      }
+    }
+  }
+
+  const handlePhotoSave = async (photoData: string) => {
+    if (user) {
+      const profileService = new ProfileService()
+      const newPhotoUrl = await profileService.uploadPhoto(user.id, photoData)
+      if (newPhotoUrl) {
+        setProfile(prev => ({ ...prev, foto: newPhotoUrl }))
+      }
+      setIsUploadingPhoto(false)
+    }
+  }
 
   return (
     <div className="min-h-screen p-4">
@@ -52,7 +131,7 @@ export default function PerfilPage() {
                 {profile.foto ? (
                   <Image
                     src={profile.foto}
-                    alt={profile.nome}
+                    alt={`${profile.primeiroNome} ${profile.sobrenome}`}
                     width={96}
                     height={96}
                     className="object-cover rounded-full"
@@ -60,24 +139,135 @@ export default function PerfilPage() {
                 ) : (
                   <div className="w-full h-full bg-primary/20 rounded-full flex items-center justify-center">
                     <span className="text-2xl text-primary">
-                      {profile.nome.charAt(0).toUpperCase()}
+                      {profile.primeiroNome.charAt(0).toUpperCase()}
+                      {profile.sobrenome.charAt(0).toUpperCase()}
                     </span>
                   </div>
                 )}
               </div>
+              <button
+                onClick={() => setIsUploadingPhoto(true)}
+                className="absolute bottom-0 right-0 bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-full transition-colors"
+              >
+                <CameraIcon className="w-4 h-4" />
+              </button>
             </div>
 
             {/* Informações básicas */}
-            <div>
-              <h1 className="text-2xl font-semibold text-primary mb-2">
-                {profile.nome}
-              </h1>
-              <p className="text-gray-300">{profile.email}</p>
-              <p className="text-sm text-gray-400 mt-1">
-                Membro desde {formatarData(profile.dataCadastro)}
-              </p>
+            <div className="flex-1">
+              <div className="flex justify-between items-start">
+                <div>
+                  <h1 className="text-2xl font-semibold text-primary mb-2">
+                    {profile.primeiroNome} {profile.sobrenome}
+                  </h1>
+                  <p className="text-gray-300">{profile.email}</p>
+                  <p className="text-gray-300 mt-1">
+                    {profile.telefone.ddd && profile.telefone.numero 
+                      ? formatarTelefone(profile.telefone)
+                      : 'Telefone não cadastrado'}
+                  </p>
+                  <p className="text-gray-300 mt-1">
+                    {profile.dataNascimento 
+                      ? `${formatarData(profile.dataNascimento)} - ${getZodiacSign(profile.dataNascimento)}`
+                      : 'Data de nascimento não cadastrada'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsEditing(!isEditing)}
+                  className="bg-primary/20 hover:bg-primary/30 text-primary p-2 rounded-lg transition-colors"
+                >
+                  <PencilIcon className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
+
+          {/* Formulário de edição */}
+          {isEditing && (
+            <div className="mt-6 border-t border-primary/20 pt-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-gray-300 mb-2">Nome</label>
+                  <input
+                    type="text"
+                    value={editForm.primeiroNome}
+                    onChange={e => setEditForm(prev => ({
+                      ...prev,
+                      primeiroNome: e.target.value
+                    }))}
+                    placeholder="Nome"
+                    className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Sobrenome</label>
+                  <input
+                    type="text"
+                    value={editForm.sobrenome}
+                    onChange={e => setEditForm(prev => ({
+                      ...prev,
+                      sobrenome: e.target.value
+                    }))}
+                    placeholder="Sobrenome"
+                    className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white w-full"
+                  />
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Telefone</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value="+55"
+                      className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white w-16"
+                      disabled
+                    />
+                    <input
+                      type="text"
+                      value={editForm.telefone.ddd}
+                      onChange={e => setEditForm(prev => ({
+                        ...prev,
+                        telefone: { ...prev.telefone, ddd: e.target.value }
+                      }))}
+                      placeholder="DDD"
+                      maxLength={2}
+                      className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white w-20"
+                    />
+                    <input
+                      type="text"
+                      value={editForm.telefone.numero}
+                      onChange={e => setEditForm(prev => ({
+                        ...prev,
+                        telefone: { ...prev.telefone, numero: e.target.value }
+                      }))}
+                      placeholder="Número"
+                      maxLength={9}
+                      className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white flex-1"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-gray-300 mb-2">Data de Nascimento</label>
+                  <input
+                    type="date"
+                    value={editForm.dataNascimento}
+                    onChange={e => setEditForm(prev => ({
+                      ...prev,
+                      dataNascimento: e.target.value
+                    }))}
+                    className="bg-black/40 border border-primary/20 rounded px-3 py-2 text-white w-full"
+                  />
+                </div>
+              </div>
+              <div className="mt-4 flex justify-end">
+                <button
+                  onClick={handleSave}
+                  className="bg-primary hover:bg-primary/90 text-black font-medium px-4 py-2 rounded-lg transition-colors"
+                >
+                  Salvar
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Cards de estatísticas */}
@@ -109,15 +299,13 @@ export default function PerfilPage() {
           </div>
         </div>
 
-        {/* Seção de configurações - será implementada posteriormente */}
-        <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6">
-          <h2 className="text-xl font-semibold text-primary mb-4">
-            Configurações
-          </h2>
-          <p className="text-gray-300">
-            Em breve você poderá personalizar suas preferências aqui.
-          </p>
-        </div>
+        {/* Modal de upload de foto */}
+        {isUploadingPhoto && (
+          <PhotoUpload
+            onSave={handlePhotoSave}
+            onCancel={() => setIsUploadingPhoto(false)}
+          />
+        )}
       </div>
     </div>
   )
