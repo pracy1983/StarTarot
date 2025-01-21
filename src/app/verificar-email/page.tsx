@@ -54,47 +54,25 @@ export default function VerificarEmailPage() {
             <div>
               <h1 className="font-raleway text-4xl font-bold text-primary mb-4">Verificar Email</h1>
               <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Digite o código de verificação
-                <br />enviado para seu email
+                Enviamos um email de confirmação
+                <br />para seu endereço de email.
+              </p>
+              <p className="mt-4 text-lg text-gray-400">
+                Clique no link enviado para
+                <br />confirmar seu cadastro.
               </p>
             </div>
           </div>
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              {error && (
-                <div className="bg-red-500/10 border border-red-500/50 text-red-500 px-4 py-2 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
-
-              <div>
-                <input
-                  type="text"
-                  value={code}
-                  onChange={(e) => setCode(e.target.value)}
-                  placeholder="Digite o código"
-                  maxLength={6}
-                  className="w-full px-4 py-3 bg-black/40 border border-primary/20 rounded-lg
-                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                           text-white placeholder-gray-400 transition-all duration-200
-                           text-center text-2xl tracking-wider"
-                  required
-                />
-              </div>
-            </div>
-
+          {/* Botão para voltar */}
+          <div className="text-center">
             <button
-              type="submit"
-              disabled={isLoading || code.length !== 6}
-              className="w-full px-4 py-3 bg-primary hover:bg-primary-light text-black font-semibold
-                       rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02]
-                       disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              onClick={() => router.push('/')}
+              className="text-primary hover:text-primary-light underline transition-colors"
             >
-              {isLoading ? 'Verificando...' : 'Verificar'}
+              Voltar para o início
             </button>
-          </form>
+          </div>
         </div>
       </div>
     </main>
