@@ -1,10 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 
-export default function NovaSenhaPage() {
+function NovaSenhaForm() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [loading, setLoading] = useState(false)
@@ -73,13 +73,11 @@ export default function NovaSenhaPage() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <div>
-              <h1 className="font-raleway text-5xl font-bold text-primary mb-4">Nova Senha</h1>
-              <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Digite sua nova senha
-                <br />para continuar.
-              </p>
-            </div>
+            <h1 className="font-raleway text-5xl font-bold text-primary mb-4">Nova Senha</h1>
+            <p className="text-xl text-gray-300 font-light leading-relaxed">
+              Digite sua nova senha
+              <br />para continuar.
+            </p>
           </div>
 
           {/* Mensagens de erro/sucesso */}
@@ -145,5 +143,17 @@ export default function NovaSenhaPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function NovaSenhaPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-primary text-xl">Carregando...</div>
+      </div>
+    }>
+      <NovaSenhaForm />
+    </Suspense>
   )
 }
