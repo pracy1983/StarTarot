@@ -1,103 +1,66 @@
 'use client'
 
-import { useRef, useEffect, useState, useMemo } from 'react'
-import { useRouter } from 'next/navigation'
-import { MinusIcon, ArrowsPointingOutIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
+import { useState, useRef, useEffect } from 'react'
+import { ArrowsPointingOutIcon, MinusIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '../services/chatService'
-import { useChatStore } from '../store/chatStore'
-import { useAuthStore } from '@/stores/authStore'
-import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore'
-import { v4 as uuidv4 } from 'uuid'
 import { Message } from '../types/message'
+import { useAuthStore } from '@/stores/authStore'
+import { useChatStore } from '../store/chatStore'
+import { processMessageContent } from '../utils/messageProcessor'
 
-interface ProcessedMessage extends Message {
-  processedContent: string
-}
-
-export function ChatWindow() {
-  const router = useRouter()
-  const { isMinimized, messages, setMinimized, addMessage } = useChatStore()
-  const user = useAuthStore(state => state.user)
+export default function ChatWindow() {
+  const { isMinimized, messages, setMinimized, addMessage, setMessages } = useChatStore()
   const [inputMessage, setInputMessage] = useState('')
   const [isTyping, setIsTyping] = useState(false)
   const chatRef = useRef<HTMLDivElement>(null)
-  const chatService = useRef<ChatService | null>(null)
-  const oraculistas = useOraculistasStore(state => state.oraculistas)
-  const { carregarOraculistas } = useOraculistasStore()
+  const user = useAuthStore(state => state.user)
+  const chatService = useRef<ChatService>()
 
-  // Inicializa o serviço de chat e carrega o histórico
   useEffect(() => {
     const initChat = async () => {
-      if (!chatService.current) {
-        await carregarOraculistas()
-        chatService.current = new ChatService()
-      }
-      
-      if (user?.id) {
-        const history = await chatService.current.retrieveHistory(user.id)
-        history.forEach(msg => {
-          addMessage({
-            id: uuidv4(),
-            content: msg.content,
-            role: msg.role,
-            timestamp: msg.timestamp ? new Date(msg.timestamp) : new Date()
-          })
-        })
+      if (user) {
+        try {
+          chatService.current = new ChatService()
+          const history = await chatService.current.retrieveHistory(user.id)
+          if (history.length > 0) {
+            setMessages(history)
+          }
+        } catch (error) {
+          console.error('Erro ao inicializar chat:', error)
+        }
       }
     }
-
     initChat()
-  }, [user?.id, addMessage, carregarOraculistas])
+  }, [user, setMessages])
 
-  // Scroll para a última mensagem
   useEffect(() => {
     if (chatRef.current) {
       chatRef.current.scrollTop = chatRef.current.scrollHeight
     }
   }, [messages])
 
-  // Função para processar o conteúdo da mensagem
-  const processMessageContent = (content: string, isAssistant: boolean): string => {
-    if (!isAssistant) return content
-
-    // Processa links para oraculistas
-    return content.replace(/\[CONSULTAR:([^\]]+)\]/g, (_, name) => {
-      const oraculista = oraculistas.find(o => 
-        o.nome.toLowerCase() === name.toLowerCase()
-      )
-      if (oraculista) {
-        return `<button 
-          class="text-primary hover:text-primary/80 transition-colors"
-          onclick="window.location.href='/oraculista/${oraculista.id}'">
-          Consultar ${oraculista.nome}
-        </button>`
-      }
-      return name
-    })
-  }
-
   const handleSendMessage = async () => {
-    if (!inputMessage.trim() || !chatService.current || !user?.id) return
+    if (!inputMessage.trim() || !user || !chatService.current) return
 
-    const userMessage: Message = {
-      id: uuidv4(),
-      content: inputMessage,
-      role: 'user',
-      timestamp: new Date()
-    }
-
-    addMessage(userMessage)
+    const content = inputMessage.trim()
     setInputMessage('')
     setIsTyping(true)
 
-    try {
-      const response = await chatService.current.sendMessage(inputMessage, user.id)
-      addMessage(response)
+    const userMessage: Message = {
+      id: Date.now().toString(),
+      content,
+      role: 'user',
+      timestamp: new Date()
+    }
+    addMessage(userMessage)
 
+    try {
+      const response = await chatService.current.sendMessage(content, user.id)
+      addMessage(response)
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
       const errorMessage: Message = {
-        id: uuidv4(),
+        id: Date.now().toString(),
         content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
         role: 'assistant',
         timestamp: new Date()
@@ -108,27 +71,29 @@ export function ChatWindow() {
     }
   }
 
-  // Processa as últimas 10 mensagens para exibição
-  const processedMessages = useMemo(() => 
-    messages.slice(-10).map(message => ({
-      ...message,
-      processedContent: processMessageContent(message.content, message.role === 'assistant')
-    })), [messages, oraculistas]
-  )
+  const processedMessages = messages.map(msg => ({
+    ...msg,
+    processedContent: processMessageContent(msg.content)
+  }))
+
+  console.log('Mensagens atuais:', messages)
 
   return (
     <div
-      className={`fixed bottom-4 right-4 w-96 bg-gray-900/95 backdrop-blur-lg rounded-lg shadow-lg transition-all duration-300 ease-in-out ${
+      className={`fixed bottom-4 right-4 w-96 bg-[url('/background.jpg')] bg-cover bg-center bg-black/90 backdrop-blur-lg rounded-lg shadow-lg border border-primary transition-all duration-300 ease-in-out z-[9999] ${
         isMinimized ? 'h-14' : 'h-[600px]'
       }`}
+      style={{
+        boxShadow: '0 0 10px rgba(255, 215, 0, 0.3)'
+      }}
     >
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-800">
-        <h3 className="text-lg font-semibold text-white">Chat</h3>
+      <div className="flex items-center justify-between p-4 bg-black border-b border-primary/30">
+        <h3 className="text-lg font-semibold text-primary">Chat</h3>
         <div className="flex space-x-2">
           <button
             onClick={() => setMinimized(!isMinimized)}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-primary hover:text-primary/80 transition-colors"
           >
             {isMinimized ? (
               <ArrowsPointingOutIcon className="w-5 h-5" />
@@ -145,62 +110,111 @@ export function ChatWindow() {
           {/* Messages */}
           <div
             ref={chatRef}
-            className="flex-1 p-4 space-y-4 overflow-y-auto h-[calc(100%-8rem)]"
+            className="flex-1 p-4 space-y-4 overflow-y-auto h-[calc(100%-8rem)] scrollbar-thin scrollbar-thumb-primary/20 scrollbar-track-transparent"
           >
-            {processedMessages.map(message => (
-              <div
-                key={message.id}
-                className={`flex ${
-                  message.role === 'user' ? 'justify-end' : 'justify-start'
-                }`}
-              >
+            {processedMessages.length > 0 ? (
+              processedMessages.map(message => (
                 <div
-                  className={`max-w-[80%] p-4 rounded-lg ${
-                    message.role === 'user'
-                      ? 'bg-primary/20 text-white rounded-br-none'
-                      : 'bg-black/80 backdrop-blur-sm text-gray-200'
-                  }`}
+                  key={message.id}
+                  className={`flex ${
+                    message.role === 'user' ? 'justify-end' : 'justify-start'
+                  } items-end gap-2`}
                 >
+                  {message.role !== 'user' && (
+                    <div className="flex-none" style={{ width: '32px', height: '32px', position: 'relative' }}>
+                      <img 
+                        src="/agent-avatar.jpeg" 
+                        alt="Agent" 
+                        className="rounded-full w-full h-full object-cover absolute"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = 'https://ui-avatars.com/api/?name=Agent&background=000&color=fff';
+                        }}
+                      />
+                    </div>
+                  )}
                   <div
-                    dangerouslySetInnerHTML={{
-                      __html: message.processedContent
+                    className={`relative p-3 rounded-lg shadow-md ${
+                      message.role === 'user'
+                        ? 'bg-primary text-black bg-opacity-85 rounded-br-none ml-0 mr-2'
+                        : 'rounded-bl-none ml-2 mr-0 text-white'
+                    }`}
+                    style={{
+                      backgroundColor: message.role === 'user' ? undefined : 'rgb(31, 41, 55)',
+                      maxWidth: '85%'
                     }}
-                  />
+                  >
+                    <div
+                      className={`absolute bottom-0 ${
+                        message.role === 'user' 
+                          ? '-right-2 border-l-primary' 
+                          : '-left-2'
+                      } w-4 h-4 transform ${
+                        message.role === 'user'
+                          ? 'border-b-[10px] border-l-[10px] border-b-primary border-l-transparent'
+                          : 'border-b-[10px] border-r-[10px] border-r-transparent'
+                      }`}
+                      style={{
+                        borderBottomColor: message.role === 'user' ? undefined : 'rgb(31, 41, 55)'
+                      }}
+                    />
+                    <div 
+                      dangerouslySetInnerHTML={{ __html: message.processedContent }}
+                      className="font-medium break-words"
+                    />
+                  </div>
+                  {message.role === 'user' && (
+                    <div className="flex-none" style={{ width: '32px', height: '32px', position: 'relative' }}>
+                      <img 
+                        src={`https://ui-avatars.com/api/?name=${user?.name || 'User'}&background=000&color=fff`}
+                        alt="User" 
+                        className="rounded-full w-full h-full object-cover absolute"
+                      />
+                    </div>
+                  )}
                 </div>
+              ))
+            ) : (
+              <div className="text-center text-gray-400">
+                Nenhuma mensagem ainda...
               </div>
-            ))}
+            )}
             {isTyping && (
               <div className="flex justify-start">
-                <div className="bg-black/80 backdrop-blur-sm text-gray-200 p-4 rounded-lg max-w-[80%]">
+                <div className="bg-gray-800/50 text-white p-3 rounded-lg rounded-bl-none relative">
                   <div className="flex space-x-2">
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                    <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                   </div>
+                  <div className="absolute bottom-0 -left-2 w-4 h-4 transform border-b-[10px] border-r-[10px] border-b-gray-800/50 border-r-transparent" />
                 </div>
               </div>
             )}
           </div>
 
           {/* Input */}
-          <div className="p-4 border-t border-gray-800">
+          <div className="p-4 border-t border-primary/30 bg-black/50">
             <div className="flex space-x-2">
               <input
                 type="text"
                 value={inputMessage}
                 onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    handleSendMessage()
+                  }
+                }}
                 placeholder="Digite sua mensagem..."
-                className="flex-1 bg-black/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary/50"
+                className="flex-1 bg-gray-800/50 text-white rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-primary border border-primary/30 placeholder-gray-400"
               />
               <button
                 onClick={handleSendMessage}
-                disabled={isTyping}
-                className={`text-primary hover:text-primary/80 transition-colors ${
-                  isTyping ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                disabled={!inputMessage.trim()}
+                className="bg-primary/20 text-primary p-2 rounded-lg hover:bg-primary/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed border border-primary/30"
               >
-                <PaperAirplaneIcon className="w-6 h-6 transform rotate-90" />
+                <PaperAirplaneIcon className="w-5 h-5" />
               </button>
             </div>
           </div>
