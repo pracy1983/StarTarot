@@ -1,14 +1,5 @@
-'use client'
-
-import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { redirect } from 'next/navigation'
 
 export default function OraculistasPage() {
-  const router = useRouter()
-
-  useEffect(() => {
-    router.push('/dashboard/oraculistas')
-  }, [router])
-
-  return null
+  redirect('/dashboard/oraculistas')
 }
