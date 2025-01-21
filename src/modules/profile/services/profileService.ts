@@ -29,6 +29,15 @@ export class ProfileService {
         .select('*', { count: 'exact', head: true })
         .eq('user_id', userId)
 
+      // Buscar a data da última consulta
+      const { data: ultimaConsulta } = await supabase
+        .from('consultations')
+        .select('created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
       return {
         primeiroNome: profile.first_name || '',
         sobrenome: profile.last_name || '',
@@ -36,6 +45,7 @@ export class ProfileService {
         dataCadastro: profile.created_at,
         creditos: profile.credits || 0,
         consultasRealizadas: consultasRealizadas || 0,
+        ultimaConsulta: ultimaConsulta?.created_at || null,
         telefone: {
           codigoPais: profile.phone_country_code || '+55',
           ddd: profile.phone_area_code || '',

@@ -1,6 +1,5 @@
 import { useCallback, useState } from 'react'
-import Cropper from 'react-easy-crop'
-import { Point, Area } from 'react-easy-crop/types'
+import Cropper, { Point, Area } from 'react-easy-crop'
 
 interface PhotoUploadProps {
   onSave: (croppedImage: string) => void
@@ -33,15 +32,29 @@ export function PhotoUpload({ onSave, onCancel }: PhotoUploadProps) {
           return
         }
 
-        // Criar uma URL temporária para a imagem
-        const imageUrl = URL.createObjectURL(file)
-        
-        // Carregar a imagem primeiro para garantir que ela está pronta
-        const img = new Image()
-        img.onload = () => {
-          console.log('Imagem carregada com sucesso:', img.width, 'x', img.height)
-          setImageSrc(imageUrl)
+      // Criar uma URL temporária para a imagem
+      const imageUrl = URL.createObjectURL(file)
+      
+      // Carregar a imagem primeiro para garantir que ela está pronta
+      const img = new Image()
+      img.src = imageUrl
+      img.onload = () => {
+        // Verificar dimensões mínimas
+        if (img.width < 100 || img.height < 100) {
+          setError('A imagem deve ter pelo menos 100x100 pixels')
+          URL.revokeObjectURL(imageUrl)
+          return
         }
+        
+        console.log('Imagem carregada com sucesso:', img.width, 'x', img.height)
+        // Forçar re-render do cropper com nova imagem
+        setImageSrc('')
+        setTimeout(() => {
+          setImageSrc(imageUrl)
+          setCrop({ x: 0, y: 0 })
+          setZoom(1)
+        }, 10)
+      }
         img.onerror = () => {
           console.error('Erro ao carregar imagem')
           setError('Erro ao carregar a imagem. Tente novamente.')
@@ -56,8 +69,33 @@ export function PhotoUpload({ onSave, onCancel }: PhotoUploadProps) {
   }
 
   const onCropComplete = useCallback((croppedArea: Area, croppedAreaPixels: Area) => {
-    console.log('Área de corte:', croppedAreaPixels)
-    setCroppedAreaPixels(croppedAreaPixels)
+    // Verifica se os valores realmente mudaram antes de atualizar o estado
+    if (
+      !croppedAreaPixels ||
+      Number.isNaN(croppedAreaPixels.width) || 
+      Number.isNaN(croppedAreaPixels.height) ||
+      Number.isNaN(croppedAreaPixels.x) ||
+      Number.isNaN(croppedAreaPixels.y)
+    ) {
+      return
+    }
+
+    // Usa debounce para evitar múltiplas atualizações rápidas
+    const timeout = setTimeout(() => {
+      setCroppedAreaPixels(prev => {
+        if (
+          prev?.width === croppedAreaPixels.width &&
+          prev?.height === croppedAreaPixels.height &&
+          prev?.x === croppedAreaPixels.x &&
+          prev?.y === croppedAreaPixels.y
+        ) {
+          return prev
+        }
+        return croppedAreaPixels
+      })
+    }, 100)
+
+    return () => clearTimeout(timeout)
   }, [])
 
   const handleSave = async () => {
@@ -113,6 +151,10 @@ export function PhotoUpload({ onSave, onCancel }: PhotoUploadProps) {
       // Limpar URL temporária
       URL.revokeObjectURL(imageSrc)
       
+      // Atualizar estado local com timestamp único para forçar revalidação
+      const timestamp = Date.now()
+      const cachedImage = `${croppedImage}?${timestamp}`
+      setImageSrc(cachedImage)
       onSave(croppedImage)
     } catch (err) {
       console.error('Erro ao processar imagem:', err)
@@ -151,18 +193,35 @@ export function PhotoUpload({ onSave, onCancel }: PhotoUploadProps) {
           </div>
         ) : (
           <>
-            <div className="relative h-80 mb-4 rounded-lg overflow-hidden">
+            <div className="relative w-full aspect-square mb-4 rounded-lg overflow-hidden">
               <Cropper
                 image={imageSrc}
                 crop={crop}
                 zoom={zoom}
                 aspect={1}
-                onCropChange={setCrop}
+                onCropChange={(newCrop) => {
+                  if (newCrop.x !== crop.x || newCrop.y !== crop.y) {
+                    setCrop(newCrop)
+                  }
+                }}
                 onCropComplete={onCropComplete}
-                onZoomChange={setZoom}
+                onZoomChange={(newZoom) => {
+                  if (newZoom !== zoom) {
+                    setZoom(newZoom)
+                  }
+                }}
                 objectFit="contain"
                 cropShape="round"
                 showGrid={false}
+                minZoom={0.5}
+                maxZoom={3}
+                initialCroppedAreaPixels={{
+                  width: 400,
+                  height: 400,
+                  x: 0,
+                  y: 0
+                }}
+                restrictPosition={false}
               />
             </div>
 

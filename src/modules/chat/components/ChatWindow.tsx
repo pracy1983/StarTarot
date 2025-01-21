@@ -1,6 +1,11 @@
 'use client'
 
 import { useState, useRef, useEffect } from 'react'
+import { CSSProperties } from 'react'
+
+interface CustomCSSProperties extends CSSProperties {
+  '--chat-bg': string
+}
 import { ArrowsPointingOutIcon, MinusIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 import { ChatService } from '../services/chatService'
 import { Message } from '../types/message'
@@ -76,16 +81,16 @@ export default function ChatWindow() {
     processedContent: processMessageContent(msg.content)
   }))
 
-  console.log('Mensagens atuais:', messages)
 
   return (
     <div
-      className={`fixed bottom-4 right-4 w-96 bg-[url('/background.jpg')] bg-cover bg-center bg-black/90 backdrop-blur-lg rounded-lg shadow-lg border border-primary transition-all duration-300 ease-in-out z-[9999] ${
+      className={`fixed bottom-4 right-4 w-96 bg-black/90 backdrop-blur-lg rounded-lg shadow-lg border border-primary transition-all duration-300 ease-in-out z-[9999] ${
         isMinimized ? 'h-14' : 'h-[600px]'
-      }`}
+      } bg-[image:var(--chat-bg)] bg-cover bg-center`}
       style={{
-        boxShadow: '0 0 10px rgba(255, 215, 0, 0.3)'
-      }}
+        boxShadow: '0 0 10px rgba(255, 215, 0, 0.3)',
+        '--chat-bg': "url('/background.jpg')"
+      } as CustomCSSProperties}
     >
       {/* Header */}
       <div className="flex items-center justify-between p-4 bg-black border-b border-primary/30">
