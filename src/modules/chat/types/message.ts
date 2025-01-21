@@ -8,6 +8,7 @@ export interface BaseMessage {
 export interface Message extends BaseMessage {
   id: string
   timestamp: Date
+  processedContent?: string
 }
 
 export interface ApiMessage extends BaseMessage {

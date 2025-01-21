@@ -159,7 +159,7 @@ export default function ChatWindow() {
                       }}
                     />
                     <div 
-                      dangerouslySetInnerHTML={{ __html: message.processedContent }}
+                      dangerouslySetInnerHTML={{ __html: message.processedContent || processMessageContent(message.content) }}
                       className="font-medium break-words"
                     />
                   </div>
