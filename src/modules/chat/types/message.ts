@@ -7,7 +7,7 @@ export interface BaseMessage {
 
 export interface Message extends BaseMessage {
   id: string
-  timestamp: Date
+  timestamp: Date | string
   processedContent?: string
 }
 
@@ -19,4 +19,5 @@ export interface DatabaseMessage extends BaseMessage {
   id: string
   user_id: string
   created_at: Date | string
+  timestamp: Date | string
 }
