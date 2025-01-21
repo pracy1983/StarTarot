@@ -1,1 +1,3 @@
-export { ChatWindow as ChatModule } from './components/ChatWindow'
+import ChatWindow from './components/ChatWindow'
+
+export { ChatWindow as ChatModule }
