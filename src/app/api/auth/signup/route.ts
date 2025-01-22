@@ -17,7 +17,7 @@ export async function POST(request: Request) {
       email: data.email,
       password: data.password,
       options: {
-        emailRedirectTo: `${siteUrl}/`,
+        emailRedirectTo: `${siteUrl}/verificar-email`,
         data: {
           name: data.name,
           phone_country_code: data.phoneCountryCode,
