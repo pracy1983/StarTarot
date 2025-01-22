@@ -2,9 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 
 // URL base do site dependendo do ambiente
-const siteUrl = process.env.NODE_ENV === 'production'
-  ? 'https://startarot.netlify.app'
-  : 'http://localhost:3000'
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +14,7 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: true,
+      email_confirm: false, // Alterado para false pois vamos enviar o email manualmente
       user_metadata: {
         name: data.name,
         phone_country_code: data.phoneCountryCode,
@@ -60,7 +58,7 @@ export async function POST(request: Request) {
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0,
-        email_verified: true
+        email_verified: false // Alterado para false até que o email seja verificado
       }])
 
     if (dbError) {
@@ -72,6 +70,21 @@ export async function POST(request: Request) {
         },
         { status: 500 }
       )
+    }
+
+    // Enviar email de verificação
+    console.log('Enviando email de verificação...')
+    const verificationResponse = await fetch(`${siteUrl}/api/auth/send-verification`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ email: data.email })
+    })
+
+    if (!verificationResponse.ok) {
+      console.error('Erro ao enviar email de verificação:', await verificationResponse.text())
+      // Não retornamos erro aqui pois o usuário já foi criado
     }
 
     console.log('Usuário criado com sucesso')
