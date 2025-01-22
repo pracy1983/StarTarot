@@ -66,10 +66,13 @@ export async function POST(request: Request) {
     }
 
     // 4. Enviar email de verificação
-    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
+    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
       email: data.email,
+      password: data.password,
       options: {
-        data: { name: data.name }
+        data: { name: data.name },
+        redirectTo: `${siteUrl}/auth/callback`
       }
     })
 
