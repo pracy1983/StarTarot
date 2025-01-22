@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase'
 import { NextResponse } from 'next/server'
 
 // URL base do site dependendo do ambiente
@@ -13,18 +13,16 @@ export async function POST(request: Request) {
 
     // Criar usuário usando signUp normal
     console.log('Criando usuário...')
-    const { data: authData, error: authError } = await supabase.auth.signUp({
+    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      options: {
-        emailRedirectTo: `${siteUrl}/verificar-email`,
-        data: {
-          name: data.name,
-          phone_country_code: data.phoneCountryCode,
-          phone_area_code: data.phoneAreaCode,
-          phone_number: data.phoneNumber,
-          birth_date: data.birthDate
-        }
+      email_confirm: true,
+      user_metadata: {
+        name: data.name,
+        phone_country_code: data.phoneCountryCode,
+        phone_area_code: data.phoneAreaCode,
+        phone_number: data.phoneNumber,
+        birth_date: data.birthDate
       }
     })
 
@@ -51,7 +49,7 @@ export async function POST(request: Request) {
 
     // Inserir dados na tabela users
     console.log('Inserindo dados na tabela users...')
-    const { error: dbError } = await supabase
+    const { error: dbError } = await supabaseAdmin
       .from('users')
       .insert([{
         id: authData.user.id,
@@ -62,7 +60,7 @@ export async function POST(request: Request) {
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0,
-        email_verified: false
+        email_verified: true
       }])
 
     if (dbError) {
@@ -76,13 +74,10 @@ export async function POST(request: Request) {
       )
     }
 
-    // Fazer logout para garantir que o usuário não está logado
-    await supabase.auth.signOut()
-
     console.log('Usuário criado com sucesso')
     return NextResponse.json({ 
       success: true,
-      redirect: '/verificar-email'
+      redirect: '/login?cadastro=sucesso'
     })
   } catch (error: any) {
     console.error('Erro completo no cadastro:', error)

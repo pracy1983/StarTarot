@@ -101,7 +101,7 @@ export default function CadastroPage() {
       }
 
       // Cadastro realizado com sucesso
-      router.push('/verificar-email')
+      router.push(result.redirect)
     } catch (err: any) {
       setError(err.message || 'Erro ao realizar cadastro')
     } finally {
