@@ -1,4 +1,4 @@
-import { supabaseAdmin } from '@/lib/supabase'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
 
 // URL base do site dependendo do ambiente
