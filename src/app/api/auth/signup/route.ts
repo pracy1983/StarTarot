@@ -9,6 +9,25 @@ export async function POST(request: Request) {
     const data = await request.json()
     console.log('Dados recebidos:', JSON.stringify(data, null, 2))
 
+    // Verificar se o usuário já existe
+    console.log('Verificando se o usuário já existe...')
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id, email')
+      .eq('email', data.email)
+      .single()
+
+    if (existingUser) {
+      console.log('Usuário já existe:', existingUser)
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Este email já está cadastrado. Por favor, use outro email ou faça login.'
+        },
+        { status: 400 }
+      )
+    }
+
     // Criar usuário usando signUp normal
     console.log('Criando usuário...')
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
@@ -26,6 +45,16 @@ export async function POST(request: Request) {
 
     if (authError) {
       console.error('Erro ao criar usuário:', authError)
+      // Verificar se o erro é de usuário já existente
+      if (authError.message?.includes('already exists')) {
+        return NextResponse.json(
+          { 
+            success: false, 
+            error: 'Este email já está cadastrado. Por favor, use outro email ou faça login.'
+          },
+          { status: 400 }
+        )
+      }
       return NextResponse.json(
         { 
           success: false, 
@@ -72,7 +101,7 @@ export async function POST(request: Request) {
       )
     }
 
-    // Enviar email de verificação diretamente usando o Supabase
+    // Enviar email de verificação
     console.log('Enviando email de verificação...')
     const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'magiclink',
