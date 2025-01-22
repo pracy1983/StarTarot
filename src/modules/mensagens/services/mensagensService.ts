@@ -79,18 +79,16 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
       throw new Error('Oraculista não encontrado')
     }
 
-    const { data: mensagem, error: mensagemError } = await supabase
+    const { data: mensagem, error } = await supabase
       .from('mensagens')
       .insert({
         user_id: userId,
         oraculista_id: formData.oraculistaId,
-        titulo: formData.titulo,
         conteudo: formData.conteudo,
         tipo: 'pergunta',
         data: new Date(),
         lida: false,
-        created_at: new Date(),
-        updated_at: new Date()
+        updatedAt: new Date()
       })
       .select(`
         *,
@@ -102,9 +100,9 @@ export async function enviarPergunta(userId: string, formData: MensagemFormData)
       `)
       .single()
 
-    if (mensagemError) {
-      console.error('Erro ao enviar pergunta:', mensagemError)
-      throw mensagemError
+    if (error) {
+      console.error('Erro ao enviar pergunta:', error)
+      throw error
     }
 
     return formatarMensagem(mensagem)
@@ -154,8 +152,7 @@ export async function enviarResposta(mensagemId: string, oraculistaId: string, c
         thread_id: mensagemId,
         data: new Date(),
         lida: false,
-        created_at: new Date(),
-        updated_at: new Date()
+        updatedAt: new Date()
       })
       .select(`
         *,
@@ -302,7 +299,6 @@ export async function enviarMensagemTeste(userId: string) {
     // Enviar uma pergunta
     const pergunta = await enviarPergunta(userId, {
       oraculistaId: oraculista.id,
-      titulo: 'Dúvida sobre relacionamento',
       conteudo: 'Olá, gostaria de saber sobre meu relacionamento atual. Tenho algumas dúvidas sobre o futuro.'
     })
 
@@ -327,21 +323,20 @@ export async function enviarMensagemTeste(userId: string) {
 function formatarMensagem(data: any): Mensagem {
   return {
     id: data.id,
-    userId: data.user_id,
-    oraculistaId: data.oraculista_id,
-    titulo: data.titulo,
+    user_id: data.user_id,
+    oraculista_id: data.oraculista_id,
     conteudo: data.conteudo,
-    lida: data.lida,
-    data: new Date(data.data),
     tipo: data.tipo,
-    threadId: data.thread_id,
-    createdAt: new Date(data.created_at),
-    updatedAt: new Date(data.updated_at),
+    data: new Date(data.data),
+    lida: data.lida,
+    updatedAt: new Date(data.updatedAt),
+    status: data.status || 'enviada',
+    thread_id: data.thread_id,
+    perguntaOriginal: data.pergunta_original,
     oraculista: data.oraculista ? {
       id: data.oraculista.id,
       nome: data.oraculista.nome,
       foto: data.oraculista.foto
-    } : undefined,
-    de: data.tipo === 'pergunta' ? 'Usuário' : data.oraculista?.nome || 'Oraculista'
+    } : undefined
   }
 }

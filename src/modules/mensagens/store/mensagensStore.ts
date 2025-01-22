@@ -48,17 +48,11 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
     try {
       set({ carregando: true, erro: null })
       
-      const { data: mensagemResposta, error } = await supabase
+      const { data: mensagemAtualizada, error } = await supabase
         .from('mensagens')
-        .insert({
-          user_id: get().mensagemAtual?.user_id,
-          oraculista_id: get().mensagemAtual?.oraculista_id,
+        .update({
           conteudo: resposta,
-          tipo: 'resposta',
-          thread_id: mensagemId,
-          data: new Date(),
-          lida: false,
-          updated_at: new Date(),
+          updatedAt: new Date(),
           status: 'entregue'
         })
         .select()
@@ -110,14 +104,14 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         user_id: msg.user_id,
         oraculista_id: msg.oraculista_id,
         conteudo: msg.conteudo,
-        lida: msg.lida,
-        data: new Date(msg.data),
         tipo: msg.tipo,
-        thread_id: msg.thread_id,
-          updated_at: msg.updated_at ? new Date(msg.updated_at) : null,
-        oraculista: msg.oraculista,
+        data: new Date(msg.data),
+        lida: msg.lida,
+        updatedAt: msg.updatedAt ? new Date(msg.updatedAt) : new Date(msg.data),
         status: msg.status || 'enviada',
-        pergunta_original: msg.pergunta_original
+        thread_id: msg.thread_id,
+        perguntaOriginal: msg.pergunta_original,
+        oraculista: msg.oraculista
       }))
 
       set({ mensagens, carregando: false })
@@ -146,7 +140,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
           lida: false,
           data: now,
           tipo: 'pergunta',
-          updated_at: now,
+          updatedAt: now,
           status: 'enviada'
         }])
         .select(`
@@ -170,7 +164,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         data: new Date(newMensagem.data),
         tipo: newMensagem.tipo,
         thread_id: newMensagem.thread_id,
-          updated_at: newMensagem.updated_at ? new Date(newMensagem.updated_at) : null,
+        updatedAt: newMensagem.updatedAt ? new Date(newMensagem.updatedAt) : new Date(newMensagem.data),
         oraculista: newMensagem.oraculista,
         status: 'enviada'
       }
@@ -225,7 +219,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           lida: true,
-          updated_at: new Date()
+          updatedAt: new Date()
         })
         .eq('id', id)
 
@@ -234,7 +228,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
       set(state => ({
         mensagens: state.mensagens.map(m =>
           m.id === id
-            ? { ...m, lida: true, updated_at: new Date() }
+            ? { ...m, lida: true, updatedAt: new Date() }
             : m
         )
       }))
@@ -257,7 +251,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           ...dados,
-          updated_at: now
+          updatedAt: now
         })
         .eq('id', id)
 
@@ -266,7 +260,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
       set(state => ({
         mensagens: state.mensagens.map(m =>
           m.id === id
-            ? { ...m, ...dados, updated_at: now }
+            ? { ...m, ...dados, updatedAt: now }
             : m
         ),
         carregando: false

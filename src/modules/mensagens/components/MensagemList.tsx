@@ -67,9 +67,9 @@ export function MensagemList({
   const organizarMensagens = (msgs: Mensagem[]) => {
     const mensagensOrdenadas = [...msgs].sort((a, b) => {
       const dateA = a.data ? new Date(a.data) : 
-        a.updated_at ? new Date(a.updated_at) : new Date(0)
+        a.updatedAt ? new Date(a.updatedAt) : new Date(0)
       const dateB = b.data ? new Date(b.data) : 
-        b.updated_at ? new Date(b.updated_at) : new Date(0)
+        b.updatedAt ? new Date(b.updatedAt) : new Date(0)
       return dateB.getTime() - dateA.getTime()
     })
 
