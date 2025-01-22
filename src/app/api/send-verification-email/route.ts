@@ -1,26 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
-import { Database } from '@/types/supabase'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-
-const supabase = createClient<Database>(supabaseUrl, supabaseServiceKey)
 
 export async function POST(request: Request) {
   try {
-    const { email, name, code } = await request.json()
+    const data = await request.json()
+    console.log('Dados recebidos:', data)
 
-    // Aqui você implementaria a lógica de envio de email
-    // Por enquanto, vamos apenas simular o envio
-    console.log('Email enviado para:', email, 'com código:', code)
+    const { error } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: data.email,
+    })
+
+    if (error) {
+      console.error('Erro ao gerar link:', error)
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Erro ao enviar email de verificação'
+      })
+    }
 
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Erro ao enviar email:', error)
-    return NextResponse.json(
-      { error: 'Erro ao enviar email de verificação' },
-      { status: 500 }
-    )
+    return NextResponse.json({ 
+      success: false, 
+      error: 'Erro ao processar requisição'
+    })
   }
 }
