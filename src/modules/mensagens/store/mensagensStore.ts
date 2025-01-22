@@ -1,12 +1,19 @@
 import { create } from 'zustand'
-import { Mensagem, MensagemFormData } from '../types/mensagem'
+import { Mensagem } from '../types/mensagem'
 import { supabase } from '@/lib/supabase'
+
+interface MensagemFormData {
+  oraculista_id: string
+  conteudo: string
+}
 
 interface MensagensState {
   mensagens: Mensagem[]
   mensagemAtual: Mensagem | null
   carregando: boolean
   erro: string | null
+  statusEntrega: Record<string, 'enviada' | 'entregue' | 'falha'>
+  logsErros: string[]
   carregarMensagens: (userId?: string) => Promise<void>
   enviarMensagem: (userId: string, mensagem: MensagemFormData) => Promise<void>
   deletarMensagem: (id: string) => Promise<void>
@@ -15,13 +22,63 @@ interface MensagensState {
   atualizarMensagem: (id: string, dados: Partial<Mensagem>) => Promise<void>
   getMensagensFiltradas: (filtro: 'todas' | 'nao_lidas' | 'respondidas') => Mensagem[]
   limparMensagens: () => void
+  atualizarStatus: (titulo: string, status: 'enviada' | 'entregue' | 'falha') => void
+  receberResposta: (mensagemId: string, resposta: string) => Promise<void>
+  processarRespostaOraculo: (mensagem: Mensagem) => Promise<string>
 }
 
 export const useMensagensStore = create<MensagensState>((set, get) => ({
+  atualizarStatus: (titulo, status) => {
+    set({
+      statusEntrega: {
+        ...get().statusEntrega,
+        [titulo]: status
+      }
+    })
+  },
   mensagens: [],
   mensagemAtual: null,
   carregando: false,
   erro: null,
+  statusEntrega: {},
+  logsErros: [],
+
+  receberResposta: async (mensagemId: string, resposta: string) => {
+    try {
+      set({ carregando: true, erro: null })
+      
+      const { data: mensagemResposta, error } = await supabase
+        .from('mensagens')
+        .insert({
+          user_id: get().mensagemAtual?.user_id,
+          oraculista_id: get().mensagemAtual?.oraculista_id,
+          conteudo: resposta,
+          tipo: 'resposta',
+          thread_id: mensagemId,
+          data: new Date(),
+          lida: false,
+          updatedAt: new Date(),
+          status: 'entregue'
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      set(state => ({
+        mensagens: state.mensagens.map(m => 
+          m.id === mensagemId 
+            ? { ...m, status: 'entregue' }
+            : m
+        ),
+        carregando: false
+      }))
+    } catch (error) {
+      console.error('Erro ao receber resposta:', error)
+      set({ erro: 'Erro ao receber resposta', carregando: false })
+      throw error
+    }
+  },
 
   carregarMensagens: async (userId?: string) => {
     try {
@@ -31,7 +88,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .select(`
           *,
-          oraculista:oraculista_id (
+          oraculista:oraculistas (
             id,
             nome,
             foto
@@ -49,18 +106,17 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
 
       const mensagens: Mensagem[] = mensagensData.map(msg => ({
         id: msg.id,
-        userId: msg.user_id,
-        oraculistaId: msg.oraculista_id,
-        titulo: msg.titulo,
+        user_id: msg.user_id,
+        oraculista_id: msg.oraculista_id,
         conteudo: msg.conteudo,
         lida: msg.lida,
         data: new Date(msg.data),
         tipo: msg.tipo,
-        threadId: msg.thread_id,
-        createdAt: new Date(msg.created_at),
+        thread_id: msg.thread_id,
         updatedAt: new Date(msg.updated_at),
         oraculista: msg.oraculista,
-        de: msg.tipo === 'pergunta' ? 'Usuário' : msg.oraculista?.nome || 'Oraculista'
+        status: msg.status || 'enviada',
+        pergunta_original: msg.pergunta_original
       }))
 
       set({ mensagens, carregando: false })
@@ -72,21 +128,25 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
 
   enviarMensagem: async (userId: string, mensagemData: MensagemFormData) => {
     try {
+      if (get().carregando) {
+        throw new Error('Já existe uma operação em andamento')
+      }
+      
       set({ carregando: true, erro: null })
-
+      get().atualizarStatus('Nova mensagem', 'enviada')
+      
       const now = new Date()
       const { data: newMensagem, error } = await supabase
         .from('mensagens')
         .insert([{
           user_id: userId,
-          oraculista_id: mensagemData.oraculistaId,
-          titulo: mensagemData.titulo,
+          oraculista_id: mensagemData.oraculista_id,
           conteudo: mensagemData.conteudo,
           lida: false,
           data: now,
           tipo: 'pergunta',
-          created_at: now,
-          updated_at: now
+          updatedAt: now,
+          status: 'enviada'
         }])
         .select(`
           *,
@@ -97,24 +157,32 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
           )
         `)
         .single()
-
+        
       if (error) throw error
 
       const mensagem: Mensagem = {
         id: newMensagem.id,
-        userId: newMensagem.user_id,
-        oraculistaId: newMensagem.oraculista_id,
-        titulo: newMensagem.titulo,
+        user_id: newMensagem.user_id,
+        oraculista_id: newMensagem.oraculista_id,
         conteudo: newMensagem.conteudo,
         lida: newMensagem.lida,
         data: new Date(newMensagem.data),
         tipo: newMensagem.tipo,
-        threadId: newMensagem.thread_id,
-        createdAt: new Date(newMensagem.created_at),
+        thread_id: newMensagem.thread_id,
         updatedAt: new Date(newMensagem.updated_at),
         oraculista: newMensagem.oraculista,
-        de: newMensagem.tipo === 'pergunta' ? 'Usuário' : newMensagem.oraculista?.nome || 'Oraculista'
+        status: 'enviada'
       }
+      
+      setTimeout(async () => {
+        try {
+          const resposta = await get().processarRespostaOraculo(mensagem)
+          await get().receberResposta(mensagem.id, resposta)
+        } catch (error) {
+          console.error('Erro ao processar resposta:', error)
+          get().atualizarStatus('Nova mensagem', 'falha')
+        }
+      }, 100)
 
       set(state => ({
         mensagens: [mensagem, ...state.mensagens],
@@ -156,7 +224,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           lida: true,
-          updated_at: new Date()
+          updatedAt: new Date()
         })
         .eq('id', id)
 
@@ -188,7 +256,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           ...dados,
-          updated_at: now
+          updatedAt: now
         })
         .eq('id', id)
 
@@ -221,7 +289,40 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
     }
   },
 
+  processarRespostaOraculo: async (mensagem: Mensagem) => {
+    try {
+      await new Promise(resolve => setTimeout(resolve, 1000))
+      return `Resposta processada para a mensagem: ${mensagem.conteudo}`
+    } catch (error) {
+      console.error('Erro ao processar resposta:', error)
+      throw error
+    }
+  },
+
   limparMensagens: () => {
     set({ mensagens: [], mensagemAtual: null })
+  },
+
+  carregarMensagemComResposta: async (mensagemId: string) => {
+    try {
+      set({ carregando: true, erro: null })
+      
+      const { data: mensagens } = await supabase
+        .from('mensagens')
+        .select(`
+          *,
+          oraculista:oraculistas(*)
+        `)
+        .or(`id.eq.${mensagemId},pergunta_ref.eq.${mensagemId}`)
+        .order('data', { ascending: true })
+
+      if (!mensagens) throw new Error('Nenhuma mensagem encontrada')
+
+      return mensagens
+    } catch (error) {
+      console.error('Erro ao carregar mensagem com resposta:', error)
+      set({ erro: 'Erro ao carregar mensagem com resposta', carregando: false })
+      throw error
+    }
   }
 }))

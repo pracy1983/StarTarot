@@ -6,24 +6,27 @@ export interface Oraculista {
 
 export interface Mensagem {
   id: string
-  userId: string
-  oraculistaId: string
-  titulo: string
+  user_id: string
+  oraculista_id: string
   conteudo: string
-  lida: boolean
-  data: Date
   tipo: 'pergunta' | 'resposta'
-  threadId?: string
-  createdAt: Date
+  data: Date
+  lida: boolean
   updatedAt: Date
-  oraculista?: Oraculista
-  de: string
+  status: 'enviada' | 'entregue' | 'falha'
+  pergunta_ref?: string
+  perguntaOriginal?: string
+  thread_id?: string
+  oraculista?: {
+    id: string
+    nome: string
+    foto: string
+  }
 }
 
 export type MensagemFiltro = 'todas' | 'nao_lidas' | 'respondidas'
 
 export interface MensagemFormData {
   oraculistaId: string
-  titulo: string
   conteudo: string
 }
