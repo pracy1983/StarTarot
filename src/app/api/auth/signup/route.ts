@@ -33,10 +33,14 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false
+      email_confirm: true,
+      user_metadata: {
+        name: data.name
+      }
     })
 
     if (authError || !authData.user) {
+      console.error('Erro ao criar usuário:', authError)
       return NextResponse.json(
         { success: false, error: 'Erro ao criar conta. Tente novamente.' },
         { status: 500 }
@@ -59,6 +63,9 @@ export async function POST(request: Request) {
       })
 
     if (profileError) {
+      // Se falhar ao criar o perfil, tenta deletar o usuário do Auth
+      await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
+      console.error('Erro ao criar perfil:', profileError)
       return NextResponse.json(
         { success: false, error: 'Erro ao salvar perfil. Tente novamente.' },
         { status: 500 }
@@ -66,13 +73,10 @@ export async function POST(request: Request) {
     }
 
     // 4. Enviar email de verificação
-    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
-      email: data.email,
-      password: data.password,
-      options: {
-        data: { name: data.name },
-        redirectTo: `${siteUrl}/auth/callback`
+    const { error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
+      redirectTo: `${siteUrl}/auth/callback`,
+      data: {
+        name: data.name
       }
     })
 
