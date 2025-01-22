@@ -75,7 +75,7 @@ export default function MensagensPage() {
         {/* Thread da Mensagem */}
         <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
           {mensagemAtual ? (
-            <MensagemThread mensagem={mensagemAtual} />
+            <MensagemThread mensagemId={mensagemAtual.id} />
           ) : (
             <div className="h-full flex items-center justify-center text-gray-500">
               Selecione uma mensagem para visualizar

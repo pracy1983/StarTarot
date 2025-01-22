@@ -25,6 +25,7 @@ interface MensagensState {
   atualizarStatus: (titulo: string, status: 'enviada' | 'entregue' | 'falha') => void
   receberResposta: (mensagemId: string, resposta: string) => Promise<void>
   processarRespostaOraculo: (mensagem: Mensagem) => Promise<string>
+  carregarMensagemComResposta: (mensagemId: string) => Promise<Mensagem[]>
 }
 
 export const useMensagensStore = create<MensagensState>((set, get) => ({
@@ -57,7 +58,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
           thread_id: mensagemId,
           data: new Date(),
           lida: false,
-          updatedAt: new Date(),
+          updated_at: new Date(),
           status: 'entregue'
         })
         .select()
@@ -113,7 +114,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         data: new Date(msg.data),
         tipo: msg.tipo,
         thread_id: msg.thread_id,
-        updatedAt: new Date(msg.updated_at),
+          updated_at: msg.updated_at ? new Date(msg.updated_at) : null,
         oraculista: msg.oraculista,
         status: msg.status || 'enviada',
         pergunta_original: msg.pergunta_original
@@ -145,7 +146,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
           lida: false,
           data: now,
           tipo: 'pergunta',
-          updatedAt: now,
+          updated_at: now,
           status: 'enviada'
         }])
         .select(`
@@ -169,7 +170,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         data: new Date(newMensagem.data),
         tipo: newMensagem.tipo,
         thread_id: newMensagem.thread_id,
-        updatedAt: new Date(newMensagem.updated_at),
+          updated_at: newMensagem.updated_at ? new Date(newMensagem.updated_at) : null,
         oraculista: newMensagem.oraculista,
         status: 'enviada'
       }
@@ -224,7 +225,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           lida: true,
-          updatedAt: new Date()
+          updated_at: new Date()
         })
         .eq('id', id)
 
@@ -233,7 +234,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
       set(state => ({
         mensagens: state.mensagens.map(m =>
           m.id === id
-            ? { ...m, lida: true, updatedAt: new Date() }
+            ? { ...m, lida: true, updated_at: new Date() }
             : m
         )
       }))
@@ -256,7 +257,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
         .from('mensagens')
         .update({
           ...dados,
-          updatedAt: now
+          updated_at: now
         })
         .eq('id', id)
 
@@ -265,7 +266,7 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
       set(state => ({
         mensagens: state.mensagens.map(m =>
           m.id === id
-            ? { ...m, ...dados, updatedAt: now }
+            ? { ...m, ...dados, updated_at: now }
             : m
         ),
         carregando: false
@@ -303,20 +304,43 @@ export const useMensagensStore = create<MensagensState>((set, get) => ({
     set({ mensagens: [], mensagemAtual: null })
   },
 
-  carregarMensagemComResposta: async (mensagemId: string) => {
+  carregarMensagemComResposta: async (mensagemId?: string) => {
     try {
       set({ carregando: true, erro: null })
       
-      const { data: mensagens } = await supabase
+      if (!mensagemId) {
+        console.warn('Nenhum ID de mensagem fornecido')
+        set({ carregando: false })
+        return []
+      }
+
+      console.log('Iniciando carregamento da mensagem:', mensagemId)
+      
+      const { data: mensagens, error } = await supabase
         .from('mensagens')
         .select(`
           *,
           oraculista:oraculistas(*)
         `)
         .or(`id.eq.${mensagemId},pergunta_ref.eq.${mensagemId}`)
-        .order('data', { ascending: true })
+        .order('created_at', { ascending: false })
 
-      if (!mensagens) throw new Error('Nenhuma mensagem encontrada')
+      if (error) {
+        console.error('Erro na query:', error)
+        throw error
+      }
+
+      if (!mensagens || mensagens.length === 0) {
+        console.warn('Nenhuma mensagem encontrada para o ID:', mensagemId)
+        set({ carregando: false })
+        return []
+      }
+
+      // Retorna apenas as mensagens carregadas, sem acumular
+      set({ 
+        carregando: false,
+        erro: null
+      })
 
       return mensagens
     } catch (error) {

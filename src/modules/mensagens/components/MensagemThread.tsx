@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { Mensagem } from '../types/mensagem'
-import { format } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { useMensagensStore } from '../store/mensagensStore'
+import { formatarData } from '../../../utils/format'
 
 interface MensagemThreadProps {
   mensagemId: string
@@ -23,28 +22,67 @@ export const MensagemThread: React.FC<MensagemThreadProps> = ({
 }) => {
   const [mensagem, setMensagem] = useState<Mensagem | null>(null)
   const [resposta, setResposta] = useState<Mensagem | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
   const { carregarMensagemComResposta } = useMensagensStore()
 
   useEffect(() => {
     const carregarMensagens = async () => {
       try {
+        setLoading(true)
+        setError(null)
+        
+        if (!mensagemId || typeof mensagemId !== 'string') {
+          setError('ID da mensagem inválido')
+          setLoading(false)
+          return
+        }
+
+        console.log('Iniciando carregamento da thread:', mensagemId)
         const mensagens = await carregarMensagemComResposta(mensagemId)
-        if (mensagens.length > 0) {
-          setMensagem(mensagens[0])
-          if (mensagens.length > 1) {
-            setResposta(mensagens[1])
+        console.log('Mensagens carregadas:', mensagens)
+
+        // Encontra a mensagem específica que foi clicada
+        const mensagemClicada = mensagens.find(m => m.id === mensagemId)
+        
+        if (mensagemClicada) {
+          setMensagem(mensagemClicada)
+          // Se for uma resposta, procura a pergunta original
+          if (mensagemClicada.pergunta_ref) {
+            const perguntaOriginal = mensagens.find(m => m.id === mensagemClicada.pergunta_ref)
+            if (perguntaOriginal) {
+              setMensagem(perguntaOriginal)
+              setResposta(mensagemClicada)
+            }
+          } else {
+            // Se for uma pergunta, procura a resposta
+            const respostaAssociada = mensagens.find(m => m.pergunta_ref === mensagemClicada.id)
+            setResposta(respostaAssociada || null)
           }
+        } else {
+          setError('Mensagem não encontrada')
         }
       } catch (error) {
         console.error('Erro ao carregar mensagens:', error)
+        setError('Erro ao carregar mensagens')
+      } finally {
+        setLoading(false)
       }
     }
 
     carregarMensagens()
   }, [mensagemId, carregarMensagemComResposta])
 
+  if (loading) {
+    return <div className="p-4 text-center">Carregando...</div>
+  }
+
+  if (error) {
+    return <div className="p-4 text-red-500 text-center">{error}</div>
+  }
+
   if (!mensagem) {
-    return <div>Carregando...</div>
+    return <div className="p-4 text-center">Mensagem não encontrada</div>
   }
 
   const nivelThread = mensagem.thread_id ? 1 : 0
@@ -53,11 +91,6 @@ export const MensagemThread: React.FC<MensagemThreadProps> = ({
     marginLeft: `${nivelThread * 2}rem`,
     borderLeft: nivelThread > 0 ? '2px solid rgba(255, 255, 255, 0.1)' : 'none',
     paddingLeft: nivelThread > 0 ? '1rem' : '0'
-  }
-  const formatarData = (data: Date) => {
-    return format(data, "dd 'de' MMMM 'de' yyyy 'às' HH:mm", {
-      locale: ptBR
-    })
   }
 
   return (
@@ -77,20 +110,53 @@ export const MensagemThread: React.FC<MensagemThreadProps> = ({
 
       {/* Container da mensagem */}
       <div className="flex-1 bg-black/40 backdrop-blur-md rounded-xl p-4 space-y-4 overflow-y-auto scrollbar-custom">
-        {/* Resposta do oraculista */}
-        <div className="space-y-2">
-          <h4 className="text-primary font-medium">Resposta:</h4>
-          <div
-            dangerouslySetInnerHTML={{ __html: mensagem.conteudo }}
-            className="text-gray-300 whitespace-pre-wrap"
-          />
+        {/* Sempre mostra a mensagem principal */}
+        <div className={`p-4 ${mensagem.tipo === 'pergunta' ? 'bg-gray-900/50' : ''} rounded-lg space-y-2`}>
+          <h4 className="text-primary/80 font-medium">
+            {mensagem.tipo === 'pergunta' ? 'Situação e Pergunta:' : 'Resposta do Oráculo:'}
+          </h4>
+          {mensagem.tipo === 'pergunta' ? (
+            <p className="text-gray-400 whitespace-pre-wrap">
+              {mensagem.perguntaOriginal || mensagem.conteudo}
+            </p>
+          ) : (
+            <div
+              dangerouslySetInnerHTML={{ 
+                __html: mensagem.conteudo.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\n/g, '<br>')
+                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                  .split('**').join('')
+                  .split('*').join('')
+              }}
+              className="text-gray-300 prose prose-invert max-w-none prose-headings:text-primary prose-strong:text-primary/90 prose-em:text-gray-400"
+            />
+          )}
         </div>
 
-        {/* Pergunta/Contexto do usuário */}
-        {mensagem.perguntaOriginal && (
-          <div className="mt-6 p-4 bg-gray-900/50 rounded-lg space-y-2">
-            <h4 className="text-primary/80 font-medium">Sua Pergunta:</h4>
-            <p className="text-gray-400 whitespace-pre-wrap">{mensagem.perguntaOriginal}</p>
+        {/* Se for uma pergunta e tiver resposta, mostra a resposta recuada */}
+        {mensagem.tipo === 'pergunta' && resposta && (
+          <div className="ml-4 p-4 border-l-2 border-l-primary/20 space-y-2">
+            <div className="flex items-center gap-4 mb-2">
+              <img 
+                src={resposta.oraculista?.foto} 
+                alt={resposta.oraculista?.nome}
+                className="w-8 h-8 rounded-full object-cover border border-primary/30"
+              />
+              <div>
+                <h4 className="text-primary font-medium text-sm">Resposta do Oráculo:</h4>
+                <p className="text-xs text-gray-400">{formatarData(resposta.data)}</p>
+              </div>
+            </div>
+            <div
+              dangerouslySetInnerHTML={{ 
+                __html: resposta.conteudo.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\n/g, '<br>')
+                  .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                  .split('**').join('')
+                  .split('*').join('')
+              }}
+              className="text-gray-300 prose prose-invert max-w-none prose-headings:text-primary prose-strong:text-primary/90 prose-em:text-gray-400"
+            />
           </div>
         )}
       </div>

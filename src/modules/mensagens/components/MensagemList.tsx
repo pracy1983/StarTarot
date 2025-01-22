@@ -8,11 +8,15 @@ import { useMensagensStore } from '../store/mensagensStore'
 
 interface MensagemListProps {
   mensagens: Mensagem[]
-  onSelectMensagem: (mensagem: Mensagem | null) => void
-  mensagemSelecionada: Mensagem | null
+  onSelectMensagem?: (mensagem: Mensagem | null) => void
+  mensagemSelecionada?: Mensagem | null
 }
 
-export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada }: MensagemListProps) {
+export function MensagemList({ 
+  mensagens,
+  onSelectMensagem,
+  mensagemSelecionada 
+}: MensagemListProps) {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const deletarMensagem = useMensagensStore(state => state.deletarMensagem)
 
@@ -44,7 +48,7 @@ export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada 
     } else {
       // Click normal
       setSelectedIds(new Set([mensagem.id]))
-      onSelectMensagem(mensagem)
+      onSelectMensagem?.(mensagem)
     }
   }
 
@@ -55,9 +59,44 @@ export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada 
         await deletarMensagem(id)
       }
       setSelectedIds(new Set())
-      onSelectMensagem(null)
+      onSelectMensagem?.(null)
     }
   }
+
+  // Organiza as mensagens em pares (pergunta/resposta)
+  const organizarMensagens = (msgs: Mensagem[]) => {
+    const mensagensOrdenadas = [...msgs].sort((a, b) => {
+      const dateA = a.data ? new Date(a.data) : 
+        a.updated_at ? new Date(a.updated_at) : new Date(0)
+      const dateB = b.data ? new Date(b.data) : 
+        b.updated_at ? new Date(b.updated_at) : new Date(0)
+      return dateB.getTime() - dateA.getTime()
+    })
+
+    const threads = new Map<string, Mensagem[]>()
+    
+    // Primeiro, organiza todas as perguntas
+    mensagensOrdenadas.forEach(msg => {
+      if (msg.tipo === 'pergunta') {
+        threads.set(msg.id, [msg])
+      }
+    })
+
+    // Depois, adiciona as respostas às suas perguntas
+    mensagensOrdenadas.forEach(msg => {
+      if (msg.tipo !== 'pergunta' && msg.pergunta_ref) {
+        const thread = threads.get(msg.pergunta_ref)
+        if (thread) {
+          thread.push(msg)
+        }
+      }
+    })
+
+    // Retorna as threads mantendo a ordem
+    return Array.from(threads.values()).flat()
+  }
+
+  const mensagensOrganizadas = organizarMensagens(mensagens)
 
   return (
     <div className="h-full flex flex-col">
@@ -75,19 +114,28 @@ export function MensagemList({ mensagens, onSelectMensagem, mensagemSelecionada 
           </button>
         </div>
       )}
-      <div className="flex-1 overflow-y-auto">
-        {mensagens.length === 0 ? (
+      <div className="flex-1 p-4 overflow-y-auto space-y-4">
+        {mensagensOrganizadas.length === 0 ? (
           <div className="h-full flex items-center justify-center text-gray-500">
             Nenhuma mensagem encontrada
           </div>
         ) : (
-          mensagens.map((mensagem) => (
-            <MensagemItem
+          mensagensOrganizadas.map((mensagem) => (
+            <div 
               key={mensagem.id}
-              mensagem={mensagem}
-              selecionada={selectedIds.has(mensagem.id)}
               onClick={(e) => handleSelect(mensagem, e)}
-            />
+              className={`cursor-pointer transition-all ${
+                mensagemSelecionada?.id === mensagem.id
+                  ? 'scale-[1.02] ring-2 ring-primary'
+                  : 'hover:scale-[1.01]'
+              }`}
+            >
+              <MensagemItem 
+                mensagem={mensagem}
+                selecionada={mensagemSelecionada?.id === mensagem.id}
+                onClick={(e) => handleSelect(mensagem, e)}
+              />
+            </div>
           ))
         )}
       </div>
