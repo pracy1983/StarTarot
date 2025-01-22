@@ -7,128 +7,87 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    console.log('Dados recebidos:', JSON.stringify(data, null, 2))
 
-    // Verificar se o usuário já existe
-    console.log('Verificando se o usuário já existe...')
-    const { data: existingUser } = await supabaseAdmin
+    // 1. Verificar se o email já está em uso
+    const { data: existingUser, error: searchError } = await supabaseAdmin
       .from('users')
-      .select('id, email')
+      .select('email')
       .eq('email', data.email)
-      .single()
+      .maybeSingle()
+
+    if (searchError) {
+      return NextResponse.json(
+        { success: false, error: 'Erro ao verificar email. Tente novamente.' },
+        { status: 500 }
+      )
+    }
 
     if (existingUser) {
-      console.log('Usuário já existe:', existingUser)
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Este email já está cadastrado. Por favor, use outro email ou faça login.'
-        },
+        { success: false, error: 'Este email já está cadastrado.' },
         { status: 400 }
       )
     }
 
-    // Criar usuário usando signUp normal
-    console.log('Criando usuário...')
+    // 2. Criar o usuário no Auth
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false,
-      user_metadata: {
-        name: data.name,
-        phone_country_code: data.phoneCountryCode,
-        phone_area_code: data.phoneAreaCode,
-        phone_number: data.phoneNumber,
-        birth_date: data.birthDate
-      }
+      email_confirm: false
     })
 
-    if (authError) {
-      console.error('Erro ao criar usuário:', authError)
-      // Verificar se o erro é de usuário já existente
-      if (authError.message?.includes('already exists')) {
-        return NextResponse.json(
-          { 
-            success: false, 
-            error: 'Este email já está cadastrado. Por favor, use outro email ou faça login.'
-          },
-          { status: 400 }
-        )
-      }
+    if (authError || !authData.user) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Erro ao criar usuário. Por favor, tente novamente.'
-        },
+        { success: false, error: 'Erro ao criar conta. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    if (!authData.user) {
-      return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Erro ao criar usuário. Por favor, tente novamente.'
-        },
-        { status: 500 }
-      )
-    }
-
-    // Inserir dados na tabela users
-    console.log('Inserindo dados na tabela users...')
-    const { error: dbError } = await supabaseAdmin
+    // 3. Criar o perfil do usuário
+    const { error: profileError } = await supabaseAdmin
       .from('users')
-      .insert([{
+      .insert({
         id: authData.user.id,
-        name: data.name,
         email: data.email,
+        name: data.name,
         phone_country_code: data.phoneCountryCode,
         phone_area_code: data.phoneAreaCode,
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0,
         email_verified: false
-      }])
+      })
 
-    if (dbError) {
-      console.error('Erro ao inserir dados na tabela users:', dbError)
+    if (profileError) {
       return NextResponse.json(
-        { 
-          success: false, 
-          error: 'Erro ao salvar dados do usuário. Por favor, tente novamente.'
-        },
+        { success: false, error: 'Erro ao salvar perfil. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    // Enviar email de verificação
-    console.log('Enviando email de verificação...')
-    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+    // 4. Enviar email de verificação
+    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
       email: data.email,
       options: {
-        redirectTo: `${siteUrl}/login?verificado=true`
+        data: { name: data.name }
       }
     })
 
+    // Se falhar o envio do email, ainda retornamos sucesso pois a conta foi criada
     if (emailError) {
-      console.error('Erro ao enviar email de verificação:', emailError)
-      // Não retornamos erro aqui pois o usuário já foi criado
+      console.error('Erro ao enviar email:', emailError)
     }
 
-    console.log('Usuário criado com sucesso')
-    return NextResponse.json({ 
+    return NextResponse.json({
       success: true,
-      message: 'Cadastro realizado com sucesso! Verifique seu email para confirmar sua conta.',
+      message: 'Conta criada com sucesso! Verifique seu email.',
       redirect: '/login?cadastro=sucesso'
     })
-  } catch (error: any) {
-    console.error('Erro completo no cadastro:', error)
+
+  } catch (error) {
+    console.error('Erro no cadastro:', error)
     return NextResponse.json(
-      { 
-        success: false, 
-        error: error.message || 'Erro ao realizar cadastro'
-      },
+      { success: false, error: 'Erro inesperado. Tente novamente.' },
       { status: 500 }
     )
   }
