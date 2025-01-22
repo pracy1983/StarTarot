@@ -14,7 +14,7 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false, // Alterado para false pois vamos enviar o email manualmente
+      email_confirm: false,
       user_metadata: {
         name: data.name,
         phone_country_code: data.phoneCountryCode,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0,
-        email_verified: false // Alterado para false até que o email seja verificado
+        email_verified: false
       }])
 
     if (dbError) {
@@ -72,24 +72,25 @@ export async function POST(request: Request) {
       )
     }
 
-    // Enviar email de verificação
+    // Enviar email de verificação diretamente usando o Supabase
     console.log('Enviando email de verificação...')
-    const verificationResponse = await fetch(`${siteUrl}/api/auth/send-verification`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ email: data.email })
+    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: data.email,
+      options: {
+        redirectTo: `${siteUrl}/login?verificado=true`
+      }
     })
 
-    if (!verificationResponse.ok) {
-      console.error('Erro ao enviar email de verificação:', await verificationResponse.text())
+    if (emailError) {
+      console.error('Erro ao enviar email de verificação:', emailError)
       // Não retornamos erro aqui pois o usuário já foi criado
     }
 
     console.log('Usuário criado com sucesso')
     return NextResponse.json({ 
       success: true,
+      message: 'Cadastro realizado com sucesso! Verifique seu email para confirmar sua conta.',
       redirect: '/login?cadastro=sucesso'
     })
   } catch (error: any) {
