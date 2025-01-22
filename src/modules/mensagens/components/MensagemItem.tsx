@@ -58,7 +58,7 @@ export const MensagemItem: React.FC<MensagemItemProps> = ({
           )}
         </div>
         <h3 className={`text-sm font-medium mb-1 ${!mensagem.lida ? 'text-primary' : 'text-gray-300'}`}>
-          {mensagem.titulo || 'Consulta'} - {formatarData(mensagem.data)}
+          {mensagem.tipo === 'pergunta' ? 'Consulta' : 'Resposta'} - {formatarData(mensagem.updatedAt)}
         </h3>
         <p className="text-xs text-gray-400 line-clamp-2">
           {mensagem.conteudo?.substring(0, 100)}...
