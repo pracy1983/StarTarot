@@ -123,9 +123,8 @@ export async function POST(request: Request) {
     // 4. Enviar email de confirmação
     console.log('12. Enviando email de confirmação...')
     const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+      type: 'magiclink',
       email: data.email,
-      password: data.password,
       options: {
         redirectTo: `${siteUrl}/auth/callback`,
         data: {
