@@ -122,7 +122,8 @@ export async function POST(request: Request) {
 
     // 4. Enviar email de confirmação
     console.log('12. Enviando email de confirmação...')
-    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
+    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'recovery',
       email: data.email,
       options: {
         redirectTo: `${siteUrl}/auth/callback`,
