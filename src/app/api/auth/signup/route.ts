@@ -1,49 +1,63 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
 
-// URL base do site dependendo do ambiente
+// Inicializar cliente Supabase Admin
+const supabaseAdmin = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+      detectSessionInUrl: false
+    }
+  }
+)
+
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const data = await request.json()
+    const data = await req.json()
+    const firstName = data.firstName?.trim()
+    const lastName = data.lastName?.trim()
 
-    // Dividir nome completo em primeiro nome e sobrenome
-    const nameParts = data.name.split(' ')
-    const firstName = nameParts[0]
-    const lastName = nameParts.slice(1).join(' ')
-
-    // 1. Verificar se o email já existe
-    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
-    const userExists = existingUser.users.some(user => user.email === data.email)
-    
-    if (userExists) {
+    if (!data.email || !data.password || !firstName) {
       return NextResponse.json(
-        { success: false, error: 'Este email já está cadastrado.' },
+        { success: false, error: 'Dados incompletos.' },
         { status: 400 }
       )
     }
 
-    // 2. Criar usuário no Auth com verificação de email obrigatória
-    const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+    // 1. Criar usuário com signUp e confirmação de email habilitada
+    const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
       email: data.email,
       password: data.password,
-      email_confirm: true, // Força confirmação de email
-      user_metadata: {
-        first_name: firstName,
-        last_name: lastName
+      options: {
+        emailRedirectTo: `${siteUrl}/auth/callback`,
+        data: {
+          first_name: firstName,
+          last_name: lastName
+        }
       }
     })
 
-    if (authError) {
-      console.error('Erro ao criar usuário:', authError)
+    if (signUpError) {
+      console.error('Erro ao criar usuário:', signUpError)
       return NextResponse.json(
         { success: false, error: 'Erro ao criar conta. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    // 3. Criar ou atualizar perfil do usuário na tabela profiles
+    if (!authData.user) {
+      return NextResponse.json(
+        { success: false, error: 'Erro ao criar usuário.' },
+        { status: 500 }
+      )
+    }
+
+    // 2. Criar perfil do usuário
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -56,52 +70,45 @@ export async function POST(request: Request) {
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0
-      }, {
-        onConflict: 'id'
       })
 
     if (profileError) {
+      console.error('Erro ao criar perfil:', profileError)
       // Se falhar ao criar o perfil, remove o usuário do Auth
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
-      console.error('Erro ao criar perfil:', profileError)
       return NextResponse.json(
         { success: false, error: 'Erro ao criar perfil. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    // 4. Gerar link de confirmação
-    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+    // 3. Reenviar email de confirmação explicitamente
+    const { error: resendError } = await supabaseAdmin.auth.resend({
       type: 'signup',
       email: data.email,
-      password: data.password,
       options: {
-        redirectTo: `${siteUrl}/auth/callback`,
-        data: {
-          first_name: firstName,
-          last_name: lastName
-        }
+        emailRedirectTo: `${siteUrl}/auth/callback`
       }
     })
 
-    if (emailError) {
-      console.error('Erro ao enviar email:', emailError)
+    if (resendError) {
+      console.error('Erro ao reenviar email:', resendError)
+      // Não vamos deletar o usuário se falhar o envio do email
       return NextResponse.json(
         { success: false, error: 'Erro ao enviar email de confirmação. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    return NextResponse.json({
-      success: true,
-      message: 'Conta criada com sucesso! Verifique seu email para confirmar.',
-      redirect: `/verificar-email?email=${encodeURIComponent(data.email)}`
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Usuário criado com sucesso. Por favor, verifique seu email para confirmar sua conta.' 
     })
 
   } catch (error) {
-    console.error('Erro no cadastro:', error)
+    console.error('Erro no servidor:', error)
     return NextResponse.json(
-      { success: false, error: 'Erro inesperado. Tente novamente.' },
+      { success: false, error: 'Erro interno do servidor.' },
       { status: 500 }
     )
   }
