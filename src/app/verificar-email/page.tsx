@@ -10,7 +10,7 @@ export default function VerificarEmailPage() {
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const email = searchParams.get('email')
+  const email = searchParams?.get('email') || ''
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
