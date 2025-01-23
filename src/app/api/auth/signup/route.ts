@@ -24,11 +24,11 @@ export async function POST(request: Request) {
       )
     }
 
-    // 2. Criar usuário no Auth com verificação de email
+    // 2. Criar usuário no Auth com verificação de email obrigatória
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false,
+      email_confirm: true, // Força confirmação de email
       user_metadata: {
         first_name: firstName,
         last_name: lastName
@@ -70,18 +70,22 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. Enviar email de confirmação
-    const { error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
-      redirectTo: `${siteUrl}/auth/callback`,
-      data: {
-        first_name: firstName,
-        last_name: lastName
+    // 4. Gerar link de confirmação
+    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email: data.email,
+      password: data.password,
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+        data: {
+          first_name: firstName,
+          last_name: lastName
+        }
       }
     })
 
     if (emailError) {
       console.error('Erro ao enviar email:', emailError)
-      // Se falhar o envio do email, vamos retornar erro mas não deletar o usuário
       return NextResponse.json(
         { success: false, error: 'Erro ao enviar email de confirmação. Tente novamente.' },
         { status: 500 }
