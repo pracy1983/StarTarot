@@ -8,38 +8,34 @@ export async function POST(request: Request) {
   try {
     const data = await request.json()
 
-    // 1. Verificar se o email já está em uso
-    const { data: existingUser, error: searchError } = await supabaseAdmin
-      .from('users')
-      .select('email')
-      .eq('email', data.email)
-      .maybeSingle()
+    // Dividir nome completo em primeiro nome e sobrenome
+    const nameParts = data.name.split(' ')
+    const firstName = nameParts[0]
+    const lastName = nameParts.slice(1).join(' ')
 
-    if (searchError) {
-      return NextResponse.json(
-        { success: false, error: 'Erro ao verificar email. Tente novamente.' },
-        { status: 500 }
-      )
-    }
-
-    if (existingUser) {
+    // 1. Verificar se o email já existe
+    const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
+    const userExists = existingUser.users.some(user => user.email === data.email)
+    
+    if (userExists) {
       return NextResponse.json(
         { success: false, error: 'Este email já está cadastrado.' },
         { status: 400 }
       )
     }
 
-    // 2. Criar o usuário no Auth
+    // 2. Criar usuário no Auth com verificação de email
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: true,
+      email_confirm: false,
       user_metadata: {
-        name: data.name
+        first_name: firstName,
+        last_name: lastName
       }
     })
 
-    if (authError || !authData.user) {
+    if (authError) {
       console.error('Erro ao criar usuário:', authError)
       return NextResponse.json(
         { success: false, error: 'Erro ao criar conta. Tente novamente.' },
@@ -47,48 +43,59 @@ export async function POST(request: Request) {
       )
     }
 
-    // 3. Criar o perfil do usuário
+    // 3. Criar ou atualizar perfil do usuário na tabela profiles
     const { error: profileError } = await supabaseAdmin
-      .from('users')
-      .insert({
+      .from('profiles')
+      .upsert({
         id: authData.user.id,
+        first_name: firstName,
+        last_name: lastName || '',
         email: data.email,
-        name: data.name,
         phone_country_code: data.phoneCountryCode,
         phone_area_code: data.phoneAreaCode,
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
-        credits: 0,
-        email_verified: false
+        credits: 0
+      }, {
+        onConflict: 'id'
       })
 
     if (profileError) {
-      // Se falhar ao criar o perfil, tenta deletar o usuário do Auth
+      // Se falhar ao criar o perfil, remove o usuário do Auth
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       console.error('Erro ao criar perfil:', profileError)
       return NextResponse.json(
-        { success: false, error: 'Erro ao salvar perfil. Tente novamente.' },
+        { success: false, error: 'Erro ao criar perfil. Tente novamente.' },
         { status: 500 }
       )
     }
 
-    // 4. Enviar email de verificação
-    const { error: emailError } = await supabaseAdmin.auth.admin.inviteUserByEmail(data.email, {
-      redirectTo: `${siteUrl}/auth/callback`,
-      data: {
-        name: data.name
+    // 4. Gerar link de confirmação de email
+    const { data: { user }, error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
+      email: data.email,
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+        data: {
+          first_name: firstName,
+          last_name: lastName
+        }
       }
     })
 
-    // Se falhar o envio do email, ainda retornamos sucesso pois a conta foi criada
     if (emailError) {
-      console.error('Erro ao enviar email:', emailError)
+      console.error('Erro ao gerar link:', emailError)
+      // Se falhar o envio do email, vamos retornar erro
+      return NextResponse.json(
+        { success: false, error: 'Erro ao enviar email de confirmação. Tente novamente.' },
+        { status: 500 }
+      )
     }
 
     return NextResponse.json({
       success: true,
-      message: 'Conta criada com sucesso! Verifique seu email.',
-      redirect: '/login?cadastro=sucesso'
+      message: 'Conta criada com sucesso! Verifique seu email para confirmar.',
+      redirect: `/verificar-email?email=${encodeURIComponent(data.email)}`
     })
 
   } catch (error) {

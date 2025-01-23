@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { verifyEmail } from '@/services/auth'
 
 export default function VerificarEmailPage() {
@@ -9,6 +9,8 @@ export default function VerificarEmailPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
+  const searchParams = useSearchParams()
+  const email = searchParams.get('email')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -51,27 +53,26 @@ export default function VerificarEmailPage() {
                 className="w-full h-full object-contain"
               />
             </div>
-            <div>
-              <h1 className="font-raleway text-4xl font-bold text-primary mb-4">Verificar Email</h1>
-              <p className="text-xl text-gray-300 font-light leading-relaxed">
-                Enviamos um email de confirmação
-                <br />para seu endereço de email.
-              </p>
-              <p className="mt-4 text-lg text-gray-400">
-                Clique no link enviado para
-                <br />confirmar seu cadastro.
+            <div className="space-y-4">
+              <h1 className="text-2xl font-semibold text-white">Verifique seu Email</h1>
+              <p className="text-gray-300">
+                Enviamos um email de confirmação para:
+                <br />
+                <span className="font-semibold text-primary">{email}</span>
+                <br />
+                Por favor, verifique sua caixa de entrada e clique no link de confirmação para continuar.
               </p>
             </div>
           </div>
 
-          {/* Botão para voltar */}
-          <div className="text-center">
-            <button
-              onClick={() => router.push('/')}
-              className="text-primary hover:text-primary-light underline transition-colors"
-            >
-              Voltar para o início
-            </button>
+          {error && (
+            <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg">
+              <p className="text-red-500 text-center">{error}</p>
+            </div>
+          )}
+
+          <div className="text-center text-sm text-gray-400">
+            <p>Não recebeu o email? Verifique sua caixa de spam ou tente novamente.</p>
           </div>
         </div>
       </div>
