@@ -122,8 +122,7 @@ export async function POST(request: Request) {
 
     // 4. Enviar email de confirmação
     console.log('12. Enviando email de confirmação...')
-    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
+    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
       email: data.email,
       options: {
         redirectTo: `${siteUrl}/auth/callback`,
@@ -159,7 +158,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Conta criada com sucesso! Verifique seu email para confirmar.',
-      user: authData.user
+      user: authData.user,
+      redirect: '/verificar-email'
     })
 
   } catch (error: any) {

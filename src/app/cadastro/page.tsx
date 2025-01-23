@@ -92,17 +92,32 @@ export default function CadastroPage() {
         }),
       })
 
+      console.log('Status da resposta:', response.status)
       const result = await response.json()
+      console.log('Resposta do servidor:', result)
 
       if (!result.success) {
-        setError(result.error || 'Erro ao realizar cadastro')
+        let errorMessage = result.error || 'Erro ao realizar cadastro'
+        
+        // Adicionar detalhes do erro se existirem
+        if (result.details) {
+          console.error('Detalhes do erro:', result.details)
+          errorMessage += `\n\nDetalhes: ${result.details.message}`
+          if (result.details.code) {
+            errorMessage += `\nCódigo: ${result.details.code}`
+          }
+        }
+        
+        setError(errorMessage)
         setIsLoading(false)
         return
       }
 
       // Cadastro realizado com sucesso
-      router.push(result.redirect)
+      console.log('Cadastro realizado com sucesso, redirecionando...')
+      router.push('/verificar-email')
     } catch (err: any) {
+      console.error('Erro completo:', err)
       setError(err.message || 'Erro ao realizar cadastro')
     } finally {
       setIsLoading(false)
