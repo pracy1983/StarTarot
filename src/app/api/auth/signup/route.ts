@@ -9,10 +9,8 @@ export async function POST(request: Request) {
     const data = await request.json()
     console.log('Dados recebidos:', { ...data, password: '[REDACTED]' })
 
-    // Dividir nome completo em primeiro nome e sobrenome
-    const nameParts = data.name.split(' ')
-    const firstName = nameParts[0]
-    const lastName = nameParts.slice(1).join(' ')
+    const firstName = data.firstName
+    const lastName = data.lastName
 
     console.log('Dados processados:', { firstName, lastName })
 
