@@ -48,7 +48,14 @@ export async function POST(request: Request) {
         message: authError.message
       })
       return NextResponse.json(
-        { success: false, error: 'Erro ao criar conta. Tente novamente.' },
+        { 
+          success: false, 
+          error: 'Erro ao criar conta. Tente novamente.',
+          details: {
+            code: authError.status,
+            message: authError.message
+          }
+        },
         { status: 500 }
       )
     }
@@ -80,7 +87,14 @@ export async function POST(request: Request) {
       // Se falhar ao criar o perfil, remove o usuário do Auth
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
       return NextResponse.json(
-        { success: false, error: 'Erro ao criar perfil. Tente novamente.' },
+        { 
+          success: false, 
+          error: 'Erro ao criar perfil. Tente novamente.',
+          details: {
+            code: profileError.code,
+            message: profileError.message
+          }
+        },
         { status: 500 }
       )
     }
@@ -110,7 +124,14 @@ export async function POST(request: Request) {
       })
       // Se falhar o envio do email, vamos retornar erro mas não deletar o usuário
       return NextResponse.json(
-        { success: false, error: 'Erro ao enviar email de confirmação. Tente novamente.' },
+        { 
+          success: false, 
+          error: 'Erro ao enviar email de confirmação. Tente novamente.',
+          details: {
+            code: emailError.status,
+            message: emailError.message
+          }
+        },
         { status: 500 }
       )
     }
@@ -123,10 +144,17 @@ export async function POST(request: Request) {
       user: authData.user
     })
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('Erro não tratado:', error)
     return NextResponse.json(
-      { success: false, error: 'Erro interno do servidor.' },
+      { 
+        success: false, 
+        error: 'Erro interno do servidor.',
+        details: {
+          message: error.message,
+          stack: error.stack
+        }
+      },
       { status: 500 }
     )
   }
