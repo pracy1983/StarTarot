@@ -70,10 +70,17 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. Enviar email de confirmação usando o método específico para isso
-    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
+    // 4. Enviar email de confirmação
+    const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'signup',
       email: data.email,
-      redirectTo: `${siteUrl}/auth/callback`
+      options: {
+        redirectTo: `${siteUrl}/auth/callback`,
+        data: {
+          first_name: firstName,
+          last_name: lastName
+        }
+      }
     })
 
     if (emailError) {
