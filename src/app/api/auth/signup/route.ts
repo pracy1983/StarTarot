@@ -7,32 +7,49 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 export async function POST(request: Request) {
   try {
     const data = await request.json()
-    console.log('Dados recebidos:', { ...data, password: '[REDACTED]' })
-
+    console.log('=== DEBUG ===')
+    console.log('1. Dados recebidos:', { 
+      ...data, 
+      password: '[REDACTED]',
+      name: data.name || 'CAMPO NAME NÃO ENCONTRADO'
+    })
+    
     // Dividir nome completo em primeiro nome e sobrenome
-    const nameParts = data.name.split(' ')
-    const firstName = nameParts[0]
-    const lastName = nameParts.slice(1).join(' ')
+    const nameParts = data.name ? data.name.split(' ') : []
+    const firstName = nameParts[0] || ''
+    const lastName = nameParts.slice(1).join(' ') || ''
 
-    console.log('Dados processados:', { firstName, lastName })
+    console.log('2. Nome processado:', { 
+      nameParts,
+      firstName,
+      lastName,
+      nameCompleto: data.name
+    })
 
     // 1. Verificar se o email já existe
-    console.log('Verificando se o email já existe...')
+    console.log('3. Verificando se o email já existe...')
     const { data: existingUser } = await supabaseAdmin.auth.admin.listUsers()
     const userExists = existingUser.users.some(user => user.email === data.email)
     
     if (userExists) {
-      console.log('Email já existe:', data.email)
+      console.log('4. Email já existe:', data.email)
       return NextResponse.json(
         { success: false, error: 'Este email já está cadastrado.' },
         { status: 400 }
       )
     }
 
-    console.log('Email não existe, prosseguindo...')
+    console.log('5. Email não existe, prosseguindo...')
 
     // 2. Criar usuário no Auth com verificação de email
-    console.log('Criando usuário no Auth...')
+    console.log('6. Criando usuário no Auth com dados:', {
+      email: data.email,
+      metadata: {
+        first_name: firstName,
+        last_name: lastName
+      }
+    })
+
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
@@ -44,7 +61,7 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      console.error('Erro no Auth:', {
+      console.error('7. Erro no Auth:', {
         error: authError,
         code: authError.status,
         message: authError.message
@@ -62,10 +79,10 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('Usuário criado no Auth:', { userId: authData.user.id, userEmail: authData.user.email })
+    console.log('8. Usuário criado no Auth:', { userId: authData.user.id, userEmail: authData.user.email })
 
     // 3. Criar ou atualizar perfil do usuário na tabela profiles
-    console.log('Criando perfil do usuário...')
+    console.log('9. Criando perfil do usuário...')
     const { error: profileError } = await supabaseAdmin
       .from('profiles')
       .upsert({
@@ -81,7 +98,7 @@ export async function POST(request: Request) {
       })
 
     if (profileError) {
-      console.error('Erro ao criar perfil:', {
+      console.error('10. Erro ao criar perfil:', {
         error: profileError,
         code: profileError.code,
         message: profileError.message
@@ -101,10 +118,10 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('Perfil criado com sucesso')
+    console.log('11. Perfil criado com sucesso')
 
     // 4. Enviar email de confirmação
-    console.log('Enviando email de confirmação...')
+    console.log('12. Enviando email de confirmação...')
     const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'signup',
       email: data.email,
@@ -119,7 +136,7 @@ export async function POST(request: Request) {
     })
 
     if (emailError) {
-      console.error('Erro ao enviar email:', {
+      console.error('13. Erro ao enviar email:', {
         error: emailError,
         code: emailError.status,
         message: emailError.message
@@ -138,7 +155,7 @@ export async function POST(request: Request) {
       )
     }
 
-    console.log('Email de confirmação enviado com sucesso')
+    console.log('14. Email de confirmação enviado com sucesso')
 
     return NextResponse.json({
       success: true,
@@ -147,7 +164,7 @@ export async function POST(request: Request) {
     })
 
   } catch (error: any) {
-    console.error('Erro não tratado:', error)
+    console.error('15. Erro não tratado:', error)
     return NextResponse.json(
       { 
         success: false, 
