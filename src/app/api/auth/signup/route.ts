@@ -28,7 +28,7 @@ export async function POST(request: Request) {
 
     // 1. Criar usuário com verificação de email
     console.log('3. Criando usuário com verificação de email...')
-    const redirectUrl = `${siteUrl}/verificar-email?email=${encodeURIComponent(data.email)}`
+    const redirectUrl = `${siteUrl}/dashboard?email=${encodeURIComponent(data.email)}`
     
     console.log('3.1 Configurando redirecionamento:', {
       redirectUrl,
