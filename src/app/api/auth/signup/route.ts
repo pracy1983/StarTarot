@@ -19,15 +19,17 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
 export async function POST(req: Request) {
   try {
     const data = await req.json()
-    const firstName = data.firstName?.trim()
-    const lastName = data.lastName?.trim()
 
-    if (!data.email || !data.password || !firstName) {
+    // Validar dados obrigatórios
+    if (!data.email || !data.password || !data.firstName) {
       return NextResponse.json(
-        { success: false, error: 'Dados incompletos.' },
+        { success: false, error: 'Por favor, preencha todos os campos obrigatórios.' },
         { status: 400 }
       )
     }
+
+    const firstName = data.firstName.trim()
+    const lastName = data.lastName?.trim() || ''
 
     // 1. Criar usuário com signUp e confirmação de email habilitada
     const { data: authData, error: signUpError } = await supabaseAdmin.auth.signUp({
@@ -63,7 +65,7 @@ export async function POST(req: Request) {
       .upsert({
         id: authData.user.id,
         first_name: firstName,
-        last_name: lastName || '',
+        last_name: lastName,
         email: data.email,
         phone_country_code: data.phoneCountryCode,
         phone_area_code: data.phoneAreaCode,
@@ -102,7 +104,8 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ 
       success: true, 
-      message: 'Usuário criado com sucesso. Por favor, verifique seu email para confirmar sua conta.' 
+      message: 'Usuário criado com sucesso. Por favor, verifique seu email para confirmar sua conta.',
+      redirect: `/verificar-email?email=${encodeURIComponent(data.email)}`
     })
 
   } catch (error) {
