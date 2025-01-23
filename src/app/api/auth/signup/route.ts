@@ -70,23 +70,15 @@ export async function POST(request: Request) {
       )
     }
 
-    // 4. Gerar link de confirmação de email
-    const { data: { user }, error: emailError } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'signup',
+    // 4. Enviar email de confirmação usando o método específico para isso
+    const { error: emailError } = await supabaseAdmin.auth.admin.sendEmailInvite({
       email: data.email,
-      password: data.password,
-      options: {
-        redirectTo: `${siteUrl}/auth/callback`,
-        data: {
-          first_name: firstName,
-          last_name: lastName
-        }
-      }
+      redirectTo: `${siteUrl}/auth/callback`
     })
 
     if (emailError) {
-      console.error('Erro ao gerar link:', emailError)
-      // Se falhar o envio do email, vamos retornar erro
+      console.error('Erro ao enviar email:', emailError)
+      // Se falhar o envio do email, vamos retornar erro mas não deletar o usuário
       return NextResponse.json(
         { success: false, error: 'Erro ao enviar email de confirmação. Tente novamente.' },
         { status: 500 }
