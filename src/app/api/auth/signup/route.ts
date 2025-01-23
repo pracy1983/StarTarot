@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: data.email,
       password: data.password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: {
         first_name: firstName,
         last_name: lastName
@@ -44,11 +44,10 @@ export async function POST(request: Request) {
     })
 
     if (authError) {
-      console.error('Erro detalhado no Auth:', {
+      console.error('Erro no Auth:', {
         error: authError,
         code: authError.status,
-        message: authError.message,
-        details: authError.details
+        message: authError.message
       })
       return NextResponse.json(
         { success: false, error: 'Erro ao criar conta. Tente novamente.' },
@@ -72,16 +71,13 @@ export async function POST(request: Request) {
         phone_number: data.phoneNumber,
         birth_date: data.birthDate,
         credits: 0
-      }, {
-        onConflict: 'id'
       })
 
     if (profileError) {
-      console.error('Erro detalhado ao criar perfil:', {
+      console.error('Erro ao criar perfil:', {
         error: profileError,
         code: profileError.code,
-        details: profileError.details,
-        hint: profileError.hint
+        message: profileError.message
       })
       // Se falhar ao criar o perfil, remove o usuário do Auth
       await supabaseAdmin.auth.admin.deleteUser(authData.user.id)
@@ -98,7 +94,6 @@ export async function POST(request: Request) {
     const { error: emailError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'signup',
       email: data.email,
-      password: data.password,
       options: {
         redirectTo: `${siteUrl}/auth/callback`,
         data: {
@@ -109,11 +104,10 @@ export async function POST(request: Request) {
     })
 
     if (emailError) {
-      console.error('Erro detalhado ao enviar email:', {
+      console.error('Erro ao enviar email:', {
         error: emailError,
         code: emailError.status,
-        message: emailError.message,
-        details: emailError.details
+        message: emailError.message
       })
       // Se falhar o envio do email, vamos retornar erro mas não deletar o usuário
       return NextResponse.json(
@@ -127,7 +121,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       message: 'Conta criada com sucesso! Verifique seu email para confirmar.',
-      redirect: `/verificar-email?email=${encodeURIComponent(data.email)}`
+      user: authData.user
     })
 
   } catch (error) {
