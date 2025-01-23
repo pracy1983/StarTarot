@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { verifyEmail } from '@/services/auth'
 
-export default function VerificarEmailPage() {
+function VerificarEmailContent() {
   const [code, setCode] = useState('')
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -77,5 +77,17 @@ export default function VerificarEmailPage() {
         </div>
       </div>
     </main>
+  )
+}
+
+export default function VerificarEmailPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-white">Carregando...</div>
+      </div>
+    }>
+      <VerificarEmailContent />
+    </Suspense>
   )
 }
