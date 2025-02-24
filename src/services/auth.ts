@@ -37,42 +37,42 @@ export const signUp = async (data: SignUpData) => {
   }
 }
 
-export const verifyEmail = async (code: string) => {
+export const sendPasswordResetEmail = async (email: string) => {
   try {
-    // Buscar usuário pelo código de verificação
-    const { data: userData, error: userError } = await supabase
-      .from('users')
-      .select('*')
-      .eq('verification_code', code)
-      .single()
+    const response = await fetch('/api/auth/reset-password', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email }),
+    })
 
-    if (userError) throw userError
-    if (!userData) throw new Error('Código inválido')
-
-    // Verificar se o código expirou
-    const expiresAt = new Date(userData.verification_code_expires_at)
-    if (expiresAt < new Date()) {
-      throw new Error('Código expirado')
+    if (!response.ok) {
+      throw new Error('Erro ao enviar email de recuperação')
     }
 
-    // Atualizar usuário como verificado
-    const { error: updateError } = await supabase
-      .from('users')
-      .update({
-        email_verified: true,
-        verification_code: null,
-        verification_code_expires_at: null
-      })
-      .eq('id', userData.id)
+    return { error: null }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Erro ao enviar email de recuperação' }
+  }
+}
 
-    if (updateError) throw updateError
+export const verifyEmail = async (token: string) => {
+  try {
+    const response = await fetch('/api/auth/verify-email', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ token }),
+    })
 
-    return { success: true }
-  } catch (error: any) {
-    console.error('Erro na verificação:', error)
-    return { 
-      success: false, 
-      error: error.message || 'Erro ao verificar email' 
+    if (!response.ok) {
+      throw new Error('Erro ao verificar email')
     }
+
+    return { error: null }
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : 'Erro ao verificar email' }
   }
 }

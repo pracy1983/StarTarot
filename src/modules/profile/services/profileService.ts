@@ -1,85 +1,78 @@
-import { supabase } from '@/lib/supabase'
-import { ProfileData } from '../types/profile'
+import { User } from '@/modules/users/types/user'
 
 export class ProfileService {
-  async getProfile(userId: string): Promise<ProfileData | null> {
+  async getProfile(userId: string): Promise<any> {
     try {
-      const { data: profile, error } = await supabase
-        .from('profiles')
-        .select(`
-          first_name,
-          last_name,
-          email,
-          created_at,
-          credits,
-          phone_country_code,
-          phone_area_code,
-          phone_number,
-          birth_date,
-          avatar_url
-        `)
-        .eq('id', userId)
-        .single()
-
-      if (error) throw error
-
-      // Buscar o número de consultas realizadas
-      const { count: consultasRealizadas } = await supabase
-        .from('consultations')
-        .select('*', { count: 'exact', head: true })
-        .eq('user_id', userId)
-
-      // Buscar a data da última consulta
-      const { data: ultimaConsulta } = await supabase
-        .from('consultations')
-        .select('created_at')
-        .eq('user_id', userId)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .single()
-
-      return {
-        primeiroNome: profile.first_name || '',
-        sobrenome: profile.last_name || '',
-        email: profile.email || '',
-        dataCadastro: profile.created_at,
-        creditos: profile.credits || 0,
-        consultasRealizadas: consultasRealizadas || 0,
-        ultimaConsulta: ultimaConsulta?.created_at || null,
-        telefone: {
-          codigoPais: profile.phone_country_code || '+55',
-          ddd: profile.phone_area_code || '',
-          numero: profile.phone_number || ''
-        },
-        dataNascimento: profile.birth_date || '',
-        foto: profile.avatar_url
+      const response = await fetch(`/api/users/${userId}`)
+      if (!response.ok) {
+        throw new Error('Erro ao buscar perfil')
       }
+      const profile = await response.json()
+      return profile
     } catch (error) {
       console.error('Erro ao buscar perfil:', error)
       return null
     }
   }
 
-  async updateProfile(userId: string, data: Partial<ProfileData>): Promise<boolean> {
+  async updateProfile(userId: string, data: Partial<User>): Promise<any> {
     try {
-      const { error } = await supabase
-        .from('profiles')
-        .update({
-          first_name: data.primeiroNome,
-          last_name: data.sobrenome,
-          phone_country_code: data.telefone?.codigoPais,
-          phone_area_code: data.telefone?.ddd,
-          phone_number: data.telefone?.numero,
-          birth_date: data.dataNascimento
-        })
-        .eq('id', userId)
+      const response = await fetch(`/api/users/${userId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      })
 
-      if (error) throw error
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar perfil')
+      }
 
-      return true
+      const updatedUser = await response.json()
+      return { data: updatedUser, error: null }
     } catch (error) {
-      console.error('Erro ao atualizar perfil:', error)
-      return false
+      return { data: null, error: error instanceof Error ? error.message : 'Erro ao atualizar perfil' }
+    }
+  }
+
+  async updateEmail(userId: string, email: string): Promise<any> {
+    try {
+      const response = await fetch(`/api/users/${userId}/email`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar email')
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Erro ao atualizar email' }
+    }
+  }
+
+  async updatePassword(userId: string, currentPassword: string, newPassword: string): Promise<any> {
+    try {
+      const response = await fetch(`/api/users/${userId}/password`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ currentPassword, newPassword }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar senha')
+      }
+
+      return { error: null }
+    } catch (error) {
+      return { error: error instanceof Error ? error.message : 'Erro ao atualizar senha' }
     }
   }
 
@@ -97,28 +90,19 @@ export class ProfileService {
 
       // Upload da foto
       const filename = `${userId}/${Date.now()}.jpg`
-      const { data, error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filename, blob, {
-          contentType: 'image/jpeg',
-          upsert: true
-        })
+      const response = await fetch(`/api/users/${userId}/photo`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'image/jpeg',
+        },
+        body: blob,
+      })
 
-      if (uploadError) throw uploadError
+      if (!response.ok) {
+        throw new Error('Erro ao fazer upload da foto')
+      }
 
-      // Obter URL pública
-      const { data: { publicUrl } } = supabase.storage
-        .from('avatars')
-        .getPublicUrl(filename)
-
-      // Atualizar URL no perfil
-      const { error: updateError } = await supabase
-        .from('profiles')
-        .update({ avatar_url: publicUrl })
-        .eq('id', userId)
-
-      if (updateError) throw updateError
-
+      const publicUrl = await response.text()
       return publicUrl
     } catch (error) {
       console.error('Erro ao fazer upload da foto:', error)

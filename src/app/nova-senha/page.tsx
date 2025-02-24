@@ -1,159 +1,110 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { supabase } from '@/lib/supabase'
 
-function NovaSenhaForm() {
+export default function NovaSenhaPage() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [loading, setLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-
-  useEffect(() => {
-    // Verificar se temos o token na URL
-    const token = searchParams?.get('token')
-    if (!token) {
-      router.push('/')
-      return
-    }
-  }, [searchParams, router])
+  const token = searchParams.get('token')
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
     setError('')
+    setLoading(true)
 
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem')
+      setError('As senhas não conferem')
       setLoading(false)
       return
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
-        password: password
+      const response = await fetch('/api/auth/reset-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          password,
+        }),
       })
 
-      if (error) throw error
+      if (!response.ok) {
+        const data = await response.json()
+        throw new Error(data.error || 'Erro ao redefinir senha')
+      }
 
-      setSuccess(true)
-      setTimeout(() => {
-        router.push('/login?reset=success')
-      }, 3000)
-    } catch (err: any) {
-      setError(err.message || 'Erro ao atualizar senha')
+      router.push('/login?message=Senha alterada com sucesso')
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Erro ao redefinir senha')
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
-      {/* Background com overlay */}
-      <div 
-        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/background.jpg)' }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
-      </div>
-
-      {/* Conteúdo */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-10 bg-black/40 p-8 rounded-2xl backdrop-blur-md border border-primary/20">
-          {/* Logo e Título */}
-          <div className="text-center space-y-6">
-            <div className="w-44 h-44 mx-auto">
-              <img
-                src="/logo.png"
-                alt="StarTarot Logo"
-                className="w-full h-full object-contain"
+    <div className="min-h-screen flex items-center justify-center bg-black">
+      <div className="max-w-md w-full space-y-8 p-8 bg-gray-900 rounded-lg">
+        <div>
+          <h2 className="mt-6 text-center text-3xl font-extrabold text-primary">
+            Nova Senha
+          </h2>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="rounded-md shadow-sm -space-y-px">
+            <div>
+              <label htmlFor="password" className="sr-only">
+                Nova Senha
+              </label>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 placeholder-gray-500 text-white rounded-t-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-gray-800"
+                placeholder="Nova Senha"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
               />
             </div>
-            <h1 className="font-raleway text-5xl font-bold text-primary mb-4">Nova Senha</h1>
-            <p className="text-xl text-gray-300 font-light leading-relaxed">
-              Digite sua nova senha
-              <br />para continuar.
-            </p>
+            <div>
+              <label htmlFor="confirm-password" className="sr-only">
+                Confirme a Nova Senha
+              </label>
+              <input
+                id="confirm-password"
+                name="confirm-password"
+                type="password"
+                required
+                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-700 placeholder-gray-500 text-white rounded-b-md focus:outline-none focus:ring-primary focus:border-primary focus:z-10 sm:text-sm bg-gray-800"
+                placeholder="Confirme a Nova Senha"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+              />
+            </div>
           </div>
 
-          {/* Mensagens de erro/sucesso */}
           {error && (
-            <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-100 text-center">
-              {error}
-            </div>
-          )}
-          
-          {success && (
-            <div className="p-4 bg-green-500/20 border border-green-500 rounded-lg text-green-100 text-center">
-              Senha atualizada com sucesso! Redirecionando...
-            </div>
+            <div className="text-red-500 text-sm text-center">{error}</div>
           )}
 
-          {/* Formulário */}
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div className="space-y-4">
-              <div>
-                <input
-                  type="password"
-                  placeholder="Nova senha"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/40 border border-primary/20 rounded-lg
-                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                           text-white placeholder-gray-400 transition-all duration-200"
-                  required
-                  disabled={loading || success}
-                  minLength={6}
-                />
-              </div>
-              <div>
-                <input
-                  type="password"
-                  placeholder="Confirme a nova senha"
-                  value={confirmPassword}
-                  onChange={(e) => setConfirmPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-black/40 border border-primary/20 rounded-lg
-                           focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary
-                           text-white placeholder-gray-400 transition-all duration-200"
-                  required
-                  disabled={loading || success}
-                  minLength={6}
-                />
-              </div>
-            </div>
-
+          <div>
             <button
               type="submit"
-              disabled={loading || success}
-              className="w-full px-4 py-3 bg-primary hover:bg-primary-light text-black font-semibold
-                       rounded-lg transition-all duration-200 ease-in-out transform hover:scale-[1.02]
-                       disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              disabled={loading}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
             >
-              {loading ? 'Atualizando...' : 'Atualizar Senha'}
+              {loading ? 'Alterando...' : 'Alterar Senha'}
             </button>
-
-            <div className="text-center text-sm text-gray-400">
-              <p>Sua senha deve ter pelo menos 6 caracteres.</p>
-            </div>
-          </form>
-        </div>
+          </div>
+        </form>
       </div>
-    </main>
-  )
-}
-
-export default function NovaSenhaPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-primary text-xl">Carregando...</div>
-      </div>
-    }>
-      <NovaSenhaForm />
-    </Suspense>
+    </div>
   )
 }
