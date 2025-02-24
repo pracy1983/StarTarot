@@ -1,12 +1,11 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-import { supabase } from '@/lib/supabase'
 
 interface User {
   id: string
   email: string
   isAdmin: boolean
-  name?: string // Nome do usuário, opcional pois pode não estar disponível
+  name?: string
 }
 
 interface AuthState {
@@ -26,69 +25,63 @@ export const useAuthStore = create<AuthState>()(
       isLoading: true,
 
       checkAuth: async () => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession()
-          
-          if (session?.user) {
-            const isAdmin = session.user.user_metadata?.isAdmin || false
-            const name = session.user.user_metadata?.name
-            
-            set({
-              user: {
-                id: session.user.id,
-                email: session.user.email!,
-                isAdmin,
-                name
-              },
-              isAuthenticated: true,
-              isLoading: false
-            })
-          } else {
-            set({ user: null, isAuthenticated: false, isLoading: false })
+        const authData = localStorage.getItem('auth-storage')
+        if (authData) {
+          try {
+            const { state } = JSON.parse(authData)
+            if (state.user) {
+              set({
+                user: state.user,
+                isAuthenticated: true,
+                isLoading: false
+              })
+              return
+            }
+          } catch (error) {
+            console.error('Erro ao verificar autenticação:', error)
           }
-        } catch (error) {
-          console.error('Erro ao verificar autenticação:', error)
-          set({ user: null, isAuthenticated: false, isLoading: false })
         }
+        set({ user: null, isAuthenticated: false, isLoading: false })
       },
 
       login: async (email: string, password: string) => {
         try {
-          const { data, error } = await supabase.auth.signInWithPassword({
-            email,
-            password,
+          set({ isLoading: true })
+          
+          const response = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ email, password }),
           })
 
-          if (error) throw error
+          const data = await response.json()
 
-          const isAdmin = data.user?.user_metadata?.isAdmin || false
-          const name = data.user?.user_metadata?.name
+          if (!response.ok) {
+            throw new Error(data.error || 'Erro ao fazer login')
+          }
 
           set({
-            user: {
-              id: data.user.id,
-              email: data.user.email!,
-              isAdmin,
-              name
-            },
+            user: data.user,
             isAuthenticated: true,
             isLoading: false
           })
 
           return { success: true }
         } catch (error: any) {
+          console.error('Erro no login:', error)
           set({ isLoading: false })
-          return { success: false, error: error.message }
+          return { 
+            success: false, 
+            error: error.message || 'Erro ao fazer login. Tente novamente.'
+          }
         }
       },
 
       logout: async () => {
-        try {
-          await supabase.auth.signOut()
-          set({ user: null, isAuthenticated: false })
-        } catch (error) {
-          console.error('Erro ao fazer logout:', error)
-        }
+        set({ user: null, isAuthenticated: false })
+        localStorage.removeItem('auth-storage')
       }
     }),
     {

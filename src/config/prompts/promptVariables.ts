@@ -1,8 +1,28 @@
-import { supabase } from '@/lib/supabase'
+import pool from '@/lib/db'
 
 export type PromptVariable = {
   key: string
   getValue: () => Promise<string>
+}
+
+export interface Oraculista {
+  id: string
+  nome: string
+  descricao: string
+  disponivel: boolean
+}
+
+export async function getOraculistasDisponiveis(): Promise<Oraculista[]> {
+  try {
+    const response = await fetch('/api/prompts/variables')
+    if (!response.ok) {
+      throw new Error('Erro ao buscar oraculistas')
+    }
+    return await response.json()
+  } catch (error) {
+    console.error('Erro ao buscar oraculistas:', error)
+    return []
+  }
 }
 
 export const promptVariables: PromptVariable[] = [
@@ -10,39 +30,21 @@ export const promptVariables: PromptVariable[] = [
     key: '[oraculistas disponiveis, status, valores]',
     getValue: async () => {
       try {
-        const { data: oraculistas, error } = await supabase
-          .from('oraculistas')
-          .select('*')
-          .eq('disponivel', true)
-          .order('nome')
+        const oraculistas = await getOraculistasDisponiveis()
 
-        if (error) throw error
-
-        if (!oraculistas?.length) {
-          return 'Desculpe, não temos oraculistas disponíveis no momento.'
+        if (!oraculistas.length) {
+          return 'Não há oraculistas disponíveis no momento.'
         }
 
-        const oraculistasDisponiveis = oraculistas.map(o => {
-          let descricao = `
-${o.nome}
-${o.descricao}
-${o.especialidades ? o.especialidades.map((esp: string) => `- ${esp}`).join('\n') : ''}`
+        const oraculistasInfo = oraculistas.map(oraculista => {
+          const status = oraculista.disponivel ? 'disponível' : 'indisponível'
+          return `${oraculista.nome} (${status}) - R$ ${oraculista.valor_consulta}`
+        })
 
-          if (o.preco) {
-            descricao += `\nPreço: R$ ${o.preco}`
-            if (o.precoPromocional) {
-              descricao += ` (Promoção: R$ ${o.precoPromocional})`
-            }
-          }
-
-          return descricao
-        }).join('\n\n')
-
-        return oraculistasDisponiveis
-
+        return oraculistasInfo.join('\n')
       } catch (error) {
-        console.error('Erro ao carregar oraculistas:', error)
-        return 'Desculpe, houve um erro ao carregar os oraculistas.'
+        console.error('Erro ao buscar oraculistas:', error)
+        return 'Erro ao buscar informações dos oraculistas.'
       }
     }
   }

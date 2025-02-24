@@ -1,6 +1,5 @@
 import { getResolvedPrompt } from '@/config/prompts/chatAgentPrompt'
 import { Message, ApiMessage, MessageRole } from '../types/message'
-import { supabase } from '@/lib/supabase'
 
 export class ChatService {
   private messages: ApiMessage[] = []
@@ -25,50 +24,84 @@ export class ChatService {
 
   async retrieveHistory(userId: string): Promise<Message[]> {
     try {
-      const { data: messages, error } = await supabase
-        .from('chat_messages')
-        .select('*')
-        .eq('user_id', userId)
-        .order('timestamp', { ascending: true })
-        .limit(50)
+      const response = await fetch(`/api/chat?userId=${userId}`)
+      if (!response.ok) {
+        throw new Error('Erro ao recuperar histórico')
+      }
 
-      if (error) throw error
-
-      return messages.map(msg => ({
+      const messages = await response.json()
+      return messages.map((msg: any) => ({
         id: msg.id,
         content: msg.content,
         role: msg.role as MessageRole,
-        timestamp: msg.timestamp
+        createdAt: msg.created_at,
+        userId: msg.user_id
       }))
     } catch (error) {
-      console.error('Erro ao recuperar histórico:', error)
-      return []
+      console.error('Erro ao recuperar histórico do chat:', error)
+      throw error
+    }
+  }
+
+  async saveMessage(message: Omit<Message, 'id'>): Promise<Message> {
+    try {
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ content: message.content, userId: message.userId })
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao salvar mensagem')
+      }
+
+      const savedMessage = await response.json()
+      return {
+        id: savedMessage.id,
+        content: savedMessage.content,
+        role: savedMessage.role as MessageRole,
+        createdAt: savedMessage.created_at,
+        userId: savedMessage.user_id
+      }
+    } catch (error) {
+      console.error('Erro ao salvar mensagem:', error)
+      throw error
+    }
+  }
+
+  async clearHistory(userId: string): Promise<void> {
+    try {
+      const response = await fetch(`/api/chat?userId=${userId}`, {
+        method: 'DELETE'
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao limpar histórico')
+      }
+    } catch (error) {
+      console.error('Erro ao limpar histórico:', error)
+      throw error
     }
   }
 
   async sendMessage(content: string, userId: string): Promise<Message> {
+    // Salvar mensagem do usuário
+    const userMessage = await this.saveMessage({
+      content,
+      role: 'user',
+      userId
+    })
+
     try {
-      // Adiciona a mensagem do usuário ao banco
-      const { data: userMessageData, error: userError } = await supabase
-        .from('chat_messages')
-        .insert([
-          {
-            user_id: userId,
-            content,
-            role: 'user',
-            timestamp: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single()
+      // Preparar mensagens para a API
+      const apiMessages = [
+        ...this.messages,
+        { role: 'user', content }
+      ]
 
-      if (userError) throw userError
-
-      // Prepara o contexto para a API
-      const userMessage: ApiMessage = { role: 'user', content }
-      this.messages.push(userMessage)
-
-      // Faz a chamada para a API
+      // Fazer requisição para a API
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -76,47 +109,28 @@ export class ChatService {
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
+          messages: apiMessages,
           model: 'deepseek-chat',
-          messages: this.messages,
           temperature: 0.7,
-          max_tokens: 1000
+          max_tokens: 2000
         })
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        console.error('Erro da API:', error)
-        throw new Error(error.message || 'Falha ao obter resposta da API')
+        throw new Error('Erro na resposta da API')
       }
 
       const data = await response.json()
-      const assistantMessage = data.choices[0].message
+      const assistantResponse = data.choices[0].message.content
 
-      // Salva a resposta do assistente no banco
-      const { data: assistantMessageData, error: assistantError } = await supabase
-        .from('chat_messages')
-        .insert([
-          {
-            user_id: userId,
-            content: assistantMessage.content,
-            role: 'assistant',
-            timestamp: new Date().toISOString()
-          }
-        ])
-        .select()
-        .single()
-
-      if (assistantError) throw assistantError
-
-      // Adiciona a mensagem do assistente ao contexto
-      this.messages.push(assistantMessage)
-
-      return {
-        id: assistantMessageData.id,
-        content: assistantMessage.content,
+      // Salvar resposta do assistente
+      const assistantMessage = await this.saveMessage({
+        content: assistantResponse,
         role: 'assistant',
-        timestamp: new Date()
-      }
+        userId
+      })
+
+      return assistantMessage
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
       throw error
