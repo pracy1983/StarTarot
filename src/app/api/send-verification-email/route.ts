@@ -1,30 +1,53 @@
-import { supabaseAdmin } from '@/lib/supabase-admin'
 import { NextResponse } from 'next/server'
+import { pool } from '@/lib/db'
+import jwt from 'jsonwebtoken'
+import { sendVerificationEmail } from '@/services/email'
 
 export async function POST(request: Request) {
   try {
-    const data = await request.json()
-    console.log('Dados recebidos:', data)
+    const { email } = await request.json()
 
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: 'magiclink',
-      email: data.email,
-    })
-
-    if (error) {
-      console.error('Erro ao gerar link:', error)
-      return NextResponse.json({ 
-        success: false, 
-        error: 'Erro ao enviar email de verificação'
-      })
+    if (!email) {
+      return NextResponse.json(
+        { error: 'Email é obrigatório' },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({ success: true })
-  } catch (error) {
-    console.error('Erro ao enviar email:', error)
-    return NextResponse.json({ 
-      success: false, 
-      error: 'Erro ao processar requisição'
+    // Verificar se o usuário existe
+    const result = await pool.query(
+      'SELECT id FROM users WHERE email = $1',
+      [email]
+    )
+
+    if (result.rows.length === 0) {
+      return NextResponse.json(
+        { error: 'Usuário não encontrado' },
+        { status: 404 }
+      )
+    }
+
+    const user = result.rows[0]
+
+    // Gerar token de verificação
+    const verificationToken = jwt.sign(
+      { userId: user.id, email },
+      process.env.JWT_SECRET!,
+      { expiresIn: '24h' }
+    )
+
+    // Enviar email de verificação
+    await sendVerificationEmail(email, verificationToken)
+
+    return NextResponse.json({
+      success: true,
+      message: 'Email de verificação enviado com sucesso'
     })
+  } catch (error) {
+    console.error('Erro ao enviar email de verificação:', error)
+    return NextResponse.json(
+      { error: 'Erro ao enviar email de verificação' },
+      { status: 500 }
+    )
   }
 }

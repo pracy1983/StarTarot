@@ -1,25 +1,79 @@
-import { NextApiRequest, NextApiResponse } from 'next';
-import { supabase } from '@/lib/supabase';
+import { NextResponse } from 'next/server'
+import { pool } from '@/lib/db'
 
-export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  if (req.method === 'GET') {
-    try {
-      const { data: mensagens, error } = await supabase
-        .from('mensagens')
-        .select('*')
-        .eq('lida', false)
-        .order('data', { ascending: false });
+export async function GET(request: Request) {
+  try {
+    const url = new URL(request.url)
+    const userId = url.searchParams.get('userId')
 
-      if (error) {
-        return res.status(500).json({ error: 'Erro ao buscar notificações' });
-      }
-
-      res.status(200).json(mensagens);
-    } catch (error) {
-      res.status(500).json({ error: 'Erro interno do servidor' });
+    if (!userId) {
+      return NextResponse.json({ error: 'User ID é obrigatório' }, { status: 400 })
     }
-  } else {
-    res.setHeader('Allow', ['GET']);
-    res.status(405).end(`Method ${req.method} Not Allowed`);
+
+    const result = await pool.query(
+      `SELECT * FROM notifications 
+       WHERE user_id = $1 
+       ORDER BY created_at DESC`,
+      [userId]
+    )
+
+    return NextResponse.json({ notifications: result.rows })
+  } catch (error) {
+    console.error('Erro ao buscar notificações:', error)
+    return NextResponse.json(
+      { error: 'Erro ao buscar notificações' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PUT(request: Request) {
+  try {
+    const url = new URL(request.url)
+    const notificationId = url.searchParams.get('id')
+
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: 'ID da notificação é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    await pool.query(
+      'UPDATE notifications SET read = true WHERE id = $1',
+      [notificationId]
+    )
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Erro ao marcar notificação como lida:', error)
+    return NextResponse.json(
+      { error: 'Erro ao marcar notificação como lida' },
+      { status: 500 }
+    )
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const url = new URL(request.url)
+    const notificationId = url.searchParams.get('id')
+
+    if (!notificationId) {
+      return NextResponse.json(
+        { error: 'ID da notificação é obrigatório' },
+        { status: 400 }
+      )
+    }
+
+    await pool.query('DELETE FROM notifications WHERE id = $1', [notificationId])
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error('Erro ao excluir notificação:', error)
+    return NextResponse.json(
+      { error: 'Erro ao excluir notificação' },
+      { status: 500 }
+    )
   }
 }

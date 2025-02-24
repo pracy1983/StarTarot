@@ -1,50 +1,55 @@
-import { supabase } from '@/lib/supabase'
-import { redirect } from 'next/navigation'
-import { generateStaticParams } from './generateStaticParams'
+'use client'
 
-export const dynamicParams = false // Ensure only statically generated params are used
+import { useEffect, useState } from 'react'
+import { useParams } from 'next/navigation'
+import { Oraculista } from '@/modules/oraculistas/types/oraculista'
+import { useOraculistasStore } from '@/modules/oraculistas/store/oraculistasStore'
+import ConsultaView from '@/modules/consulta/components/ConsultaView'
 
-import { Oraculista } from './types'
+export default function ConsultaPage() {
+  const params = useParams()
+  const [oraculista, setOraculista] = useState<Oraculista | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-export default async function ConsultaPage({
-  params,
-}: {
-  params: { nome: string }
-}) {
-  // Verify if the param is valid
-  const staticParams = await generateStaticParams()
-  const isValidParam = staticParams.some((p: { nome: string }) => 
-    p.nome === encodeURIComponent(params.nome)
-  )
+  useEffect(() => {
+    const fetchOraculista = async () => {
+      try {
+        const response = await fetch(`/api/oraculistas/${params.nome}`)
+        if (!response.ok) {
+          throw new Error('Oraculista não encontrado')
+        }
+        const data = await response.json()
+        setOraculista(data)
+      } catch (error) {
+        setError(error instanceof Error ? error.message : 'Erro ao buscar oraculista')
+      } finally {
+        setLoading(false)
+      }
+    }
 
-  if (!isValidParam) {
-    redirect('/')
-  }
+    if (params.nome) {
+      fetchOraculista()
+    }
+  }, [params.nome])
 
-  const nome = decodeURIComponent(params.nome)
-  
-  const { data: oraculistas } = await supabase
-    .from('oraculistas')
-    .select('nome')
-
-  const oraculista = oraculistas?.find(o => 
-    o.nome.toLowerCase() === nome.toLowerCase()
-  )
-
-  if (!oraculista) {
-    redirect('/')
-  }
-
-  return (
-    <div className="min-h-screen bg-black text-white p-4">
-      <div className="max-w-4xl mx-auto">
-        <h1 className="text-2xl font-bold text-primary mb-4">
-          Iniciando consulta...
-        </h1>
-        <p className="text-gray-400">
-          Aguarde enquanto conectamos você com {nome}
-        </p>
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-primary text-xl">Carregando...</div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (error || !oraculista) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-xl">
+          {error || 'Oraculista não encontrado'}
+        </div>
+      </div>
+    )
+  }
+
+  return <ConsultaView oraculista={oraculista} />
 }

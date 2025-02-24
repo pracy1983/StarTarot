@@ -1,342 +1,132 @@
-import { supabase } from '@/lib/supabase'
-import { Mensagem, MensagemFormData } from '../types/mensagem'
+import { Message } from '../types/message'
 
-// Função auxiliar para verificar se as tabelas existem
-async function verificarTabelasExistem() {
-  const { error: mensagensError } = await supabase
-    .from('mensagens')
-    .select('id')
-    .limit(1)
-
-  const { error: oraculistasError } = await supabase
-    .from('oraculistas')
-    .select('id')
-    .limit(1)
-
-  if (mensagensError?.code === '42P01' || oraculistasError?.code === '42P01') {
-    throw new Error(
-      'As tabelas necessárias não existem no banco de dados. Por favor, execute o script de criação das tabelas.'
-    )
-  }
-}
-
-export async function carregarMensagens(userId?: string) {
-  try {
-    console.log('=== INÍCIO CARREGAMENTO ===')
-    console.log('Carregando mensagens para usuário:', userId)
-    await verificarTabelasExistem()
-
-    let query = supabase
-      .from('mensagens')
-      .select(`
-        *,
-        oraculista:oraculistas (
-          id,
-          nome,
-          foto
-        )
-      `)
-      .order('data', { ascending: false })
-
-    // Se um userId for fornecido, filtra por ele
-    if (userId) {
-      query = query.eq('user_id', userId)
-    }
-
-    const { data, error } = await query
-
-    if (error) {
-      console.error('Erro ao carregar mensagens:', error)
-      throw error
-    }
-
-    console.log('Mensagens brutas do Supabase:', data)
-    const mensagensFiltradas = data?.filter(msg => msg !== null) || []
-    console.log('Mensagens filtradas:', mensagensFiltradas.length)
-    console.log('=== FIM CARREGAMENTO ===')
-
-    return mensagensFiltradas.map(formatarMensagem)
-  } catch (error) {
-    console.error('Erro ao carregar mensagens:', error)
-    throw error
-  }
-}
-
-export async function enviarPergunta(userId: string, formData: MensagemFormData) {
-  try {
-    await verificarTabelasExistem()
-
-    console.log('Enviando mensagem para o oraculista:', formData.oraculistaId);
-
-    // Verificar se o oraculista existe
-    const { data: oraculista, error: oraculistaError } = await supabase
-      .from('oraculistas')
-      .select('id, nome, foto')
-      .eq('id', formData.oraculistaId)
-      .single()
-
-    if (oraculistaError || !oraculista) {
-      throw new Error('Oraculista não encontrado')
-    }
-
-    const { data: mensagem, error } = await supabase
-      .from('mensagens')
-      .insert({
-        user_id: userId,
-        oraculista_id: formData.oraculistaId,
-        conteudo: formData.conteudo,
-        tipo: 'pergunta',
-        data: new Date(),
-        lida: false,
-        updatedAt: new Date()
+export class MensagensService {
+  async iniciarConsulta(oraculistaId: string, userId: string) {
+    try {
+      const response = await fetch('/api/chat/iniciar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ oraculistaId, userId }),
       })
-      .select(`
-        *,
-        oraculista:oraculistas (
-          id,
-          nome,
-          foto
-        )
-      `)
-      .single()
 
-    if (error) {
-      console.error('Erro ao enviar pergunta:', error)
-      throw error
+      if (!response.ok) {
+        throw new Error('Erro ao iniciar consulta')
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Erro ao iniciar consulta:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erro ao iniciar consulta' }
     }
-
-    return formatarMensagem(mensagem)
-  } catch (error) {
-    console.error('Erro ao enviar pergunta:', error)
-    throw error
   }
-}
 
-export async function enviarResposta(mensagemId: string, oraculistaId: string, conteudo: string) {
-  try {
-    await verificarTabelasExistem()
+  async buscarMensagens(params: {
+    userId?: string
+    oraculistaId?: string
+    dataInicio?: Date
+    dataFim?: Date
+    status?: string
+    limit?: number
+  }) {
+    try {
+      const queryParams = new URLSearchParams()
+      if (params.userId) queryParams.append('userId', params.userId)
+      if (params.oraculistaId) queryParams.append('oraculistaId', params.oraculistaId)
+      if (params.dataInicio) queryParams.append('dataInicio', params.dataInicio.toISOString())
+      if (params.dataFim) queryParams.append('dataFim', params.dataFim.toISOString())
+      if (params.status) queryParams.append('status', params.status)
+      if (params.limit) queryParams.append('limit', params.limit.toString())
 
-    // Primeiro, vamos verificar se a mensagem original existe
-    const { data: mensagemOriginal, error: mensagemOriginalError } = await supabase
-      .from('mensagens')
-      .select('user_id')
-      .eq('id', mensagemId)
-      .single()
+      const response = await fetch(`/api/chat/mensagens?${queryParams}`)
+      if (!response.ok) {
+        throw new Error('Erro ao buscar mensagens')
+      }
 
-    if (mensagemOriginalError || !mensagemOriginal) {
-      console.error('Erro ao buscar mensagem original:', mensagemOriginalError)
-      throw mensagemOriginalError || new Error('Mensagem original não encontrada')
+      const data = await response.json()
+      return data.mensagens
+    } catch (error) {
+      console.error('Erro ao buscar mensagens:', error)
+      return []
     }
+  }
 
-    // Verificar se o oraculista existe
-    const { data: oraculista, error: oraculistaError } = await supabase
-      .from('oraculistas')
-      .select('id, nome, foto')
-      .eq('id', oraculistaId)
-      .single()
-
-    if (oraculistaError || !oraculista) {
-      console.error('Erro ao verificar oraculista:', oraculistaError)
-      throw oraculistaError || new Error('Oraculista não encontrado')
-    }
-
-    // Agora vamos inserir a resposta
-    const { data: mensagem, error: mensagemError } = await supabase
-      .from('mensagens')
-      .insert({
-        user_id: mensagemOriginal.user_id,
-        oraculista_id: oraculistaId,
-        titulo: 'Resposta do Oraculista',
-        conteudo: conteudo,
-        tipo: 'resposta',
-        thread_id: mensagemId,
-        data: new Date(),
-        lida: false,
-        updatedAt: new Date()
+  async enviarMensagem(mensagem: Omit<Message, 'id'>) {
+    try {
+      const response = await fetch('/api/chat/mensagens', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(mensagem),
       })
-      .select(`
-        *,
-        oraculista:oraculistas (
-          id,
-          nome,
-          foto
-        )
-      `)
-      .single()
 
-    if (mensagemError) {
-      console.error('Erro ao enviar resposta:', mensagemError)
-      throw mensagemError
+      if (!response.ok) {
+        throw new Error('Erro ao enviar mensagem')
+      }
+
+      const data = await response.json()
+      return { success: true, mensagem: data }
+    } catch (error) {
+      console.error('Erro ao enviar mensagem:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erro ao enviar mensagem' }
     }
-
-    return formatarMensagem(mensagem)
-  } catch (error) {
-    console.error('Erro ao enviar resposta:', error)
-    throw error
   }
-}
 
-export async function marcarComoLida(mensagemId: string) {
-  try {
-    await verificarTabelasExistem()
+  async atualizarMensagem(id: string, dados: Partial<Message>) {
+    try {
+      const response = await fetch(`/api/chat/mensagens/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(dados),
+      })
 
-    const { error } = await supabase
-      .from('mensagens')
-      .update({ lida: true })
-      .eq('id', mensagemId)
+      if (!response.ok) {
+        throw new Error('Erro ao atualizar mensagem')
+      }
 
-    if (error) {
+      const data = await response.json()
+      return { success: true, mensagem: data }
+    } catch (error) {
+      console.error('Erro ao atualizar mensagem:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erro ao atualizar mensagem' }
+    }
+  }
+
+  async excluirMensagem(id: string) {
+    try {
+      const response = await fetch(`/api/chat/mensagens/${id}`, {
+        method: 'DELETE',
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao excluir mensagem')
+      }
+
+      return { success: true }
+    } catch (error) {
+      console.error('Erro ao excluir mensagem:', error)
+      return { success: false, error: error instanceof Error ? error.message : 'Erro ao excluir mensagem' }
+    }
+  }
+
+  async marcarComoLida(id: string) {
+    try {
+      const response = await fetch(`/api/chat/mensagens/${id}/lida`, {
+        method: 'PUT',
+      })
+
+      if (!response.ok) {
+        throw new Error('Erro ao marcar mensagem como lida')
+      }
+
+      return { success: true }
+    } catch (error) {
       console.error('Erro ao marcar mensagem como lida:', error)
-      throw error
+      return { success: false, error: error instanceof Error ? error.message : 'Erro ao marcar mensagem como lida' }
     }
-  } catch (error) {
-    console.error('Erro ao marcar mensagem como lida:', error)
-    throw error
-  }
-}
-
-export async function deletarMensagem(mensagemId: string, userId: string) {
-  try {
-    console.log('=== INÍCIO DELEÇÃO ===')
-    console.log('Tentando deletar mensagem:', mensagemId, 'para usuário:', userId)
-
-    // Primeiro, busca a mensagem para ver se é uma pergunta ou resposta
-    const { data: mensagem, error: buscaError } = await supabase
-      .from('mensagens')
-      .select('*')
-      .eq('id', mensagemId)
-      .single()
-
-    if (buscaError) {
-      console.error('Erro ao buscar mensagem:', buscaError)
-      throw buscaError
-    }
-
-    console.log('Mensagem encontrada:', mensagem)
-
-    if (mensagem) {
-      // Verifica se a mensagem pertence ao usuário
-      if (mensagem.user_id !== userId) {
-        throw new Error('Mensagem não pertence ao usuário')
-      }
-
-      if (mensagem.tipo === 'pergunta') {
-        console.log('Deletando resposta para thread_id:', mensagem.id)
-        // Se for uma pergunta, deleta também a resposta
-        const { error: deleteRespostaError } = await supabase
-          .from('mensagens')
-          .delete()
-          .eq('thread_id', mensagem.id)
-
-        if (deleteRespostaError) {
-          console.error('Erro ao deletar resposta:', deleteRespostaError)
-          throw deleteRespostaError
-        }
-        console.log('Resposta deletada com sucesso')
-      }
-
-      console.log('Deletando mensagem principal:', mensagemId)
-      // Deleta a mensagem em si
-      const { error: deleteMensagemError } = await supabase
-        .from('mensagens')
-        .delete()
-        .eq('id', mensagemId)
-
-      if (deleteMensagemError) {
-        console.error('Erro ao deletar mensagem:', deleteMensagemError)
-        throw deleteMensagemError
-      }
-
-      console.log('Mensagem deletada com sucesso')
-      console.log('=== FIM DELEÇÃO ===')
-    } else {
-      console.error('Mensagem não encontrada')
-      throw new Error('Mensagem não encontrada')
-    }
-  } catch (error) {
-    console.error('Erro ao deletar mensagem:', error)
-    throw error
-  }
-}
-
-// Função auxiliar para testes
-export async function enviarMensagemTeste(userId: string) {
-  try {
-    console.log('=== INÍCIO VERIFICAÇÃO MENSAGEM TESTE ===')
-    await verificarTabelasExistem()
-
-    // Verifica se já existem mensagens no Supabase
-    const { data: mensagensExistentes, error } = await supabase
-      .from('mensagens')
-      .select('id')
-      .eq('user_id', userId)
-
-    if (error) {
-      console.error('Erro ao verificar mensagens existentes:', error)
-      throw error
-    }
-
-    if (mensagensExistentes && mensagensExistentes.length > 0) {
-      console.log('Já existem mensagens para o usuário:', mensagensExistentes.length)
-      console.log('=== FIM VERIFICAÇÃO MENSAGEM TESTE ===')
-      return false
-    }
-
-    console.log('Nenhuma mensagem encontrada, enviando mensagem de teste')
-
-    // Primeiro, buscar um oraculista
-    const { data: oraculista, error: oraculistaError } = await supabase
-      .from('oraculistas')
-      .select('id')
-      .limit(1)
-      .single()
-
-    if (oraculistaError || !oraculista) {
-      console.error('Erro ao buscar oraculista:', oraculistaError)
-      throw oraculistaError || new Error('Nenhum oraculista encontrado')
-    }
-
-    // Enviar uma pergunta
-    const pergunta = await enviarPergunta(userId, {
-      oraculistaId: oraculista.id,
-      conteudo: 'Olá, gostaria de saber sobre meu relacionamento atual. Tenho algumas dúvidas sobre o futuro.'
-    })
-
-    // Enviar a resposta do oraculista
-    if (pergunta) {
-      await enviarResposta(
-        pergunta.id,
-        oraculista.id,
-        'Olá! Estou vendo que você está em um momento de reflexão sobre seu relacionamento. As cartas indicam um período de transformações positivas. Continue mantendo o diálogo aberto e a sinceridade com seu parceiro(a). Se precisar de mais orientações específicas, estou à disposição.'
-      )
-    }
-
-    console.log('Mensagem de teste enviada com sucesso')
-    console.log('=== FIM VERIFICAÇÃO MENSAGEM TESTE ===')
-    return true
-  } catch (error) {
-    console.error('Erro ao enviar mensagem de teste:', error)
-    throw error
-  }
-}
-
-function formatarMensagem(data: any): Mensagem {
-  return {
-    id: data.id,
-    user_id: data.user_id,
-    oraculista_id: data.oraculista_id,
-    conteudo: data.conteudo,
-    tipo: data.tipo,
-    data: new Date(data.data),
-    lida: data.lida,
-    updatedAt: new Date(data.updatedAt),
-    status: data.status || 'enviada',
-    thread_id: data.thread_id,
-    perguntaOriginal: data.pergunta_original,
-    oraculista: data.oraculista ? {
-      id: data.oraculista.id,
-      nome: data.oraculista.nome,
-      foto: data.oraculista.foto
-    } : undefined
   }
 }

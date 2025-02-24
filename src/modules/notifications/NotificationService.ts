@@ -1,57 +1,47 @@
-import { supabase } from '@/lib/supabase'
-
-interface NotificationData {
-  id: string
-  message: string
-  created_at: string
-  read: boolean
-}
+import { NotificationData } from '@/types/notifications'
 
 export class NotificationService {
-  private intervalId: ReturnType<typeof setInterval> | null = null
-  private readonly pollingInterval: number
-  private lastCheck: Date | null = null
-
-  constructor(pollingIntervalMs: number = 30000) {
-    this.pollingInterval = pollingIntervalMs
-  }
-
-  private async checkForUpdates(): Promise<void> {
+  async getNotifications(userId: string): Promise<NotificationData[]> {
     try {
-      const now = new Date()
-      const { data: notifications, error } = await supabase
-        .from('notifications')
-        .select('*')
-        .eq('read', false)
-        .gte('created_at', this.lastCheck?.toISOString() || now.toISOString())
-        .order('created_at', { ascending: false })
-
-      if (error) {
-        console.error('Erro ao buscar notificações:', error)
-        return
+      const response = await fetch(`/api/notifications/${userId}`)
+      if (!response.ok) {
+        throw new Error('Erro ao buscar notificações')
       }
-
-      if (notifications && notifications.length > 0) {
-        // Aqui você pode emitir um evento ou chamar uma callback
-        console.log('Novas notificações:', notifications)
-      }
-
-      this.lastCheck = now
+      const data = await response.json()
+      return data.notifications
     } catch (error) {
-      console.error('Erro ao verificar notificações:', error)
+      console.error('Erro ao buscar notificações:', error)
+      return []
     }
   }
 
-  public subscribe(): void {
-    this.intervalId = setInterval(async () => {
-      await this.checkForUpdates()
-    }, this.pollingInterval)
+  async markAsRead(notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}/read`, {
+        method: 'PUT'
+      })
+      if (!response.ok) {
+        throw new Error('Erro ao marcar notificação como lida')
+      }
+      return true
+    } catch (error) {
+      console.error('Erro ao marcar notificação como lida:', error)
+      return false
+    }
   }
 
-  public unsubscribe(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId)
-      this.intervalId = null
+  async deleteNotification(notificationId: string): Promise<boolean> {
+    try {
+      const response = await fetch(`/api/notifications/${notificationId}`, {
+        method: 'DELETE'
+      })
+      if (!response.ok) {
+        throw new Error('Erro ao excluir notificação')
+      }
+      return true
+    } catch (error) {
+      console.error('Erro ao excluir notificação:', error)
+      return false
     }
   }
 }
