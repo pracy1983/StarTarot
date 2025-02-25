@@ -1,31 +1,34 @@
 'use client'
 
-import { useState, useEffect, Suspense } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { verifyEmail } from '@/services/auth'
+import { verifyEmailAction } from '@/app/actions/auth'
 
-function VerificarEmailContent() {
-  const [code, setCode] = useState('')
+export default function VerificarEmailPage() {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const router = useRouter()
   const searchParams = useSearchParams()
-  const email = searchParams?.get('email') || ''
+  const token = searchParams.get('token')
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    setIsLoading(true)
+  useEffect(() => {
+    if (token) {
+      verifyEmail(token)
+    }
+  }, [token])
 
+  const verifyEmail = async (token: string) => {
     try {
-      const result = await verifyEmail(code)
-      if (result.success) {
-        router.push('/dashboard')
+      setIsLoading(true)
+      const result = await verifyEmailAction(token)
+      
+      if (result.error) {
+        setError(result.error)
       } else {
-        setError(result.error || 'Código inválido')
+        router.push('/dashboard')
       }
-    } catch (err: any) {
-      setError(err.message || 'Erro ao verificar email')
+    } catch (error) {
+      setError('Erro ao verificar email. Por favor, tente novamente.')
     } finally {
       setIsLoading(false)
     }
@@ -54,40 +57,22 @@ function VerificarEmailContent() {
               />
             </div>
             <div className="space-y-4">
-              <h1 className="text-2xl font-semibold text-white">Verifique seu Email</h1>
-              <p className="text-gray-300">
-                Enviamos um email de confirmação para:
-                <br />
-                <span className="font-semibold text-primary">{email}</span>
-                <br />
-                Por favor, verifique sua caixa de entrada e clique no link de confirmação para continuar.
-              </p>
+              <h1 className="text-2xl font-semibold text-white">Verificação de Email</h1>
+              {isLoading ? (
+                <p className="text-gray-300">Verificando seu email...</p>
+              ) : error ? (
+                <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg">
+                  <p className="text-red-500">{error}</p>
+                </div>
+              ) : (
+                <p className="text-gray-300">
+                  Por favor, aguarde enquanto verificamos seu email.
+                </p>
+              )}
             </div>
-          </div>
-
-          {error && (
-            <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg">
-              <p className="text-red-500 text-center">{error}</p>
-            </div>
-          )}
-
-          <div className="text-center text-sm text-gray-400">
-            <p>Não recebeu o email? Verifique sua caixa de spam ou tente novamente.</p>
           </div>
         </div>
       </div>
     </main>
-  )
-}
-
-export default function VerificarEmailPage() {
-  return (
-    <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-white">Carregando...</div>
-      </div>
-    }>
-      <VerificarEmailContent />
-    </Suspense>
   )
 }
