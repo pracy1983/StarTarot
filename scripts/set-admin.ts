@@ -1,18 +1,32 @@
-import { createClient } from '@supabase/supabase-js'
+import { pool } from '../src/lib/db'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+async function setUserAsAdmin(email: string) {
+  try {
+    const { rows } = await pool.query(
+      'UPDATE users SET role = $1 WHERE email = $2 RETURNING id, email, role',
+      ['admin', email]
+    )
 
-async function setUserAsAdmin() {
-  const { data: { user }, error } = await supabase.auth.updateUser({
-    data: { isAdmin: true }
-  })
+    if (rows.length === 0) {
+      console.error('Usuário não encontrado:', email)
+      return
+    }
 
-  if (error) {
-    console.error('Erro ao atualizar usuário:', error.message)
-    return
+    console.log('Usuário atualizado com sucesso:', rows[0])
+  } catch (error) {
+    console.error('Erro ao atualizar usuário:', error)
+  } finally {
+    await pool.end()
   }
-
-  console.log('Usuário atualizado com sucesso:', user)
 }
+
+// Pegar o email do usuário dos argumentos da linha de comando
+const email = process.argv[2]
+
+if (!email) {
+  console.error('Por favor, forneça o email do usuário como argumento.')
+  console.error('Exemplo: npm run set-admin user@example.com')
+  process.exit(1)
+}
+
+setUserAsAdmin(email)

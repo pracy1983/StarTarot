@@ -18,7 +18,7 @@ if (!password) {
   throw new Error('POSTGRES_PASSWORD não está definido')
 }
 
-const pool = new Pool({
+export const pool = new Pool({
   user,
   password,
   host,
@@ -43,15 +43,13 @@ pool.query('SELECT NOW()')
   .then(() => console.log('Conexão com o banco de dados testada com sucesso'))
   .catch(err => console.error('Erro ao testar conexão com o banco:', err))
 
-export default pool
-
 // Helper para executar queries
 export async function query(text: string, params?: any[]) {
   const start = Date.now()
   try {
     const res = await pool.query(text, params)
     const duration = Date.now() - start
-    console.log('Query executada:', { text, duration, rows: res.rowCount })
+    console.log('Query executada', { text, duration, rows: res.rowCount })
     return res
   } catch (error) {
     console.error('Erro ao executar query:', error)
