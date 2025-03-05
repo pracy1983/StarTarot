@@ -113,24 +113,16 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     try {
       if (oraculistaId) {
         // Atualizar oraculista existente
-        const result = await updateOraculista(oraculistaId, {
+        await updateOraculista(oraculistaId, {
           ...formData,
           prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
         })
-        if (!result.success) {
-          setError(result.error || 'Erro ao atualizar oraculista')
-          return
-        }
       } else {
         // Adicionar novo oraculista
-        const result = await createOraculista({
+        await createOraculista({
           ...formData,
           prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
         })
-        if (!result.success) {
-          setError(result.error || 'Erro ao salvar oraculista')
-          return
-        }
       }
       onClose()
     } catch (err: any) {
