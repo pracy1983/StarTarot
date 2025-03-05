@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, Suspense } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { AuthService } from '@/modules/auth/services/authService'
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline'
 
-export default function NovaSenhaPage() {
+function NovaSenhaForm() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
@@ -104,5 +104,13 @@ export default function NovaSenhaPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+export default function NovaSenhaPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center p-4">Carregando...</div>}>
+      <NovaSenhaForm />
+    </Suspense>
   )
 }

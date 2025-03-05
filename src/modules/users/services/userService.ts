@@ -66,7 +66,7 @@ export const userService = {
         'DELETE FROM users WHERE id = $1 RETURNING id',
         [id]
       )
-      return result.rowCount > 0
+      return result.rowCount !== null && result.rowCount > 0
     } catch (error) {
       console.error('Erro ao deletar usuário:', error)
       throw error

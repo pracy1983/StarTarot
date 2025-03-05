@@ -143,15 +143,20 @@ export async function GET() {
           nome VARCHAR(255) NOT NULL UNIQUE,
           descricao TEXT,
           disponivel BOOLEAN DEFAULT true,
-          valor_consulta DECIMAL(10,2) DEFAULT 0.00,
+          preco DECIMAL(10,2) DEFAULT 0.00,
+          especialidades TEXT[] DEFAULT '{}',
           created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         );
 
         -- Inserir oraculista inicial
-        INSERT INTO oraculistas (nome, descricao, disponivel, valor_consulta)
-        VALUES ('Paula Racy', 'Oraculista experiente em Tarot', true, 50.00)
-        ON CONFLICT (nome) DO NOTHING;
+        DO $$
+        BEGIN
+          IF NOT EXISTS (SELECT 1 FROM oraculistas WHERE nome = 'Paula Racy') THEN
+            INSERT INTO oraculistas (nome, descricao, disponivel, preco, especialidades)
+            VALUES ('Paula Racy', 'Oraculista experiente em Tarot', true, 50.00, ARRAY['Tarot', 'Astrologia']);
+          END IF;
+        END $$;
       `)
     } catch (error) {
       console.error('Erro ao criar tabela de oraculistas:', error)

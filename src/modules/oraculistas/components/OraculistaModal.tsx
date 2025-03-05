@@ -121,7 +121,10 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         // Adicionar novo oraculista
         await createOraculista({
           ...formData,
-          prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
+          prompt_formatado: formData.prompt, // Garante que o prompt é salvo no campo correto
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          consultas: 0 // Inicializa com zero consultas
         })
       }
       onClose()
