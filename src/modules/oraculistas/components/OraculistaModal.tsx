@@ -16,7 +16,7 @@ interface OraculistaModalProps {
 }
 
 export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaModalProps) {
-  const { oraculistas, adicionarOraculista, atualizarOraculista, carregarOraculistas } = useOraculistasStore()
+  const { oraculistas, createOraculista, updateOraculista, fetchOraculistas } = useOraculistasStore()
   const [formData, setFormData] = useState<OraculistaFormData>({
     nome: '',
     foto: '',
@@ -39,12 +39,12 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     if (isOpen) {
       const loadData = async () => {
         console.log('Carregando oraculistas...')
-        await carregarOraculistas()
+        await fetchOraculistas()
         console.log('Oraculistas carregados:', oraculistas.length)
       }
       loadData()
     }
-  }, [isOpen, carregarOraculistas])
+  }, [isOpen, fetchOraculistas])
 
   // Atualiza o formulário quando um oraculista é selecionado
   useEffect(() => {
@@ -113,7 +113,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
     try {
       if (oraculistaId) {
         // Atualizar oraculista existente
-        const result = await atualizarOraculista(oraculistaId, {
+        const result = await updateOraculista(oraculistaId, {
           ...formData,
           prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
         })
@@ -123,7 +123,7 @@ export function OraculistaModal({ isOpen, onClose, oraculistaId }: OraculistaMod
         }
       } else {
         // Adicionar novo oraculista
-        const result = await adicionarOraculista({
+        const result = await createOraculista({
           ...formData,
           prompt_formatado: formData.prompt // Garante que o prompt é salvo no campo correto
         })
