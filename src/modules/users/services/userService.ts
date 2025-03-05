@@ -1,4 +1,4 @@
-import pool from '@/lib/db'
+import { pool } from '@/lib/db'
 import { User, CreateUserInput, UpdateUserInput } from '../types/user'
 
 export const userService = {

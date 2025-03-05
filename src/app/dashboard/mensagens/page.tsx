@@ -1,22 +1,21 @@
 'use client'
 
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useMensagensStore } from '@/modules/mensagens/store/mensagensStore'
 import { MensagemList } from '@/modules/mensagens/components/MensagemList'
 import { MensagemThread } from '@/modules/mensagens/components/MensagemThread'
 import { useAuthStore } from '@/stores/authStore'
+import { Message } from '@/modules/mensagens/types/message'
 
 export default function MensagensPage() {
-  const { 
-    mensagens,
-    mensagemAtual,
-    setMensagemAtual,
-    marcarComoLida,
-    getMensagensFiltradas,
-    carregarMensagens,
-    limparMensagens
-  } = useMensagensStore()
+  const mensagens = useMensagensStore((state) => state.mensagens)
+  const loading = useMensagensStore((state) => state.loading)
+  const carregarMensagens = useMensagensStore((state) => state.carregarMensagens)
+  const marcarComoLida = useMensagensStore((state) => state.marcarComoLida)
+  const enviarResposta = useMensagensStore((state) => state.enviarResposta)
+  const deletarMensagem = useMensagensStore((state) => state.deletarMensagem)
 
+  const [mensagemAtual, setMensagemAtual] = useState<Message | null>(null)
   const user = useAuthStore(state => state.user)
   const carregando = useRef(false)
 
@@ -30,7 +29,6 @@ export default function MensagensPage() {
       try {
         console.log('Iniciando carregamento para usuário:', user.id)
         carregando.current = true
-        limparMensagens()
         await carregarMensagens(user.id)
       } catch (error) {
         console.error('Erro ao carregar mensagens:', error)
@@ -46,41 +44,55 @@ export default function MensagensPage() {
     return () => {
       mounted = false
     }
-  }, [user?.id])
+  }, [user?.id, carregarMensagens])
 
   // Marca a mensagem como lida quando selecionada
   useEffect(() => {
-    if (mensagemAtual && !mensagemAtual.lida) {
+    if (mensagemAtual?.id && !mensagemAtual.lida) {
       marcarComoLida(mensagemAtual.id)
     }
-  }, [mensagemAtual, marcarComoLida])
+  }, [mensagemAtual?.id, mensagemAtual?.lida, marcarComoLida])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+          <p className="text-gray-400 mt-4">Carregando mensagens...</p>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="flex flex-col h-full">
-      <div className="mb-8 text-center">
-        <h1 className="text-2xl font-bold text-primary">Caixa de Mensagens</h1>
-        <p className="text-gray-400">Suas consultas e respostas dos oraculistas</p>
-      </div>
+    <div className="min-h-screen p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="flex gap-6">
+          {/* Lista de Mensagens */}
+          <div className="w-1/3">
+            <MensagemList
+              mensagens={mensagens}
+              mensagemAtual={mensagemAtual}
+              setMensagemAtual={setMensagemAtual}
+            />
+          </div>
 
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Lista de Mensagens */}
-        <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
-          <MensagemList
-            mensagens={getMensagensFiltradas('todas')}
-            onSelectMensagem={setMensagemAtual}
-            mensagemSelecionada={mensagemAtual}
-          />
-        </div>
-
-        {/* Thread da Mensagem */}
-        <div className="h-[600px] bg-black/40 backdrop-blur-md border border-primary/20 rounded-2xl">
-          {mensagemAtual ? (
-            <MensagemThread mensagemId={mensagemAtual.id} />
-          ) : (
-            <div className="h-full flex items-center justify-center text-gray-500">
-              Selecione uma mensagem para visualizar
-            </div>
-          )}
+          {/* Thread da Mensagem */}
+          <div className="flex-1">
+            {mensagemAtual ? (
+              <MensagemThread
+                mensagem={mensagemAtual}
+                onEnviarResposta={enviarResposta}
+                onDeletarMensagem={deletarMensagem}
+              />
+            ) : (
+              <div className="h-full flex items-center justify-center">
+                <p className="text-gray-400">
+                  Selecione uma mensagem para visualizar
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

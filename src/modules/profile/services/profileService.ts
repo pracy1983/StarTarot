@@ -1,7 +1,8 @@
 import { User } from '@/modules/users/types/user'
+import { ProfileData } from '../types/profile'
 
 export class ProfileService {
-  async getProfile(userId: string): Promise<any> {
+  async getProfile(userId: string): Promise<ProfileData | null> {
     try {
       const response = await fetch(`/api/users/${userId}`)
       if (!response.ok) {
@@ -15,7 +16,7 @@ export class ProfileService {
     }
   }
 
-  async updateProfile(userId: string, data: Partial<User>): Promise<any> {
+  async updateProfile(userId: string, data: Partial<ProfileData>): Promise<boolean> {
     try {
       const response = await fetch(`/api/users/${userId}`, {
         method: 'PUT',
@@ -30,13 +31,14 @@ export class ProfileService {
       }
 
       const updatedUser = await response.json()
-      return { data: updatedUser, error: null }
+      return true
     } catch (error) {
-      return { data: null, error: error instanceof Error ? error.message : 'Erro ao atualizar perfil' }
+      console.error('Erro ao atualizar perfil:', error)
+      return false
     }
   }
 
-  async updateEmail(userId: string, email: string): Promise<any> {
+  async updateEmail(userId: string, email: string): Promise<boolean> {
     try {
       const response = await fetch(`/api/users/${userId}/email`, {
         method: 'PUT',
@@ -50,9 +52,10 @@ export class ProfileService {
         throw new Error('Erro ao atualizar email')
       }
 
-      return { error: null }
+      return true
     } catch (error) {
-      return { error: error instanceof Error ? error.message : 'Erro ao atualizar email' }
+      console.error('Erro ao atualizar email:', error)
+      return false
     }
   }
 
@@ -78,34 +81,22 @@ export class ProfileService {
 
   async uploadPhoto(userId: string, photoData: string): Promise<string | null> {
     try {
-      // Converter base64 para blob
-      const base64Data = photoData.split(',')[1]
-      const byteCharacters = atob(base64Data)
-      const byteNumbers = new Array(byteCharacters.length)
-      for (let i = 0; i < byteCharacters.length; i++) {
-        byteNumbers[i] = byteCharacters.charCodeAt(i)
-      }
-      const byteArray = new Uint8Array(byteNumbers)
-      const blob = new Blob([byteArray], { type: 'image/jpeg' })
-
-      // Upload da foto
-      const filename = `${userId}/${Date.now()}.jpg`
       const response = await fetch(`/api/users/${userId}/photo`, {
         method: 'PUT',
         headers: {
-          'Content-Type': 'image/jpeg',
+          'Content-Type': 'application/json',
         },
-        body: blob,
+        body: JSON.stringify({ photo: photoData }),
       })
 
       if (!response.ok) {
-        throw new Error('Erro ao fazer upload da foto')
+        throw new Error('Erro ao atualizar foto')
       }
 
-      const publicUrl = await response.text()
-      return publicUrl
+      const data = await response.json()
+      return data.photoUrl
     } catch (error) {
-      console.error('Erro ao fazer upload da foto:', error)
+      console.error('Erro ao atualizar foto:', error)
       return null
     }
   }

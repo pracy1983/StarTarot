@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import pool from '@/lib/db'
+import { pool } from '@/lib/db'
 import jwt from 'jsonwebtoken'
 import { cookies } from 'next/headers'
 
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     cookieStore.set('token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
+      sameSite: 'lax',
       maxAge: 7 * 24 * 60 * 60 // 7 dias
     })
 

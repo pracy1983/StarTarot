@@ -1,78 +1,118 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { verifyEmailAction } from '@/app/actions/auth'
+import { AuthService } from '@/modules/auth/services/authService'
 
 export default function VerificarEmailPage() {
-  const [error, setError] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
   const router = useRouter()
   const searchParams = useSearchParams()
-  const token = searchParams.get('token')
+  const token = searchParams?.get('token') || ''
 
   useEffect(() => {
     if (token) {
-      verifyEmail(token)
-    }
-  }, [token])
+      const verifyEmail = async () => {
+        try {
+          const authService = new AuthService()
+          const success = await authService.verifyEmail(token)
 
-  const verifyEmail = async (token: string) => {
-    try {
-      setIsLoading(true)
-      const result = await verifyEmailAction(token)
-      
-      if (result.error) {
-        setError(result.error)
-      } else {
-        router.push('/dashboard')
+          if (success) {
+            setStatus('success')
+            setTimeout(() => {
+              router.push('/login')
+            }, 3000)
+          } else {
+            setStatus('error')
+          }
+        } catch (error) {
+          console.error('Erro ao verificar email:', error)
+          setStatus('error')
+        }
       }
-    } catch (error) {
-      setError('Erro ao verificar email. Por favor, tente novamente.')
-    } finally {
-      setIsLoading(false)
+
+      verifyEmail()
+    } else {
+      setStatus('error')
     }
-  }
+  }, [token, router])
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
-      {/* Background com overlay */}
-      <div 
-        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/background.jpg)' }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
-      </div>
+    <div className="min-h-screen flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-8 text-center">
+          <h1 className="text-3xl font-bold text-primary mb-6">
+            Verificação de Email
+          </h1>
 
-      {/* Conteúdo */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-10 bg-black/40 p-8 rounded-2xl backdrop-blur-md border border-primary/20">
-          {/* Logo e Título */}
-          <div className="text-center space-y-6">
-            <div className="w-44 h-44 mx-auto">
-              <img
-                src="/logo.png"
-                alt="StarTarot Logo"
-                className="w-full h-full object-contain"
-              />
+          {status === 'loading' && (
+            <div>
+              <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+              <p className="text-gray-400 mt-4">
+                Verificando seu email...
+              </p>
             </div>
-            <div className="space-y-4">
-              <h1 className="text-2xl font-semibold text-white">Verificação de Email</h1>
-              {isLoading ? (
-                <p className="text-gray-300">Verificando seu email...</p>
-              ) : error ? (
-                <div className="p-4 bg-red-500/20 border border-red-500 rounded-lg">
-                  <p className="text-red-500">{error}</p>
-                </div>
-              ) : (
-                <p className="text-gray-300">
-                  Por favor, aguarde enquanto verificamos seu email.
-                </p>
-              )}
+          )}
+
+          {status === 'success' && (
+            <div>
+              <div className="w-12 h-12 rounded-full bg-green-500/20 flex items-center justify-center mx-auto">
+                <svg
+                  className="w-6 h-6 text-green-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+              </div>
+              <p className="text-green-500 mt-4">
+                Email verificado com sucesso!
+              </p>
+              <p className="text-gray-400 mt-2">
+                Redirecionando para a página de login...
+              </p>
             </div>
-          </div>
+          )}
+
+          {status === 'error' && (
+            <div>
+              <div className="w-12 h-12 rounded-full bg-red-500/20 flex items-center justify-center mx-auto">
+                <svg
+                  className="w-6 h-6 text-red-500"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M6 18L18 6M6 6l12 12"
+                  />
+                </svg>
+              </div>
+              <p className="text-red-500 mt-4">
+                Erro ao verificar email
+              </p>
+              <p className="text-gray-400 mt-2">
+                O link pode ter expirado ou ser inválido
+              </p>
+              <button
+                onClick={() => router.push('/login')}
+                className="mt-4 bg-primary/20 hover:bg-primary/30 text-primary py-2 px-4 rounded-lg transition-colors duration-300"
+              >
+                Voltar para o login
+              </button>
+            </div>
+          )}
         </div>
       </div>
-    </main>
+    </div>
   )
 }

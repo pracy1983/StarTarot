@@ -1,5 +1,5 @@
 import { getResolvedPrompt } from '@/config/prompts/chatAgentPrompt'
-import { Message, ApiMessage, MessageRole } from '../types/message'
+import { Message, ApiMessage, MessageRole, DatabaseMessage } from '../types/message'
 
 export class ChatService {
   private messages: ApiMessage[] = []
@@ -30,12 +30,11 @@ export class ChatService {
       }
 
       const messages = await response.json()
-      return messages.map((msg: any) => ({
+      return messages.map((msg: DatabaseMessage) => ({
         id: msg.id,
         content: msg.content,
-        role: msg.role as MessageRole,
-        createdAt: msg.created_at,
-        userId: msg.user_id
+        role: msg.role,
+        timestamp: msg.created_at
       }))
     } catch (error) {
       console.error('Erro ao recuperar histórico do chat:', error)
@@ -43,14 +42,18 @@ export class ChatService {
     }
   }
 
-  async saveMessage(message: Omit<Message, 'id'>): Promise<Message> {
+  async saveMessage(message: ApiMessage & { user_id: string }): Promise<Message> {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify({ content: message.content, userId: message.userId })
+        body: JSON.stringify({
+          content: message.content,
+          role: message.role,
+          user_id: message.user_id
+        })
       })
 
       if (!response.ok) {
@@ -61,9 +64,8 @@ export class ChatService {
       return {
         id: savedMessage.id,
         content: savedMessage.content,
-        role: savedMessage.role as MessageRole,
-        createdAt: savedMessage.created_at,
-        userId: savedMessage.user_id
+        role: savedMessage.role,
+        timestamp: savedMessage.created_at
       }
     } catch (error) {
       console.error('Erro ao salvar mensagem:', error)
@@ -87,21 +89,21 @@ export class ChatService {
   }
 
   async sendMessage(content: string, userId: string): Promise<Message> {
-    // Salvar mensagem do usuário
-    const userMessage = await this.saveMessage({
-      content,
-      role: 'user',
-      userId
-    })
-
     try {
-      // Preparar mensagens para a API
-      const apiMessages = [
-        ...this.messages,
-        { role: 'user', content }
-      ]
+      // Salva a mensagem do usuário
+      const userMessage = await this.saveMessage({
+        content,
+        role: 'user',
+        user_id: userId
+      })
 
-      // Fazer requisição para a API
+      // Adiciona a mensagem do usuário ao contexto
+      this.messages.push({
+        role: 'user',
+        content
+      })
+
+      // Faz a chamada para a API do DeepSeek
       const response = await fetch(this.apiUrl, {
         method: 'POST',
         headers: {
@@ -109,25 +111,31 @@ export class ChatService {
           'Authorization': `Bearer ${this.apiKey}`
         },
         body: JSON.stringify({
-          messages: apiMessages,
+          messages: this.messages,
           model: 'deepseek-chat',
           temperature: 0.7,
-          max_tokens: 2000
+          max_tokens: 1000
         })
       })
 
       if (!response.ok) {
-        throw new Error('Erro na resposta da API')
+        throw new Error('Erro ao obter resposta do DeepSeek')
       }
 
       const data = await response.json()
-      const assistantResponse = data.choices[0].message.content
+      const assistantContent = data.choices[0].message.content
 
-      // Salvar resposta do assistente
+      // Salva a resposta do assistente
       const assistantMessage = await this.saveMessage({
-        content: assistantResponse,
+        content: assistantContent,
         role: 'assistant',
-        userId
+        user_id: userId
+      })
+
+      // Adiciona a resposta do assistente ao contexto
+      this.messages.push({
+        role: 'assistant',
+        content: assistantContent
       })
 
       return assistantMessage

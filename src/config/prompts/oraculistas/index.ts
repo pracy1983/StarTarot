@@ -1,4 +1,4 @@
-import pool from '@/lib/db'
+import { pool } from '@/lib/db'
 import { Oraculista } from '@/modules/oraculistas/types/oraculista'
 import { resolvePromptVariables } from '../promptVariables'
 

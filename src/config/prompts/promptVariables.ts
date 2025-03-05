@@ -1,5 +1,3 @@
-import pool from '@/lib/db'
-
 export type PromptVariable = {
   key: string
   getValue: () => Promise<string>
@@ -10,6 +8,7 @@ export interface Oraculista {
   nome: string
   descricao: string
   disponivel: boolean
+  preco: number
 }
 
 export async function getOraculistasDisponiveis(): Promise<Oraculista[]> {
@@ -38,7 +37,7 @@ export const promptVariables: PromptVariable[] = [
 
         const oraculistasInfo = oraculistas.map(oraculista => {
           const status = oraculista.disponivel ? 'disponível' : 'indisponível'
-          return `${oraculista.nome} (${status}) - R$ ${oraculista.valor_consulta}`
+          return `${oraculista.nome} (${status}) - R$ ${oraculista.preco}`
         })
 
         return oraculistasInfo.join('\n')

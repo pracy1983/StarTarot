@@ -6,7 +6,9 @@ import { format } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
 
 export default function CouponsPage() {
-  const { coupons, isModalOpen, setIsModalOpen, toggleCouponStatus } = useCouponsStore()
+  const coupons = useCouponsStore((state) => state.coupons)
+  const setIsModalOpen = useCouponsStore((state) => state.setIsModalOpen)
+  const toggleCouponStatus = useCouponsStore((state) => state.toggleCouponStatus)
 
   const formatarData = (data: Date) => {
     return format(data, "dd 'de' MMMM 'de' yyyy", {
@@ -49,54 +51,42 @@ export default function CouponsPage() {
                       {coupon.type === 'FREE_FIRST' && '1ª Pergunta Grátis'}
                     </div>
                   </div>
+
                   {['PERCENTAGE', 'FIXED'].includes(coupon.type) && (
                     <div>
-                      <div className="text-sm text-gray-400">Desconto</div>
+                      <div className="text-sm text-gray-400">Valor</div>
                       <div className="text-lg font-semibold text-primary">
                         {coupon.type === 'PERCENTAGE' ? `${coupon.discount}%` : `R$ ${coupon.discount}`}
                       </div>
                     </div>
                   )}
+
                   <div>
                     <div className="text-sm text-gray-400">Usos</div>
                     <div className="text-lg font-semibold text-primary">
-                      {coupon.usageCount}{coupon.maxUses ? `/${coupon.maxUses}` : ''}
+                      {coupon.usageCount}/{coupon.maxUses || '∞'}
                     </div>
                   </div>
+
                   <div>
-                    <div className="text-sm text-gray-400">Status</div>
-                    <button
-                      onClick={() => toggleCouponStatus(coupon.id)}
-                      className={`text-lg font-semibold px-3 py-1 rounded-lg transition-colors ${
-                        coupon.isActive
-                          ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30'
-                          : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'
-                      }`}
-                    >
-                      {coupon.isActive ? 'Ativo' : 'Inativo'}
-                    </button>
-                  </div>
-                  {coupon.expiresAt && (
-                    <div>
-                      <div className="text-sm text-gray-400">Expira em</div>
-                      <div className="text-lg font-semibold text-primary">
-                        {formatarData(coupon.expiresAt)}
-                      </div>
+                    <div className="text-sm text-gray-400">Expira em</div>
+                    <div className="text-lg font-semibold text-primary">
+                      {coupon.expiresAt ? formatarData(new Date(coupon.expiresAt)) : 'Sem expiração'}
                     </div>
-                  )}
+                  </div>
                 </div>
               </div>
-              <div className="flex gap-2">
+
+              <div className="flex items-center gap-4">
                 <button
-                  onClick={() => {
-                    // TODO: Implementar edição
-                    setIsModalOpen(true)
-                  }}
-                  className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
+                  onClick={() => toggleCouponStatus(coupon.id)}
+                  className={`px-4 py-2 rounded-lg font-medium transition-all
+                    ${coupon.isActive
+                      ? 'bg-green-500/20 text-green-500 hover:bg-green-500/30'
+                      : 'bg-red-500/20 text-red-500 hover:bg-red-500/30'
+                    }`}
                 >
-                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  {coupon.isActive ? 'Ativo' : 'Inativo'}
                 </button>
               </div>
             </div>

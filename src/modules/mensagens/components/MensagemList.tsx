@@ -1,142 +1,69 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Mensagem } from '../types/mensagem'
-import { MensagemItem } from './MensagemItem'
-import { Trash2 } from 'lucide-react'
-import { useMensagensStore } from '../store/mensagensStore'
+import { Message } from '../types/message'
+import { format } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 
 interface MensagemListProps {
-  mensagens: Mensagem[]
-  onSelectMensagem?: (mensagem: Mensagem | null) => void
-  mensagemSelecionada?: Mensagem | null
+  mensagens: Message[]
+  mensagemAtual: Message | null
+  setMensagemAtual: (mensagem: Message | null) => void
 }
 
-export function MensagemList({ 
+export function MensagemList({
   mensagens,
-  onSelectMensagem,
-  mensagemSelecionada 
+  mensagemAtual,
+  setMensagemAtual
 }: MensagemListProps) {
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const deletarMensagem = useMensagensStore(state => state.deletarMensagem)
-
-  // Limpa seleções quando as mensagens mudam
-  useEffect(() => {
-    setSelectedIds(new Set())
-  }, [mensagens])
-
-  const handleSelect = (mensagem: Mensagem, event: React.MouseEvent) => {
-    if (event.ctrlKey || event.metaKey) {
-      // Ctrl/Cmd + Click para selecionar múltiplos
-      const newSelectedIds = new Set(selectedIds)
-      if (selectedIds.has(mensagem.id)) {
-        newSelectedIds.delete(mensagem.id)
-      } else {
-        newSelectedIds.add(mensagem.id)
-      }
-      setSelectedIds(newSelectedIds)
-    } else if (event.shiftKey && mensagemSelecionada) {
-      // Shift + Click para selecionar intervalo
-      const currentIndex = mensagens.findIndex(m => m.id === mensagem.id)
-      const lastIndex = mensagens.findIndex(m => m.id === mensagemSelecionada.id)
-      const start = Math.min(currentIndex, lastIndex)
-      const end = Math.max(currentIndex, lastIndex)
-      const newSelectedIds = new Set(
-        mensagens.slice(start, end + 1).map(m => m.id)
-      )
-      setSelectedIds(newSelectedIds)
-    } else {
-      // Click normal
-      setSelectedIds(new Set([mensagem.id]))
-      onSelectMensagem?.(mensagem)
-    }
-  }
-
-  const handleDeleteSelected = async () => {
-    if (selectedIds.size === 0) return
-    if (window.confirm(`Tem certeza que deseja deletar ${selectedIds.size} mensagem(ns)?`)) {
-      for (const id of selectedIds) {
-        await deletarMensagem(id)
-      }
-      setSelectedIds(new Set())
-      onSelectMensagem?.(null)
-    }
-  }
-
-  // Organiza as mensagens em pares (pergunta/resposta)
-  const organizarMensagens = (msgs: Mensagem[]) => {
-    const mensagensOrdenadas = [...msgs].sort((a, b) => {
-      const dateA = a.data ? new Date(a.data) : 
-        a.updatedAt ? new Date(a.updatedAt) : new Date(0)
-      const dateB = b.data ? new Date(b.data) : 
-        b.updatedAt ? new Date(b.updatedAt) : new Date(0)
-      return dateB.getTime() - dateA.getTime()
-    })
-
-    const threads = new Map<string, Mensagem[]>()
-    
-    // Primeiro, organiza todas as perguntas
-    mensagensOrdenadas.forEach(msg => {
-      if (msg.tipo === 'pergunta') {
-        threads.set(msg.id, [msg])
-      }
-    })
-
-    // Depois, adiciona as respostas às suas perguntas
-    mensagensOrdenadas.forEach(msg => {
-      if (msg.tipo !== 'pergunta' && msg.pergunta_ref) {
-        const thread = threads.get(msg.pergunta_ref)
-        if (thread) {
-          thread.push(msg)
-        }
-      }
-    })
-
-    // Retorna as threads mantendo a ordem
-    return Array.from(threads.values()).flat()
-  }
-
-  const mensagensOrganizadas = organizarMensagens(mensagens)
-
   return (
-    <div className="h-full flex flex-col">
-      {selectedIds.size > 0 && (
-        <div className="p-2 bg-black/40 border-b border-primary/20 flex items-center justify-between">
-          <span className="text-sm text-gray-400">
-            {selectedIds.size} mensagem(ns) selecionada(s)
-          </span>
+    <div className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-4">
+      <h2 className="text-xl font-semibold text-primary mb-4">
+        Suas Mensagens
+      </h2>
+
+      <div className="space-y-2">
+        {mensagens.map((mensagem) => (
           <button
-            onClick={handleDeleteSelected}
-            className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
-            title="Deletar mensagens selecionadas"
+            key={mensagem.id}
+            onClick={() => setMensagemAtual(mensagem)}
+            className={`w-full text-left p-4 rounded-lg transition-all ${
+              mensagemAtual?.id === mensagem.id
+                ? 'bg-primary/20 border-primary'
+                : 'bg-black/20 hover:bg-black/30 border-transparent'
+            } border`}
           >
-            <Trash2 size={18} />
-          </button>
-        </div>
-      )}
-      <div className="flex-1 p-4 overflow-y-auto space-y-4">
-        {mensagensOrganizadas.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-gray-500">
-            Nenhuma mensagem encontrada
-          </div>
-        ) : (
-          mensagensOrganizadas.map((mensagem) => (
-            <div 
-              key={mensagem.id}
-              onClick={(e) => handleSelect(mensagem, e)}
-              className={`cursor-pointer transition-all ${
-                mensagemSelecionada?.id === mensagem.id
-                  ? 'scale-[1.02] ring-2 ring-primary'
-                  : 'hover:scale-[1.01]'
-              }`}
-            >
-              <MensagemItem 
-                mensagem={mensagem}
-                selecionada={mensagemSelecionada?.id === mensagem.id}
-                onClick={(e) => handleSelect(mensagem, e)}
-              />
+            <div className="flex justify-between items-start mb-2">
+              <h3 className="font-medium text-primary">
+                {mensagem.oraculista_nome}
+              </h3>
+              <span className="text-xs text-gray-400">
+                {format(new Date(mensagem.data), "d 'de' MMMM", {
+                  locale: ptBR,
+                })}
+              </span>
             </div>
-          ))
+
+            <p className="text-sm text-gray-300 line-clamp-2">
+              {mensagem.conteudo}
+            </p>
+
+            {!mensagem.lida && (
+              <div className="mt-2">
+                <span className="inline-block px-2 py-1 text-xs bg-primary/10 text-primary rounded-full">
+                  Nova mensagem
+                </span>
+              </div>
+            )}
+          </button>
+        ))}
+
+        {mensagens.length === 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-400">
+              Você ainda não tem mensagens
+            </p>
+          </div>
         )}
       </div>
     </div>

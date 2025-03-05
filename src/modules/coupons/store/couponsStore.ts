@@ -52,7 +52,9 @@ export const useCouponsStore = create<CouponsStore>((set) => ({
   toggleCouponStatus: (id) =>
     set((state) => ({
       coupons: state.coupons.map((coupon) =>
-        coupon.id === id ? { ...coupon, isActive: !coupon.isActive } : coupon
+        coupon.id === id
+          ? { ...coupon, isActive: !coupon.isActive }
+          : coupon
       ),
     })),
 }))

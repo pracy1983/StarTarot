@@ -23,13 +23,18 @@ import { ptBR } from 'date-fns/locale'
 
 export default function OraculistasAdminPage() {
   const router = useRouter()
-  const { oraculistas, loading, carregarOraculistas, excluirOraculista, atualizarOraculista } = useOraculistasStore()
+  const oraculistas = useOraculistasStore((state) => state.oraculistas)
+  const loading = useOraculistasStore((state) => state.loading)
+  const fetchOraculistas = useOraculistasStore((state) => state.fetchOraculistas)
+  const deleteOraculista = useOraculistasStore((state) => state.deleteOraculista)
+  const updateOraculista = useOraculistasStore((state) => state.updateOraculista)
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedOraculistaId, setSelectedOraculistaId] = useState<string | null>(null)
 
   useEffect(() => {
-    carregarOraculistas()
-  }, [carregarOraculistas])
+    fetchOraculistas()
+  }, [fetchOraculistas])
 
   const formatarData = (data: Date | string) => {
     const date = data instanceof Date ? data : new Date(data)
@@ -51,220 +56,132 @@ export default function OraculistasAdminPage() {
             className="px-4 py-2 text-black font-medium bg-gradient-to-r from-primary to-primary/80 rounded-lg
               hover:from-primary/90 hover:to-primary/70 transition-all whitespace-nowrap"
           >
-            + Novo Oraculista
+            <PlusIcon className="w-5 h-5 inline-block mr-2" />
+            Novo Oraculista
           </button>
         </div>
 
-        {/* Lista de Oraculistas */}
-        <div className="grid gap-6">
-          {oraculistas.map((oraculista) => (
-            <div
-              key={oraculista.id}
-              className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6
-                hover:border-primary/40 transition-all duration-300 relative"
-            >
-              <div className="flex items-start gap-6">
-                {/* Foto */}
-                <div className="w-32 h-32 rounded-lg overflow-hidden">
-                  <img
-                    src={oraculista.foto}
-                    alt={oraculista.nome}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+        {loading ? (
+          <div className="text-center py-12">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primary mx-auto"></div>
+            <p className="text-gray-400 mt-4">Carregando oraculistas...</p>
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {oraculistas.map((oraculista) => (
+              <div
+                key={oraculista.id}
+                className="bg-black/40 backdrop-blur-md border border-primary/20 rounded-lg p-6
+                  hover:border-primary/40 transition-all duration-300"
+              >
+                <div className="flex items-start gap-6">
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden bg-black/40">
+                    {oraculista.foto ? (
+                      <Image
+                        src={oraculista.foto}
+                        alt={oraculista.nome}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                        <SparklesIcon className="w-8 h-8" />
+                      </div>
+                    )}
+                  </div>
 
-                {/* Informações */}
-                <div className="flex-1">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h2 className="text-xl font-semibold text-primary">
-                        {oraculista.nome}
-                      </h2>
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {oraculista.especialidades.map((esp, index) => (
-                          <span
-                            key={index}
-                            className="px-2 py-1 text-sm bg-primary/10 text-primary rounded-full"
-                          >
-                            {esp}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-sm text-gray-400">Valor da Consulta</div>
-                      <div className={`text-xl font-bold text-primary ${oraculista.emPromocao ? 'line-through' : ''}`}>
-                        R$ {oraculista.preco.toFixed(2)}
-                      </div>
-                      {oraculista.emPromocao && oraculista.precoPromocional && (
-                        <div className="text-xl font-bold text-green-500">
-                          R$ {oraculista.precoPromocional.toFixed(2)}
+                  <div className="flex-1">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-primary mb-2">
+                          {oraculista.nome}
+                        </h2>
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {oraculista.especialidades.map((especialidade, index) => (
+                            <div key={index} className="flex items-center gap-1 text-gray-400">
+                              <TagIcon className="w-4 h-4" />
+                              <span>{especialidade}</span>
+                            </div>
+                          ))}
                         </div>
-                      )}
-                      <div className="mt-2 flex items-center gap-2">
-                        <input
-                          type="number"
-                          placeholder="Desconto"
-                          className="w-24 px-2 py-1 bg-black/40 border border-primary/20 rounded text-sm"
-                          value={oraculista.desconto_temp || 0}
-                          onChange={(e) => {
-                            const value = parseFloat(e.target.value);
-                            useOraculistasStore.setState(state => ({
-                              oraculistas: state.oraculistas.map(o => 
-                                o.id === oraculista.id 
-                                  ? { ...o, desconto_temp: isNaN(value) ? 0 : value }
-                                  : o
-                              )
-                            }));
-                          }}
-                        />
+                      </div>
+
+                      <div className="flex gap-2">
                         <button
-                          onClick={async () => {
-                            const novoPreco = oraculista.desconto_temp || 0;
-                            if (!isNaN(novoPreco)) {
-                              // Atualiza o estado local
-                              useOraculistasStore.setState(state => ({
-                                oraculistas: state.oraculistas.map(o => 
-                                  o.id === oraculista.id 
-                                    ? { 
-                                        ...o, 
-                                        emPromocao: true,
-                                        precoPromocional: novoPreco,
-                                        desconto_temp: 0
-                                      }
-                                    : o
-                                )
-                              }));
-
-                              // Atualiza no banco de dados
-                              await atualizarOraculista(oraculista.id, {
-                                emPromocao: true,
-                                precoPromocional: novoPreco
-                              });
-                            }
+                          onClick={() => {
+                            setSelectedOraculistaId(oraculista.id)
+                            setIsModalOpen(true)
                           }}
-                          className="px-2 py-1 bg-primary/10 text-primary rounded hover:bg-primary/20 text-sm"
+                          className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
                         >
-                          OK
+                          <PencilIcon className="w-5 h-5" />
                         </button>
-                        {oraculista.emPromocao && (
-                          <button
-                            onClick={async () => {
-                              // Atualiza o estado local
-                              useOraculistasStore.setState(state => ({
-                                oraculistas: state.oraculistas.map(o => 
-                                  o.id === oraculista.id 
-                                    ? { 
-                                        ...o, 
-                                        emPromocao: false,
-                                        precoPromocional: undefined,
-                                        desconto_temp: 0
-                                      }
-                                    : o
-                                )
-                              }));
-
-                              // Atualiza no banco de dados
-                              await atualizarOraculista(oraculista.id, {
-                                emPromocao: false,
-                                precoPromocional: undefined
-                              });
-                            }}
-                            className="px-2 py-1 bg-red-500/10 text-red-500 rounded hover:bg-red-500/20 text-sm"
-                          >
-                            Remover
-                          </button>
-                        )}
+                        <button
+                          onClick={() => deleteOraculista(oraculista.id)}
+                          className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
                       </div>
                     </div>
-                  </div>
 
-                  <p className="mt-4 text-gray-300">
-                    {oraculista.descricao}
-                  </p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                      <div>
+                        <div className="text-sm text-gray-400">Status</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {oraculista.disponivel ? (
+                            <span className="flex items-center gap-1 text-green-500">
+                              <CheckCircleIcon className="w-5 h-5" />
+                              Disponível
+                            </span>
+                          ) : (
+                            <span className="flex items-center gap-1 text-red-500">
+                              <XCircleIcon className="w-5 h-5" />
+                              Indisponível
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                  {/* Estatísticas */}
-                  <div className="mt-4 flex gap-6">
-                    <div>
-                      <div className="text-sm text-gray-400">Consultas</div>
-                      <div className="text-lg font-semibold text-primary">
-                        {oraculista.consultas}
+                      <div>
+                        <div className="text-sm text-gray-400">Preço Base</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {formatarPreco(oraculista.preco)}
+                          {oraculista.emPromocao && oraculista.precoPromocional && (
+                            <span className="ml-2 text-green-500">
+                              {formatarPreco(oraculista.precoPromocional)}
+                            </span>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-400">Adicionado em</div>
-                      <div className="text-lg font-semibold text-primary">
-                        {formatarData(oraculista.createdAt)}
+
+                      <div>
+                        <div className="text-sm text-gray-400">Cadastro</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {formatarData(oraculista.createdAt)}
+                        </div>
                       </div>
-                    </div>
-                    <div>
-                      <div className="text-sm text-gray-400">Avaliação</div>
-                      <div className="flex items-center">
-                        {[...Array(5)].map((_, i) => {
-                          const rating = oraculista.rating || 0;
-                          const filled = rating - i;
-                          return (
-                            <svg
-                              key={i}
-                              className={`w-5 h-5 ${
-                                filled >= 1
-                                  ? 'text-yellow-400'
-                                  : filled > 0
-                                  ? 'text-yellow-200'
-                                  : 'text-gray-300'
-                              }`}
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M10 15.934L4.618 19.247l1.03-6.987L.636 7.253l6.982-.591L10 0l2.382 6.662 6.982.591-5.012 5.007 1.03 6.987L10 15.934z"
-                              />
-                            </svg>
-                          );
-                        })}
+
+                      <div>
+                        <div className="text-sm text-gray-400">Última Atualização</div>
+                        <div className="text-lg font-semibold text-primary">
+                          {formatarData(oraculista.updatedAt)}
+                        </div>
                       </div>
                     </div>
                   </div>
                 </div>
               </div>
-
-              {/* Botões de Ação */}
-              <div className="absolute bottom-6 right-6 flex gap-2">
-                <button
-                  onClick={() => {
-                    if (window.confirm('Tem certeza que deseja excluir este oraculista?')) {
-                      excluirOraculista(oraculista.id);
-                    }
-                  }}
-                  className="p-2 bg-red-500/10 text-red-500 rounded-lg hover:bg-red-500/20 transition-colors"
-                >
-                  <TrashIcon className="w-5 h-5" />
-                </button>
-                <button
-                  onClick={() => {
-                    setSelectedOraculistaId(oraculista.id);
-                    setIsModalOpen(true);
-                  }}
-                  className="p-2 bg-primary/10 text-primary rounded-lg hover:bg-primary/20 transition-colors"
-                >
-                  <PencilIcon className="w-5 h-5" />
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Modal de Oraculista */}
-        <OraculistaModal
-          isOpen={isModalOpen}
-          onClose={() => {
-            setIsModalOpen(false)
-            setSelectedOraculistaId(null)
-          }}
-          oraculistaId={selectedOraculistaId}
-        />
+            ))}
+          </div>
+        )}
       </div>
+
+      <OraculistaModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        oraculistaId={selectedOraculistaId}
+      />
     </div>
   )
 }
