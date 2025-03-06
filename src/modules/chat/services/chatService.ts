@@ -57,7 +57,9 @@ export class ChatService {
       })
 
       if (!response.ok) {
-        throw new Error('Erro ao salvar mensagem')
+        const errorData = await response.text()
+        console.error('Resposta da API:', response.status, errorData)
+        throw new Error(`Erro ao salvar mensagem: ${response.status}`)
       }
 
       const savedMessage = await response.json()
@@ -103,42 +105,9 @@ export class ChatService {
         content
       })
 
-      // Faz a chamada para a API do DeepSeek
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          messages: this.messages,
-          model: 'deepseek-chat',
-          temperature: 0.7,
-          max_tokens: 1000
-        })
-      })
-
-      if (!response.ok) {
-        throw new Error('Erro ao obter resposta do DeepSeek')
-      }
-
-      const data = await response.json()
-      const assistantContent = data.choices[0].message.content
-
-      // Salva a resposta do assistente
-      const assistantMessage = await this.saveMessage({
-        content: assistantContent,
-        role: 'assistant',
-        userId
-      })
-
-      // Adiciona a resposta do assistente ao contexto
-      this.messages.push({
-        role: 'assistant',
-        content: assistantContent
-      })
-
-      return assistantMessage
+      // A API agora processa a resposta do DeepSeek automaticamente
+      // e retorna a mensagem do assistente já salva
+      return userMessage
     } catch (error) {
       console.error('Erro ao enviar mensagem:', error)
       throw error

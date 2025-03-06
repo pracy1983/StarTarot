@@ -28,7 +28,8 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
-    const { content, userId } = await request.json()
+    const body = await request.json()
+    const { content, role, userId } = body
 
     if (!content || !userId) {
       return NextResponse.json(
@@ -37,53 +38,64 @@ export async function POST(request: Request) {
       )
     }
 
-    // Salvar mensagem do usuário
-    const userMessageResult = await pool.query(
-      'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      [content, 'user', userId]
-    )
+    // Se for uma mensagem do usuário, processamos com a API DeepSeek
+    if (role === 'user') {
+      // Salvar mensagem do usuário
+      const userMessageResult = await pool.query(
+        'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+        [content, 'user', userId]
+      )
 
-    // Preparar mensagens para a API
-    const systemPrompt = await getResolvedPrompt()
-    const apiMessages = [
-      { role: 'system', content: systemPrompt },
-      { role: 'user', content }
-    ]
+      // Preparar mensagens para a API
+      const systemPrompt = await getResolvedPrompt()
+      const apiMessages = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content }
+      ]
 
-    // Fazer requisição para a API
-    const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY
-    if (!apiKey) {
-      throw new Error('DEEPSEEK_API_KEY não está configurada')
-    }
+      // Fazer requisição para a API
+      const apiKey = process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY || process.env.DEEPSEEK_API_KEY
+      if (!apiKey) {
+        throw new Error('DEEPSEEK_API_KEY não está configurada')
+      }
 
-    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`
-      },
-      body: JSON.stringify({
-        messages: apiMessages,
-        model: 'deepseek-chat',
-        temperature: 0.7,
-        max_tokens: 2000
+      const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
+        body: JSON.stringify({
+          messages: apiMessages,
+          model: 'deepseek-chat',
+          temperature: 0.7,
+          max_tokens: 2000
+        })
       })
-    })
 
-    if (!response.ok) {
-      throw new Error('Erro na resposta da API')
+      if (!response.ok) {
+        throw new Error('Erro na resposta da API')
+      }
+
+      const data = await response.json()
+      const assistantResponse = data.choices[0].message.content
+
+      // Salvar resposta do assistente
+      const assistantMessageResult = await pool.query(
+        'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+        [assistantResponse, 'assistant', userId]
+      )
+
+      return NextResponse.json(assistantMessageResult.rows[0])
+    } else {
+      // Se for uma mensagem do assistente ou outra, apenas salvamos no banco
+      const messageResult = await pool.query(
+        'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
+        [content, role, userId]
+      )
+
+      return NextResponse.json(messageResult.rows[0])
     }
-
-    const data = await response.json()
-    const assistantResponse = data.choices[0].message.content
-
-    // Salvar resposta do assistente
-    const assistantMessageResult = await pool.query(
-      'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, NOW()) RETURNING *',
-      [assistantResponse, 'assistant', userId]
-    )
-
-    return NextResponse.json(assistantMessageResult.rows[0])
   } catch (error) {
     console.error('Erro ao processar mensagem:', error)
     return NextResponse.json(
