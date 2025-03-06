@@ -4,7 +4,7 @@ const nextConfig = {
   images: {
     unoptimized: true
   },
-  trailingSlash: true,
+  trailingSlash: false, // Alterado para false para evitar redirecionamentos 308
   basePath: '',
   assetPrefix: '',
   webpack: (config, { isServer }) => {
@@ -19,6 +19,29 @@ const nextConfig = {
       }
     }
     return config
+  },
+  // Configuração para permitir CORS
+  async headers() {
+    return [
+      {
+        // Aplicar a todas as rotas
+        source: '/:path*',
+        headers: [
+          {
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type, Authorization',
+          },
+        ],
+      },
+    ]
   }
 }
 

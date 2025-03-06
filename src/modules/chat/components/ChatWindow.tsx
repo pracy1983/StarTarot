@@ -44,7 +44,7 @@ export default function ChatWindow() {
     }
   }, [messages])
 
-  const handleSendMessage = async () => {
+  async function handleSendMessage() {
     if (!inputMessage.trim() || !user || !chatService.current) return
 
     const content = inputMessage.trim()
@@ -57,13 +57,19 @@ export default function ChatWindow() {
       role: 'user',
       timestamp: new Date()
     }
+
     addMessage(userMessage)
 
     try {
+      console.log('ChatWindow - Enviando mensagem para o serviço de chat')
+      console.log('ChatWindow - User ID:', user.id)
+      console.log('ChatWindow - Conteúdo:', content.substring(0, 50) + '...')
+      
       const response = await chatService.current.sendMessage(content, user.id)
+      console.log('ChatWindow - Resposta recebida:', response)
       addMessage(response)
     } catch (error) {
-      console.error('Erro ao enviar mensagem:', error)
+      console.error('ChatWindow - Erro ao enviar mensagem:', error)
       const errorMessage: Message = {
         id: Date.now().toString(),
         content: 'Desculpe, tive um problema para processar sua mensagem. Pode tentar novamente?',
@@ -81,6 +87,12 @@ export default function ChatWindow() {
     processedContent: processMessageContent(msg.content)
   }))
 
+  // Função para formatar a hora da mensagem (HH:MM)
+  const formatMessageTime = (timestamp: Date | string | undefined) => {
+    if (!timestamp) return '';
+    const date = typeof timestamp === 'string' ? new Date(timestamp) : timestamp;
+    return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  };
 
   return (
     <div
@@ -167,6 +179,16 @@ export default function ChatWindow() {
                       dangerouslySetInnerHTML={{ __html: message.processedContent || processMessageContent(message.content) }}
                       className="font-medium break-words"
                     />
+                    {/* Hora da mensagem */}
+                    <div 
+                      className={`text-xs mt-1 ${
+                        message.role === 'user' 
+                          ? 'text-black text-left' 
+                          : 'text-white text-right'
+                      }`}
+                    >
+                      {formatMessageTime(message.timestamp)}
+                    </div>
                   </div>
                   {message.role === 'user' && (
                     <div className="flex-none" style={{ width: '32px', height: '32px', position: 'relative' }}>

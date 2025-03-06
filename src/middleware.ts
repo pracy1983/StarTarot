@@ -10,7 +10,8 @@ const publicRoutes = [
   '/nova-senha',
   '/verificar-email',
   '/',
-  '/api/auth/login'
+  '/api/auth/login',
+  '/api/chat'
 ]
 
 // Rotas que precisam de permissão de admin
