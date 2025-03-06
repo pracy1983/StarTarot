@@ -42,7 +42,7 @@ export class ChatService {
     }
   }
 
-  async saveMessage(message: ApiMessage & { user_id: string }): Promise<Message> {
+  async saveMessage(message: ApiMessage & { userId: string }): Promise<Message> {
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
@@ -52,7 +52,7 @@ export class ChatService {
         body: JSON.stringify({
           content: message.content,
           role: message.role,
-          user_id: message.user_id
+          userId: message.userId
         })
       })
 
@@ -94,7 +94,7 @@ export class ChatService {
       const userMessage = await this.saveMessage({
         content,
         role: 'user',
-        user_id: userId
+        userId
       })
 
       // Adiciona a mensagem do usuário ao contexto
@@ -129,7 +129,7 @@ export class ChatService {
       const assistantMessage = await this.saveMessage({
         content: assistantContent,
         role: 'assistant',
-        user_id: userId
+        userId
       })
 
       // Adiciona a resposta do assistente ao contexto
