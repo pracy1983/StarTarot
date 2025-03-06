@@ -5,6 +5,8 @@ const nextConfig = {
     unoptimized: true
   },
   trailingSlash: true,
+  basePath: '',
+  assetPrefix: '',
   webpack: (config, { isServer }) => {
     if (!isServer) {
       // Não tente importar módulos Node.js no lado do cliente
