@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { getResolvedPrompt } from '@/config/prompts/chatAgentPrompt'
+import { query } from '@/lib/db'
 
 // Armazenamento temporário em memória para mensagens
 interface ChatMessage {
@@ -36,16 +37,25 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Recuperar mensagens do armazenamento em memória
-    const messages = messageStore[userId] || [];
-    console.log(`API Chat - Recuperadas ${messages.length} mensagens para o usuário ${userId}`)
-    
-    return corsHeaders(NextResponse.json(messages))
+    // Tentar recuperar mensagens do banco de dados
+    try {
+      const result = await query('SELECT * FROM messages WHERE user_id = $1 ORDER BY created_at ASC', [userId])
+      const messages = result.rows
+      console.log(`API Chat - Recuperadas ${messages.length} mensagens para o usuário ${userId}`)
+      return corsHeaders(NextResponse.json(messages))
+    } catch (dbError) {
+      console.error('Erro ao recuperar mensagens do banco de dados:', dbError)
+      
+      // Fallback para o armazenamento em memória
+      const messages = messageStore[userId] || [];
+      console.log(`API Chat - Usando fallback em memória: ${messages.length} mensagens para o usuário ${userId}`)
+      return corsHeaders(NextResponse.json(messages))
+    }
   } catch (error) {
     console.error('Erro ao recuperar histórico do chat:', error)
     return corsHeaders(NextResponse.json(
       { error: 'Erro ao recuperar histórico' },
-      { status: 500 }
+      { status: 200 } // Retornar 200 mesmo com erro para evitar quebrar o cliente
     ))
   }
 }
@@ -82,26 +92,48 @@ export async function POST(request: Request) {
 
     console.log(`API Chat - Processando mensagem de ${role} com userId ${userId}`)
 
-    // Salvar mensagem no armazenamento em memória
+    // Salvar mensagem no banco de dados ou no armazenamento em memória
     try {
       console.log(`API Chat - Salvando mensagem do ${role} com userId ${userId}`)
       
       // Criar a mensagem
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        content,
-        role,
-        user_id: userId,
-        created_at: new Date().toISOString()
-      };
+      let newMessage: ChatMessage;
       
-      // Inicializar o array de mensagens para o usuário se não existir
-      if (!messageStore[userId]) {
-        messageStore[userId] = [];
+      try {
+        // Tentar salvar no banco de dados
+        const timestamp = new Date().toISOString();
+        const result = await query(
+          'INSERT INTO messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+          [content, role, userId, timestamp]
+        );
+        
+        newMessage = {
+          id: result.rows[0].id,
+          content: result.rows[0].content,
+          role: result.rows[0].role,
+          user_id: result.rows[0].user_id,
+          created_at: result.rows[0].created_at
+        };
+      } catch (dbError) {
+        console.error('Erro ao salvar mensagem no banco de dados, usando fallback em memória:', dbError)
+        
+        // Fallback para armazenamento em memória
+        newMessage = {
+          id: Date.now().toString(),
+          content,
+          role,
+          user_id: userId,
+          created_at: new Date().toISOString()
+        };
+        
+        // Inicializar o array de mensagens para o usuário se não existir
+        if (!messageStore[userId]) {
+          messageStore[userId] = [];
+        }
+        
+        // Adicionar a mensagem ao armazenamento em memória
+        messageStore[userId].push(newMessage);
       }
-      
-      // Adicionar a mensagem ao armazenamento
-      messageStore[userId].push(newMessage);
       
       console.log('API Chat - Mensagem salva com sucesso:', newMessage)
 
@@ -112,7 +144,14 @@ export async function POST(request: Request) {
 
       // Preparar mensagens para a API DeepSeek
       console.log('API Chat - Preparando mensagens para a API DeepSeek')
-      const systemPrompt = await getResolvedPrompt()
+      let systemPrompt;
+      try {
+        systemPrompt = await getResolvedPrompt();
+      } catch (promptError) {
+        console.error('Erro ao obter prompt resolvido, usando fallback:', promptError);
+        systemPrompt = 'Você é Priscila, uma atendente simpática do StarTarot. Você ajuda os clientes com informações sobre serviços de tarot.';
+      }
+      
       const apiMessages = [
         { role: 'system', content: systemPrompt },
         { role: 'user', content }
@@ -160,18 +199,42 @@ export async function POST(request: Request) {
         const data = await response.json()
         const assistantResponse = data.choices[0].message.content
 
-        // Salvar resposta do assistente no armazenamento em memória
+        // Salvar resposta do assistente no banco de dados ou no armazenamento em memória
         console.log('API Chat - Salvando resposta do assistente')
-        const assistantMessage: ChatMessage = {
-          id: Date.now().toString(),
-          content: assistantResponse,
-          role: 'assistant',
-          user_id: userId,
-          created_at: new Date().toISOString()
-        };
+        let assistantMessage: ChatMessage;
         
-        // Adicionar a mensagem ao armazenamento
-        messageStore[userId].push(assistantMessage);
+        try {
+          // Tentar salvar no banco de dados
+          const timestamp = new Date().toISOString();
+          const result = await query(
+            'INSERT INTO messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+            [assistantResponse, 'assistant', userId, timestamp]
+          );
+          
+          assistantMessage = {
+            id: result.rows[0].id,
+            content: result.rows[0].content,
+            role: result.rows[0].role,
+            user_id: result.rows[0].user_id,
+            created_at: result.rows[0].created_at
+          };
+        } catch (dbError) {
+          console.error('Erro ao salvar resposta do assistente no banco de dados, usando fallback em memória:', dbError)
+          
+          // Fallback para armazenamento em memória
+          assistantMessage = {
+            id: Date.now().toString(),
+            content: assistantResponse,
+            role: 'assistant',
+            user_id: userId,
+            created_at: new Date().toISOString()
+          };
+          
+          // Adicionar a mensagem ao armazenamento em memória
+          if (messageStore[userId]) {
+            messageStore[userId].push(assistantMessage);
+          }
+        }
 
         console.log('API Chat - Resposta do assistente salva com sucesso')
         return corsHeaders(NextResponse.json(assistantMessage))
@@ -208,15 +271,22 @@ export async function DELETE(request: Request) {
   }
 
   try {
-    // Limpar mensagens do usuário do armazenamento em memória
-    messageStore[userId] = [];
-    console.log(`API Chat - Histórico limpo para o usuário ${userId}`)
+    // Tentar limpar mensagens do banco de dados
+    try {
+      await query('DELETE FROM messages WHERE user_id = $1', [userId])
+    } catch (dbError) {
+      console.error('Erro ao limpar mensagens do banco de dados:', dbError)
+    }
     
-    return corsHeaders(NextResponse.json({ success: true }))
+    // Limpar também do armazenamento em memória
+    messageStore[userId] = [];
+    
+    console.log(`API Chat - Histórico limpo para o usuário ${userId}`)
+    return corsHeaders(NextResponse.json({ message: 'Histórico limpo com sucesso' }))
   } catch (error) {
-    console.error('Erro ao limpar histórico:', error)
+    console.error('Erro ao limpar histórico do chat:', error)
     return corsHeaders(NextResponse.json(
-      { error: 'Erro ao limpar histórico' },
+      { error: 'Erro ao limpar histórico', details: error.message },
       { status: 500 }
     ))
   }
