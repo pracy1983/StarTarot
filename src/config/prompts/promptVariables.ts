@@ -13,7 +13,17 @@ export interface Oraculista {
 
 export async function getOraculistasDisponiveis(): Promise<Oraculista[]> {
   try {
-    const response = await fetch('/api/prompts/variables')
+    // Corrigindo a URL para usar URL absoluta com base na origem
+    let baseUrl;
+    if (typeof window !== 'undefined') {
+      baseUrl = window.location.origin;
+    } else {
+      // Em ambiente de servidor, verificar se estamos em desenvolvimento
+      const isDev = process.env.NODE_ENV === 'development';
+      baseUrl = process.env.NEXT_PUBLIC_APP_URL || (isDev ? 'http://localhost:3001' : 'http://localhost:3000');
+    }
+    
+    const response = await fetch(`${baseUrl}/api/prompts/variables`)
     if (!response.ok) {
       throw new Error('Erro ao buscar oraculistas')
     }

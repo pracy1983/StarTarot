@@ -15,16 +15,32 @@ export class ChatService {
     }
     this.apiKey = apiKey
     
-    // Usar a porta 3001, que é onde o servidor Next.js está rodando
-    this.baseUrl = 'http://localhost:3001'
+    // Usar a origem atual do navegador ou um fallback para localhost
+    // Verificar se estamos em desenvolvimento e usar a porta 3001 se necessário
+    if (typeof window !== 'undefined') {
+      this.baseUrl = window.location.origin;
+    } else {
+      // Em ambiente de servidor, verificar se estamos em desenvolvimento
+      const isDev = process.env.NODE_ENV === 'development';
+      this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || (isDev ? 'http://localhost:3001' : 'http://localhost:3000');
+    }
+    
     console.log('ChatService - URL base:', this.baseUrl)
   }
 
   private async initializeChat() {
-    const systemPrompt = await getResolvedPrompt()
-    this.messages = [
-      { role: 'system', content: systemPrompt }
-    ]
+    try {
+      const systemPrompt = await getResolvedPrompt()
+      this.messages = [
+        { role: 'system', content: systemPrompt }
+      ]
+    } catch (error) {
+      console.error('ChatService - Erro ao inicializar chat:', error)
+      // Fallback para um prompt básico em caso de erro
+      this.messages = [
+        { role: 'system', content: 'Você é Priscila, uma atendente simpática do StarTarot.' }
+      ]
+    }
   }
 
   async retrieveHistory(userId: string): Promise<Message[]> {
@@ -36,6 +52,7 @@ export class ChatService {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
+        cache: 'no-store', // Evita cache para sempre obter dados atualizados
         mode: 'cors',
         credentials: 'omit'
       })
@@ -64,7 +81,6 @@ export class ChatService {
   async saveMessage(message: ApiMessage & { userId: string }): Promise<Message> {
     try {
       console.log(`ChatService - Salvando mensagem: ${message.role} para userId: ${message.userId}`)
-      console.log('ChatService - Conteúdo da mensagem:', message.content.substring(0, 50) + '...')
       
       const response = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
@@ -88,7 +104,6 @@ export class ChatService {
       }
 
       const savedMessage = await response.json()
-      console.log('ChatService - Mensagem salva com sucesso:', savedMessage)
       
       return {
         id: savedMessage.id,
@@ -131,63 +146,59 @@ export class ChatService {
   async sendMessage(content: string, userId: string): Promise<Message> {
     try {
       console.log(`ChatService - Enviando mensagem para userId: ${userId}`)
-      console.log('ChatService - Conteúdo da mensagem:', content)
       
-      // Salva a mensagem do usuário
+      // Salva a mensagem do usuário diretamente na API do chat
+      // Isso evita fazer chamadas separadas para a API DeepSeek
       const userMessage = await this.saveMessage({
         content,
         role: 'user',
         userId
       })
 
-      // Adiciona a mensagem do usuário ao contexto
+      // Adiciona a mensagem do usuário ao contexto local
       this.messages.push({
         role: 'user',
         content
       })
 
-      // Faz a chamada para a API do DeepSeek
-      console.log('ChatService - Fazendo chamada para a API DeepSeek')
-      const response = await fetch(this.apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${this.apiKey}`
-        },
-        body: JSON.stringify({
-          messages: this.messages,
-          model: 'deepseek-chat',
-          temperature: 0.7,
-          max_tokens: 1000
-        })
-      })
+      // A API do backend já processará a resposta do assistente
+      // Não precisamos fazer a chamada direta para a API DeepSeek aqui
+      // Isso reduz a duplicação de chamadas e melhora a performance
 
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error(`ChatService - Erro ao obter resposta do DeepSeek: ${response.status}`, errorText)
-        throw new Error('Erro ao obter resposta do DeepSeek')
+      // Aguarda a resposta do assistente
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 segundos de timeout
+      
+      try {
+        // Aguarda um curto período para dar tempo da API processar a mensagem
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Busca as últimas mensagens para obter a resposta do assistente
+        const history = await this.retrieveHistory(userId);
+        clearTimeout(timeoutId);
+        
+        // A última mensagem deve ser a resposta do assistente
+        const assistantMessage = history[history.length - 1];
+        
+        if (assistantMessage && assistantMessage.role === 'assistant') {
+          // Adiciona a resposta do assistente ao contexto local
+          this.messages.push({
+            role: 'assistant',
+            content: assistantMessage.content
+          });
+          
+          return assistantMessage;
+        } else {
+          throw new Error('Não foi possível obter a resposta do assistente');
+        }
+      } catch (fetchError) {
+        clearTimeout(timeoutId);
+        if (fetchError.name === 'AbortError') {
+          console.error('ChatService - Timeout ao aguardar resposta do assistente');
+          throw new Error('Timeout ao aguardar resposta do assistente');
+        }
+        throw fetchError;
       }
-
-      console.log('ChatService - Resposta recebida da API DeepSeek')
-      const data = await response.json()
-      const assistantContent = data.choices[0].message.content
-
-      // Salva a resposta do assistente
-      console.log('ChatService - Salvando resposta do assistente')
-      const assistantMessage = await this.saveMessage({
-        content: assistantContent,
-        role: 'assistant',
-        userId
-      })
-
-      // Adiciona a resposta do assistente ao contexto
-      this.messages.push({
-        role: 'assistant',
-        content: assistantContent
-      })
-
-      console.log('ChatService - Mensagem processada com sucesso')
-      return assistantMessage
     } catch (error) {
       console.error('ChatService - Erro ao enviar mensagem:', error)
       throw error
