@@ -28,6 +28,41 @@ export async function OPTIONS() {
   return corsHeaders(response)
 }
 
+// Função para garantir que o usuário exista no banco de dados
+async function ensureUserExists(userId: string): Promise<boolean> {
+  try {
+    // Verificar se o usuário já existe
+    const userResult = await query('SELECT id FROM users WHERE id = $1', [userId]);
+    
+    // Se o usuário já existe, retornar true
+    if (userResult.rows.length > 0) {
+      return true;
+    }
+    
+    // Se o usuário não existe, criar um novo com os campos que existem na tabela
+    console.log(`API Chat - Criando novo usuário com ID: ${userId}`);
+    await query(
+      `INSERT INTO users (
+        id, email, password, name, is_admin, created_at, updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+      [
+        userId, 
+        `user-${userId.substring(0, 8)}@example.com`,
+        'senha_temporaria', // Senha temporária
+        `Usuário ${userId.substring(0, 8)}`, 
+        false, // não é admin
+        new Date(),
+        new Date()
+      ]
+    );
+    
+    return true;
+  } catch (error) {
+    console.error('Erro ao garantir existência do usuário:', error);
+    return false;
+  }
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url)
   const userId = searchParams.get('userId')
@@ -39,7 +74,7 @@ export async function GET(request: Request) {
   try {
     // Tentar recuperar mensagens do banco de dados
     try {
-      const result = await query('SELECT * FROM messages WHERE user_id = $1 ORDER BY created_at ASC', [userId])
+      const result = await query('SELECT * FROM chat_messages WHERE user_id = $1 ORDER BY created_at ASC', [userId])
       const messages = result.rows
       console.log(`API Chat - Recuperadas ${messages.length} mensagens para o usuário ${userId}`)
       return corsHeaders(NextResponse.json(messages))
@@ -92,6 +127,18 @@ export async function POST(request: Request) {
 
     console.log(`API Chat - Processando mensagem de ${role} com userId ${userId}`)
 
+    // Verificar/criar usuário antes de salvar mensagens
+    if (role === 'user') {
+      try {
+        const userExists = await ensureUserExists(userId);
+        if (!userExists) {
+          console.log('API Chat - Não foi possível garantir a existência do usuário, usando fallback em memória');
+        }
+      } catch (userError) {
+        console.error('API Chat - Erro ao verificar/criar usuário:', userError);
+      }
+    }
+
     // Salvar mensagem no banco de dados ou no armazenamento em memória
     try {
       console.log(`API Chat - Salvando mensagem do ${role} com userId ${userId}`)
@@ -103,7 +150,7 @@ export async function POST(request: Request) {
         // Tentar salvar no banco de dados
         const timestamp = new Date().toISOString();
         const result = await query(
-          'INSERT INTO messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+          'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
           [content, role, userId, timestamp]
         );
         
@@ -207,7 +254,7 @@ export async function POST(request: Request) {
           // Tentar salvar no banco de dados
           const timestamp = new Date().toISOString();
           const result = await query(
-            'INSERT INTO messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
+            'INSERT INTO chat_messages (content, role, user_id, created_at) VALUES ($1, $2, $3, $4) RETURNING *',
             [assistantResponse, 'assistant', userId, timestamp]
           );
           
@@ -273,7 +320,7 @@ export async function DELETE(request: Request) {
   try {
     // Tentar limpar mensagens do banco de dados
     try {
-      await query('DELETE FROM messages WHERE user_id = $1', [userId])
+      await query('DELETE FROM chat_messages WHERE user_id = $1', [userId])
     } catch (dbError) {
       console.error('Erro ao limpar mensagens do banco de dados:', dbError)
     }
