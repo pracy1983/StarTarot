@@ -1,9 +1,9 @@
 'use client'
 
-import { ButtonHTMLAttributes, ReactNode } from 'react'
-import { motion } from 'framer-motion'
+import React, { ButtonHTMLAttributes, ReactNode } from 'react'
+import { motion, HTMLMotionProps } from 'framer-motion'
 
-interface NeonButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface NeonButtonProps extends HTMLMotionProps<'button'> {
     children: ReactNode
     variant?: 'purple' | 'cyan' | 'gold'
     size?: 'sm' | 'md' | 'lg'
