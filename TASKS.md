@@ -29,8 +29,11 @@
 - [x] Layout do Painel Admin (Sidebar glassmorphism)
 
 ### Phase 5: Client Marketplace
-- [ ] Visual do Marketplace
-- [ ] Integração Asaas (Carteira)
+- [x] Layout do App Cliente (Sidebar + Glass design)
+- [x] OracleCards (Diferenciação sutil IA/Humano)
+- [x] Marketplace com grid e filtros dinâmicos
+- [x] Página de Carteira (Saldos + Pacotes de Crédito)
+- [ ] Integração real Asaas Sandbox (Edge Functions)
 
 ### Phase 6: Chat & AI
 - [ ] Sala de Chat Realtime
