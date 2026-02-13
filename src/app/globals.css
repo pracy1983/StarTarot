@@ -3,68 +3,80 @@
 @tailwind utilities;
 
 :root {
-  --font-montserrat: 'Montserrat', sans-serif;
-  --font-raleway: 'Raleway', sans-serif;
-  --foreground-rgb: 255, 255, 255;
-  --background-start-rgb: 0, 0, 0;
-  --background-end-rgb: 0, 0, 0;
+  --deep-space: #0a0a1a;
+  --neon-purple: #a855f7;
+  --neon-cyan: #22d3ee;
+  --neon-gold: #fbbf24;
 }
 
-html {
-  height: 100%;
+@layer base {
+  body {
+    @apply bg-deep-space text-slate-100 min-h-screen overflow-x-hidden selection:bg-neon-purple/30;
+    font-family: var(--font-montserrat), sans-serif;
+  }
 }
 
-body {
-  background-color: black;
-  color: rgb(var(--foreground-rgb));
-  font-family: var(--font-montserrat);
-  min-height: 100vh;
-  background: rgb(var(--background-start-rgb));
+@layer components {
+  .glass {
+    @apply bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)];
+  }
+
+  .glass-card {
+    @apply glass rounded-2xl p-6 transition-all duration-300 hover:border-white/20;
+  }
+
+  .neon-border-purple {
+    @apply border-neon-purple/50 shadow-[0_0_15px_rgba(168,85,247,0.3)];
+  }
+
+  .neon-border-cyan {
+    @apply border-neon-cyan/50 shadow-[0_0_15px_rgba(34,211,238,0.3)];
+  }
+
+  .neon-border-gold {
+    @apply border-neon-gold/50 shadow-[0_0_15px_rgba(251,191,36,0.3)];
+  }
+
+  .neon-text-purple {
+    @apply text-neon-purple drop-shadow-[0_0_8px_rgba(168,85,247,0.8)];
+  }
+
+  .neon-text-cyan {
+    @apply text-neon-cyan drop-shadow-[0_0_8px_rgba(34,211,238,0.8)];
+  }
+
+  .neon-text-gold {
+    @apply text-neon-gold drop-shadow-[0_0_8px_rgba(251,191,36,0.8)];
+  }
 }
 
-.font-raleway {
-  font-family: var(--font-raleway);
-}
-
-/* Estilização da barra de rolagem para todo o projeto */
+/* Custom Scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-  background-color: rgba(0, 0, 0, 0.2);
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-radius: 10px;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  @apply bg-deep-space;
 }
 
 ::-webkit-scrollbar-thumb {
-  background-color: rgba(255, 193, 7, 0.3);
-  border-radius: 10px;
-  box-shadow: inset 0 0 6px rgba(0, 0, 0, 0.3);
+  @apply bg-neon-purple/20 rounded-full hover:bg-neon-purple/40 transition-colors;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(255, 193, 7, 0.5);
-}
-
-/* Setas da barra de rolagem */
-::-webkit-scrollbar-button {
-  background-color: transparent;
-  height: 6px;
-  width: 6px;
-  border-radius: 50%;
-}
-
-::-webkit-scrollbar-button:vertical:start:decrement,
-::-webkit-scrollbar-button:vertical:end:increment,
-::-webkit-scrollbar-button:horizontal:start:decrement,
-::-webkit-scrollbar-button:horizontal:end:increment {
-  background-color: rgba(255, 193, 7, 0.3);
-}
-
-.chat-background {
-  background-color: rgba(0, 0, 0, 0.98);
-  backdrop-filter: blur(8px);
+/* Background Stars Effect (Alternative to Image) */
+.stars-overlay {
+  position: fixed;
+  inset: 0;
+  background-image: 
+    radial-gradient(1px 1px at 20px 30px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 40px 70px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 50px 160px, #fff, rgba(0,0,0,0)),
+    radial-gradient(2px 2px at 90px 40px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 130px 80px, #fff, rgba(0,0,0,0)),
+    radial-gradient(1px 1px at 160px 120px, #fff, rgba(0,0,0,0));
+  background-repeat: repeat;
+  background-size: 200px 200px;
+  opacity: 0.15;
+  pointer-events: none;
+  z-index: 0;
 }

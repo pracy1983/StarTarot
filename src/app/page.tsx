@@ -2,15 +2,18 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import Link from 'next/link'
-import { useAuthStore } from '../stores/authStore'
+import Image from 'next/image'
+import { useAuthStore } from '@/stores/authStore'
+import { GlassCard } from '@/components/ui/GlassCard'
+import { NeonButton } from '@/components/ui/NeonButton'
+import { GlowInput } from '@/components/ui/GlowInput'
+import { motion } from 'framer-motion'
+import { Mail, Lock, Sparkles } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const login = useAuthStore(state => state.login)
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
-  const isLoading = useAuthStore(state => state.isLoading)
-  const checkAuth = useAuthStore(state => state.checkAuth)
+  const { login, isAuthenticated, isLoading, checkAuth, profile } = useAuthStore()
+
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -21,10 +24,12 @@ export default function LoginPage() {
   }, [checkAuth])
 
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
-      router.push('/dashboard')
+    if (!isLoading && isAuthenticated && profile) {
+      if (profile.role === 'owner') router.push('/admin')
+      else if (profile.role === 'oracle') router.push('/oracle')
+      else router.push('/app')
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -33,13 +38,11 @@ export default function LoginPage() {
 
     try {
       const result = await login(email, password)
-      if (result.success) {
-        router.push('/dashboard')
-      } else {
+      if (!result.success) {
         setError(result.error || 'Erro ao fazer login')
       }
     } catch (err) {
-      setError('Erro ao fazer login')
+      setError('Ocorreu um erro inesperado')
     } finally {
       setFormLoading(false)
     }
@@ -47,89 +50,105 @@ export default function LoginPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="animate-spin rounded-full h-32 w-32 border-t-2 border-b-2 border-primary"></div>
+      <div className="min-h-screen bg-deep-space flex items-center justify-center">
+        <motion.div
+          animate={{ scale: [1, 1.2, 1], opacity: [0.5, 1, 0.5] }}
+          transition={{ duration: 2, repeat: Infinity }}
+          className="text-neon-purple"
+        >
+          <Sparkles size={48} />
+        </motion.div>
       </div>
     )
   }
 
   return (
-    <main className="min-h-screen relative overflow-hidden">
-      {/* Background com overlay */}
-      <div 
-        className="fixed inset-0 w-screen h-screen bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: 'url(/background.jpg)' }}
+    <main className="min-h-screen relative flex items-center justify-center p-4 overflow-hidden">
+      {/* Background Decorativo */}
+      <div className="stars-overlay" />
+      <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/20 blur-[120px] rounded-full" />
+      <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/20 blur-[120px] rounded-full" />
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8 }}
+        className="w-full max-w-md z-10"
       >
-        <div className="absolute inset-0 bg-black/50"></div>
-      </div>
+        <div className="text-center mb-10">
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            className="w-32 h-32 mx-auto mb-6 relative"
+          >
+            <div className="absolute inset-0 bg-neon-purple blur-2xl opacity-20 animate-pulse" />
+            <img
+              src="/logo.png"
+              alt="Star Tarot Logo"
+              className="w-full h-full object-contain relative z-10"
+            />
+          </motion.div>
+          <h1 className="text-4xl font-bold tracking-tighter mb-2">
+            <span className="text-white">Star</span>
+            <span className="neon-text-purple ml-2">Tarot</span>
+          </h1>
+          <p className="text-slate-400 font-medium">O universo tem algo a lhe dizer.</p>
+        </div>
 
-      {/* Conteúdo */}
-      <div className="relative z-10 min-h-screen flex items-center justify-center p-4">
-        <div className="w-full max-w-md space-y-10 bg-black/40 p-8 rounded-2xl backdrop-blur-md border border-primary/20">
-          {/* Logo e Título */}
-          <div className="text-center space-y-6">
-            <div className="w-44 h-44 mx-auto">
-              <img 
-                src="/logo.png" 
-                alt="StarTarot Logo" 
-                className="w-full h-full object-contain"
-              />
-            </div>
-            <h1 className="text-4xl font-bold text-primary">StarTarot</h1>
-            <p className="text-gray-400">O direcionamento que você precisa,<br/>na energia que você quer.</p>
-            <p className="text-primary/80 text-sm">Daemons/Baralho cigano/Oráculo dos Anjos</p>
-          </div>
-
-          {/* Formulário */}
+        <GlassCard glowColor="purple">
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-black/40 border border-primary/20 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                required
-              />
-            </div>
+            <GlowInput
+              label="E-mail"
+              type="email"
+              placeholder="seu@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              icon={<Mail size={18} />}
+              required
+            />
 
-            <div>
-              <input
-                type="password"
-                placeholder="Senha"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-black/40 border border-primary/20 text-white placeholder-gray-500 focus:outline-none focus:border-primary"
-                required
-              />
-            </div>
+            <GlowInput
+              label="Senha"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              icon={<Lock size={18} />}
+              required
+            />
 
             {error && (
-              <div className="text-red-500 text-sm text-center">{error}</div>
+              <motion.div
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20"
+              >
+                {error}
+              </motion.div>
             )}
 
-            <button
+            <NeonButton
               type="submit"
-              disabled={formLoading}
-              className={`w-full py-3 rounded-lg bg-primary text-white font-semibold transition-all ${
-                formLoading ? 'opacity-50 cursor-not-allowed' : 'hover:bg-primary/80'
-              }`}
+              variant="purple"
+              fullWidth
+              loading={formLoading}
+              size="lg"
             >
-              {formLoading ? 'Entrando...' : 'Entrar'}
-            </button>
+              Entrar no Portal
+            </NeonButton>
           </form>
 
-          {/* Links */}
-          <div className="flex justify-between text-sm">
-            <Link href="/criar-conta" className="text-primary hover:text-primary/80">
-              Criar conta
-            </Link>
-            <Link href="/esqueceu-senha" className="text-primary hover:text-primary/80">
-              Esqueceu a senha?
-            </Link>
+          <div className="mt-8 flex flex-col space-y-4 text-center">
+            <button className="text-sm text-slate-400 hover:text-neon-cyan transition-colors">
+              Esqueceu sua chave de acesso?
+            </button>
+            <div className="h-px bg-white/10 w-full" />
+            <p className="text-sm text-slate-500">
+              Novo no templo? <button className="text-neon-gold hover:underline">Iniciar jornada</button>
+            </p>
           </div>
-        </div>
-      </div>
+        </GlassCard>
+      </motion.div>
     </main>
   )
 }

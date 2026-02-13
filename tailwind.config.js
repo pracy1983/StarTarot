@@ -4,34 +4,50 @@ module.exports = {
     './src/pages/**/*.{js,ts,jsx,tsx,mdx}',
     './src/components/**/*.{js,ts,jsx,tsx,mdx}',
     './src/app/**/*.{js,ts,jsx,tsx,mdx}',
-    './src/modules/**/*.{js,ts,jsx,tsx,mdx}',
   ],
   theme: {
     extend: {
       colors: {
-        surface: '#1A1A1A',
-        primary: {
-          DEFAULT: '#FFD700',
-          light: '#FFE44D',
-          dark: '#B39700',
+        'deep-space': {
+          DEFAULT: '#0a0a1a',
+          lighter: '#12122a',
+          card: 'rgba(18, 18, 42, 0.7)',
         },
-        background: {
-          DEFAULT: '#000000',
-          secondary: '#1A1A1A',
+        'neon-purple': {
+          DEFAULT: '#a855f7',
+          glow: 'rgba(168, 85, 247, 0.5)',
+        },
+        'neon-cyan': {
+          DEFAULT: '#22d3ee',
+          glow: 'rgba(34, 211, 238, 0.4)',
+        },
+        'neon-gold': {
+          DEFAULT: '#fbbf24',
+          glow: 'rgba(251, 191, 36, 0.4)',
         },
       },
       backgroundImage: {
+        'star-pattern': "url('/background.jpg')",
         'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
-        'gradient-conic': 'conic-gradient(from 180deg at 50% 50%, var(--tw-gradient-stops))',
-        'auth-pattern': "url('/images/background.jpg')",
+        'gradient-neon': 'linear-gradient(to bottom right, #a855f7, #22d3ee)',
       },
-      fontFamily: {
-        montserrat: ['var(--font-montserrat)'],
-        raleway: ['var(--font-raleway)'],
+      animation: {
+        'pulse-glow': 'pulseGlow 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+        'float': 'float 3s ease-in-out infinite',
       },
-      backgroundColor: {
-        'chat-bg': '#000000f9',
-      }
+      keyframes: {
+        pulseGlow: {
+          '0%, 100%': { opacity: 1, transform: 'scale(1)' },
+          '50%': { opacity: 0.7, transform: 'scale(1.02)' },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0)' },
+          '50%': { transform: 'translateY(-10px)' },
+        },
+      },
+      backdropBlur: {
+        xs: '2px',
+      },
     },
   },
   plugins: [],
