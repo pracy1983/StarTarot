@@ -1,8 +1,6 @@
 'use client'
 
-import { useAuthStore } from '@/stores/authStore'
-import { ChatModule } from '@/modules/chat'
-import { usePathname } from 'next/navigation'
+import { Toaster } from 'react-hot-toast'
 
 export function RootLayoutClient({
   children,
@@ -11,14 +9,20 @@ export function RootLayoutClient({
   children: React.ReactNode
   className: string
 }) {
-  const isAuthenticated = useAuthStore(state => state.isAuthenticated)
-  const pathname = usePathname()
-  const isAdminPage = pathname?.startsWith('/admin')
-
   return (
     <body className={className}>
       {children}
-      {isAuthenticated && !isAdminPage && <ChatModule />}
+      <Toaster
+        position="top-center"
+        toastOptions={{
+          style: {
+            background: '#12122a',
+            color: '#fff',
+            border: '1px solid rgba(255,255,255,0.1)',
+            backdropFilter: 'blur(10px)',
+          },
+        }}
+      />
     </body>
   )
 }
