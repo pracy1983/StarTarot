@@ -11,7 +11,7 @@ import {
     History,
     Zap,
     ShoppingBag,
-    Qrcode
+    QrCode
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -145,7 +145,7 @@ export default function WalletPage() {
                                         Recarregar {pkg.credits} CR
                                     </NeonButton>
                                     <p className="text-[10px] text-slate-500 mt-4 flex items-center justify-center">
-                                        <Qrcode size={12} className="mr-1" /> Ativação Imediata via PIX
+                                        <QrCode size={12} className="mr-1" /> Ativação Imediata via PIX
                                     </p>
                                 </div>
                             </GlassCard>
