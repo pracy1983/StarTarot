@@ -121,7 +121,8 @@ export default function NewOraclePage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                     {/* Coluna Dados Básicos */}
                     <div className="lg:col-span-1 space-y-6">
-                        <GlassCard title="Identidade" hover={false}>
+                        <GlassCard hover={false}>
+                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Identidade</h3>
                             <div className="space-y-4">
                                 <div className="w-32 h-32 mx-auto rounded-full bg-deep-space border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-slate-500 hover:border-neon-purple transition-colors cursor-pointer group">
                                     <ImageIcon size={32} className="group-hover:text-neon-purple transition-colors" />
@@ -186,7 +187,8 @@ export default function NewOraclePage() {
                                     animate={{ opacity: 1, x: 0 }}
                                     exit={{ opacity: 0, x: -20 }}
                                 >
-                                    <GlassCard title="Personalidade Digital" hover={false} className="border-neon-cyan/20">
+                                    <GlassCard hover={false} className="border-neon-cyan/20">
+                                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Personalidade Digital</h3>
                                         <div className="space-y-4">
                                             <div className="space-y-1.5">
                                                 <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">
@@ -214,7 +216,8 @@ export default function NewOraclePage() {
                             )}
                         </AnimatePresence>
 
-                        <GlassCard title="Grade de Horários Disponíveis" hover={false}>
+                        <GlassCard hover={false}>
+                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Grade de Horários Disponíveis</h3>
                             <div className="mb-4 flex items-center text-slate-500 text-xs">
                                 <Clock size={14} className="mr-2" />
                                 Os horários definidos aqui controlam a disponibilidade automática no marketplace.
