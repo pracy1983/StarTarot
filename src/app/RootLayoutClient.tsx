@@ -1,6 +1,8 @@
 'use client'
 
+import { useEffect } from 'react'
 import { Toaster } from 'react-hot-toast'
+import { useAuthStore } from '@/stores/authStore'
 
 export function RootLayoutClient({
   children,
@@ -9,7 +11,13 @@ export function RootLayoutClient({
   children: React.ReactNode
   className: string
 }) {
-  console.log('RootLayoutClient montado!')
+  const { checkAuth } = useAuthStore()
+
+  useEffect(() => {
+    console.log('RootLayoutClient: Verificando sessão...')
+    checkAuth()
+  }, [checkAuth])
+
   return (
     <body className={className}>
       {children}
