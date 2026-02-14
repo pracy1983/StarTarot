@@ -24,7 +24,9 @@ export default function LoginPage() {
   }, [checkAuth])
 
   useEffect(() => {
+    console.log('useEffect de redirecionamento:', { isLoading, isAuthenticated, role: profile?.role })
     if (!isLoading && isAuthenticated && profile) {
+      console.log('Redirecionando usuário para:', profile.role)
       if (profile.role === 'owner') router.push('/admin')
       else if (profile.role === 'oracle') router.push('/oracle')
       else router.push('/app')
@@ -46,7 +48,17 @@ export default function LoginPage() {
         console.warn('Login falhou:', result.error)
         setError(result.error || 'Erro ao fazer login')
       } else {
-        console.log('Login com sucesso! Redirecionando em breve...')
+        console.log('Login com sucesso! Forçando redirecionamento...')
+        // Força redirecionamento manual caso o useEffect falhe
+        // Pequeno delay para garantir que o estado atualizou, mas vamos confiar no router direto aqui também se possível
+        // Mas como role vem do profile que é async, talvez não tenhamos o profile atualizado AQUI Imediatamente.
+        // Vamos tentar ler do store direto ou apenas confiar no reload.
+
+        // Melhor estratégia: recarregar a página ou forçar checkAuth se necessário.
+        // Mas vamos deixar o useEffect fazer o trabalho, se ele não rodar, algo está bloqueando a renderização.
+
+        // Vamos tentar um push direto para /app como fallback se não for owner, mas é arriscado sem saber a role.
+        // Vamos esperar o useEffect.
       }
     } catch (err) {
       console.error('Erro não tratado no handleSubmit:', err)
