@@ -10,6 +10,8 @@ export async function middleware(req: NextRequest) {
         data: { session },
     } = await supabase.auth.getSession()
 
+    console.log('Middleware Path:', req.nextUrl.pathname, 'Session active:', !!session)
+
     const url = req.nextUrl.clone()
 
     // Se não estiver logado e tentar acessar áreas restritas
@@ -29,6 +31,7 @@ export async function middleware(req: NextRequest) {
             .single()
 
         const role = profile?.role
+        console.log('Middleware Session found. Role:', role)
 
         // Proteção de rotas por Role
         if (url.pathname.startsWith('/admin') && role !== 'owner') {

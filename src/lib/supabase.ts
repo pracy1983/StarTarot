@@ -1,17 +1,8 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClientComponentClient } from '@supabase/auth-helpers-nextjs'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+// No Next.js com auth-helpers, o cliente já pega as variáveis de ambiente automaticamente
+// se elas seguirem o padrão NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.
+export const supabase = createClientComponentClient()
 
-if (!supabaseUrl) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_URL')
-}
-if (!supabaseAnonKey) {
-  throw new Error('Missing env.NEXT_PUBLIC_SUPABASE_ANON_KEY')
-}
-
-// Log para debug em produção (remover depois)
-console.log('[Supabase Config] URL:', supabaseUrl)
-console.log('[Supabase Config] Key length:', supabaseAnonKey?.length)
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Log para debug em produção
+console.log('[Supabase Client] Inicializado via auth-helpers (Cookies habilitados)')

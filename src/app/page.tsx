@@ -24,13 +24,18 @@ export default function LoginPage() {
   }, [checkAuth])
 
   useEffect(() => {
-    console.log('useEffect de redirecionamento:', { isLoading, isAuthenticated, role: profile?.role })
+    // Só redireciona se não estiver carregando e estiver autenticado
     if (!isLoading && isAuthenticated && profile) {
-      console.log('Redirecionando usuário (via window.location) para:', profile.role)
+      console.log('Usuário autenticado detectado. Role:', profile.role)
       const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
-      window.location.href = targetPath
+
+      // Se já estivermos no path objetivo, não faz nada
+      if (window.location.pathname === targetPath) return
+
+      console.log('Redirecionando para:', targetPath)
+      router.push(targetPath)
     }
-  }, [isAuthenticated, isLoading, profile])
+  }, [isAuthenticated, isLoading, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -58,6 +63,16 @@ export default function LoginPage() {
 
         // Vamos tentar um push direto para /app como fallback se não for owner, mas é arriscado sem saber a role.
         // Vamos esperar o useEffect.
+        if (profile) {
+          console.log('Login realizado com sucesso no banco. Perfil:', profile.role)
+          const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
+          router.push(targetPath)
+        } else {
+          // Fallback if profile is not immediately available after successful login
+          // This might happen if the profile fetch is still in progress.
+          // In this case, we can push to a default path and let useEffect handle the final redirect.
+          router.push('/app')
+        }
       }
     } catch (err) {
       console.error('Erro não tratado no handleSubmit:', err)
