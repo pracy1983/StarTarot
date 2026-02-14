@@ -41,9 +41,10 @@ export default function OracleProfilePage() {
 
             // Contar consultas realizadas
             const { count } = await supabase
-                .from('chats')
+                .from('consultations')
                 .select('id', { count: 'exact', head: true })
                 .eq('oracle_id', id)
+                .eq('status', 'answered')
 
             setChatCount(count || 0)
         } catch (err) {
@@ -163,7 +164,7 @@ export default function OracleProfilePage() {
                     variant="purple"
                     size="lg"
                     className="sm:w-auto px-8"
-                    onClick={() => router.push(`/app/chat/${oracle.id}`)}
+                    onClick={() => router.push(`/app/consulta/${oracle.id}`)}
                 >
                     {oracle.is_online ? '🔮 Iniciar Consulta' : '💬 Deixar Mensagem'}
                 </NeonButton>

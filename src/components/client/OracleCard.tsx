@@ -27,7 +27,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
-        router.push(`/app/chat/${oracle.id}`)
+        router.push(`/app/consulta/${oracle.id}`)
     }
 
     const handleViewProfile = () => {
