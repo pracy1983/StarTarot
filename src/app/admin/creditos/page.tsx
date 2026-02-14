@@ -37,11 +37,13 @@ export default function AdminCreditsPage() {
                 // Para cada user, buscar saldo da wallet
                 const usersWithBalance = await Promise.all(
                     data.map(async (u) => {
-                        const { data: wallet } = await supabase
+                        const { data: wallet, error } = await supabase
                             .from('wallets')
                             .select('balance')
                             .eq('user_id', u.id)
-                            .single()
+                            .maybeSingle()
+
+                        if (error) console.error(`Erro ao buscar wallet para ${u.email}:`, error)
                         return { ...u, balance: wallet?.balance ?? 0 }
                     })
                 )
@@ -62,27 +64,43 @@ export default function AdminCreditsPage() {
 
         try {
             // 1. Buscar wallet atual
-            const { data: wallet } = await supabase
+            const { data: wallet, error: fetchErr } = await supabase
                 .from('wallets')
                 .select('balance')
                 .eq('user_id', userId)
-                .single()
+                .maybeSingle()
+
+            if (fetchErr) {
+                console.error('Erro ao buscar wallet:', fetchErr)
+                throw new Error('Falha ao verificar carteira.')
+            }
 
             if (!wallet) {
+                console.log('Wallet não encontrada, criando nova...')
                 // Criar wallet
                 const { error: insertErr } = await supabase
                     .from('wallets')
                     .insert({ user_id: userId, balance: creditAmount })
 
-                if (insertErr) throw insertErr
+                if (insertErr) {
+                    console.error('Erro ao inserir wallet:', insertErr)
+                    throw insertErr
+                }
             } else {
+                console.log('Wallet encontrada, atualizando saldo:', wallet.balance, '+', creditAmount)
                 // Atualizar saldo
                 const { error: updateErr } = await supabase
                     .from('wallets')
-                    .update({ balance: wallet.balance + creditAmount, updated_at: new Date().toISOString() })
+                    .update({
+                        balance: (wallet.balance || 0) + creditAmount,
+                        updated_at: new Date().toISOString()
+                    })
                     .eq('user_id', userId)
 
-                if (updateErr) throw updateErr
+                if (updateErr) {
+                    console.error('Erro ao atualizar wallet:', updateErr)
+                    throw updateErr
+                }
             }
 
             // 2. Registrar transação
@@ -169,8 +187,8 @@ export default function AdminCreditsPage() {
                                         </td>
                                         <td className="px-6 py-4">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${u.role === 'owner' ? 'bg-neon-gold/10 text-neon-gold'
-                                                    : u.role === 'oracle' ? 'bg-neon-purple/10 text-neon-purple'
-                                                        : 'bg-neon-cyan/10 text-neon-cyan'
+                                                : u.role === 'oracle' ? 'bg-neon-purple/10 text-neon-purple'
+                                                    : 'bg-neon-cyan/10 text-neon-cyan'
                                                 }`}>
                                                 {u.role}
                                             </span>
