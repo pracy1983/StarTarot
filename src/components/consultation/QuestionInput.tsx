@@ -106,24 +106,30 @@ export const SubjectInfo = ({ subjectName, subjectBirthdate, onNameChange, onBir
                 Se a consulta for sobre outra pessoa, você pode informar abaixo (opcional):
             </p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="relative">
-                    <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                        type="text"
-                        value={subjectName}
-                        onChange={(e) => onNameChange(e.target.value)}
-                        placeholder="Primeiro nome da pessoa"
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
-                    />
+                <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-medium">Primeiro nome</label>
+                    <div className="relative">
+                        <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="text"
+                            value={subjectName}
+                            onChange={(e) => onNameChange(e.target.value)}
+                            placeholder="Ex: Maria"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
+                        />
+                    </div>
                 </div>
-                <div className="relative">
-                    <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
-                    <input
-                        type="date"
-                        value={subjectBirthdate}
-                        onChange={(e) => onBirthdateChange(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
-                    />
+                <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-medium">Data de nascimento</label>
+                    <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="date"
+                            value={subjectBirthdate}
+                            onChange={(e) => onBirthdateChange(e.target.value)}
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
+                        />
+                    </div>
                 </div>
             </div>
         </div>

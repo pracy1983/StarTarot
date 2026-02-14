@@ -1,6 +1,7 @@
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
+import { whatsappService } from '@/lib/whatsapp'
 
 export async function POST(req: Request) {
     const supabase = createRouteHandlerClient({ cookies })
@@ -165,11 +166,31 @@ Importante: Responda de forma mística, profunda, mas clara. O usuário pagou cr
             recipient_id: consultation.client_id,
             sender_id: oracle.id,
             title: `✨ Sua consulta com ${oracle.full_name} foi respondida!`,
-            content: `O oráculo respondeu todas as suas ${questions.length} pergunta(s). Clique para ver as respostas.`,
+            content: `O oraculista respondeu todas as suas ${questions.length} pergunta(s). Clique para ver as respostas.`,
             metadata: { consultation_id: consultationId, type: 'consultation_answered' }
         })
 
-        // 10. Registrar transações
+        // 10. Enviar notificação WhatsApp
+        try {
+            const { data: clientData } = await supabase
+                .from('profiles')
+                .select('full_name, phone')
+                .eq('id', consultation.client_id)
+                .single()
+
+            if (clientData?.phone) {
+                await whatsappService.sendConsultationAnsweredNotification(
+                    clientData.phone,
+                    clientData.full_name || 'Cliente',
+                    oracle.full_name
+                )
+            }
+        } catch (whatsappError) {
+            console.error('WhatsApp notification error:', whatsappError)
+            // Não bloqueia o fluxo se WhatsApp falhar
+        }
+
+        // 11. Registrar transações
         await supabase.from('transactions').insert([
             {
                 user_id: consultation.client_id,
