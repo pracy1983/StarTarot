@@ -62,12 +62,12 @@ export class EvolutionWhatsAppService {
 
 Olá ${clientName}! 👋
 
-O oraculista *${oracleName}* respondeu todas as suas perguntas.
+O oraculista *${oracleName}* respondeu suas perguntas.
 
 🔮 Acesse agora para ver as respostas:
-https://startarot.com.br/app/mensagens
+https://startarot.netlify.app/app/mensagens
 
-_Star Tarot - Respostas que iluminam seu caminho_ ⭐`
+⭐`
 
         return this.sendTextMessage({ phone, message })
     }

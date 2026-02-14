@@ -1,14 +1,40 @@
 'use client'
 
-import React from 'react'
+import React, { useState } from 'react'
 import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Wallet } from 'lucide-react'
+import { User, Mail, Camera, Wallet, Phone } from 'lucide-react'
+import { supabase } from '@/lib/supabase'
+import toast from 'react-hot-toast'
 
 export default function PerfilPage() {
-    const { profile } = useAuthStore()
+    const { profile, setProfile } = useAuthStore()
+    const [phone, setPhone] = useState(profile?.phone || '')
+    const [saving, setSaving] = useState(false)
+
+    const handleSave = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setSaving(true)
+
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ phone })
+                .eq('id', profile!.id)
+
+            if (error) throw error
+
+            setProfile({ ...profile!, phone })
+            toast.success('Perfil atualizado com sucesso!')
+        } catch (err: any) {
+            console.error('Error updating profile:', err)
+            toast.error('Erro ao salvar: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
 
     return (
         <div className="max-w-4xl mx-auto space-y-10">
@@ -49,11 +75,12 @@ export default function PerfilPage() {
                 {/* Form Content */}
                 <div className="md:col-span-2 space-y-6">
                     <GlassCard hover={false} className="border-white/5">
-                        <form className="space-y-6">
+                        <form onSubmit={handleSave} className="space-y-6">
                             <GlowInput
                                 label="Nome Completo"
                                 icon={<User size={18} />}
                                 defaultValue={profile?.full_name || ''}
+                                readOnly
                             />
                             <GlowInput
                                 label="E-mail de Acesso"
@@ -61,9 +88,16 @@ export default function PerfilPage() {
                                 defaultValue={profile?.email || ''}
                                 readOnly
                             />
+                            <GlowInput
+                                label="WhatsApp (para notificações)"
+                                icon={<Phone size={18} />}
+                                value={phone}
+                                onChange={(e) => setPhone(e.target.value)}
+                                placeholder="(11) 98765-4321"
+                            />
 
                             <div className="pt-4 border-t border-white/5">
-                                <NeonButton loading={false}>Salvar Alterações</NeonButton>
+                                <NeonButton loading={saving} type="submit">Salvar Alterações</NeonButton>
                             </div>
                         </form>
                     </GlassCard>

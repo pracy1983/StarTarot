@@ -9,12 +9,15 @@ SELECT id, 0 FROM public.profiles
 WHERE id NOT IN (SELECT user_id FROM public.wallets)
 ON CONFLICT (user_id) DO NOTHING;
 
--- 2. GARANTIR COLUNAS EM TRANSACTIONS
+-- 2. ADICIONAR COLUNA DE TELEFONE EM PROFILES
+ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS phone TEXT;
+
+-- 3. GARANTIR COLUNAS EM TRANSACTIONS
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS money_amount DECIMAL(10,2);
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS asaas_payment_id TEXT;
 ALTER TABLE public.transactions ADD COLUMN IF NOT EXISTS metadata JSONB;
 
--- 3. CRIAR TABELA DE CONSULTAS
+-- 4. CRIAR TABELA DE CONSULTAS
 CREATE TABLE IF NOT EXISTS public.consultations (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   client_id UUID REFERENCES public.profiles(id) ON DELETE CASCADE,
@@ -28,7 +31,7 @@ CREATE TABLE IF NOT EXISTS public.consultations (
   answered_at TIMESTAMPTZ
 );
 
--- 4. CRIAR TABELA DE PERGUNTAS/RESPOSTAS
+-- 5. CRIAR TABELA DE PERGUNTAS/RESPOSTAS
 CREATE TABLE IF NOT EXISTS public.consultation_questions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   consultation_id UUID REFERENCES public.consultations(id) ON DELETE CASCADE,
@@ -38,14 +41,14 @@ CREATE TABLE IF NOT EXISTS public.consultation_questions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 5. INDEXES
+-- 6. INDEXES
 CREATE INDEX IF NOT EXISTS idx_consultations_client ON public.consultations(client_id);
 CREATE INDEX IF NOT EXISTS idx_consultations_oracle ON public.consultations(oracle_id);
 CREATE INDEX IF NOT EXISTS idx_consultations_status ON public.consultations(status);
 CREATE INDEX IF NOT EXISTS idx_consultation_questions_consultation ON public.consultation_questions(consultation_id);
 CREATE INDEX IF NOT EXISTS idx_inbox_recipient_unread ON public.inbox_messages(recipient_id, is_read);
 
--- 6. RLS POLICIES
+-- 7. RLS POLICIES
 
 ALTER TABLE public.consultations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.consultation_questions ENABLE ROW LEVEL SECURITY;

@@ -12,6 +12,7 @@ interface Profile {
   is_ai: boolean
   specialty: string | null
   credits?: number
+  phone?: string | null
 }
 
 interface AuthState {
@@ -21,6 +22,7 @@ interface AuthState {
   checkAuth: () => Promise<void>
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
+  setProfile: (profile: Profile) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -119,5 +121,9 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: async () => {
     await supabase.auth.signOut()
     set({ profile: null, isAuthenticated: false })
+  },
+
+  setProfile: (profile: Profile) => {
+    set({ profile })
   },
 }))
