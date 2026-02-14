@@ -24,17 +24,15 @@ export default function LoginPage() {
   }, [checkAuth])
 
   useEffect(() => {
-    // Só redireciona se não estiver carregando e estiver autenticado
+    // DESATIVADO TEMPORARIAMENTE PARA EVITAR O LOOP DE PISCADA
+    /*
     if (!isLoading && isAuthenticated && profile) {
       console.log('Usuário autenticado detectado. Role:', profile.role)
       const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
-
-      // Se já estivermos no path objetivo, não faz nada
       if (window.location.pathname === targetPath) return
-
-      console.log('Redirecionando para:', targetPath)
       router.push(targetPath)
     }
+    */
   }, [isAuthenticated, isLoading, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {

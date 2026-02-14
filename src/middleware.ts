@@ -14,6 +14,8 @@ export async function middleware(req: NextRequest) {
 
     const url = req.nextUrl.clone()
 
+    // COMENTADO TEMPORARIAMENTE PARA QUEBRAR O LOOP DE REDIRECIONAMENTO
+    /*
     // Se não estiver logado e tentar acessar áreas restritas
     if (!session) {
         if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/oracle') || url.pathname.startsWith('/app')) {
@@ -55,6 +57,7 @@ export async function middleware(req: NextRequest) {
             return NextResponse.redirect(url)
         }
     }
+    */
 
     return res
 }
