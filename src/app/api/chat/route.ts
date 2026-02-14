@@ -1,22 +1,119 @@
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 
 export async function POST(req: Request) {
+    const supabase = createRouteHandlerClient({ cookies })
+
     try {
         const { chatId, message, oracleId } = await req.json()
 
-        // Mock de delay de pensamento (Thinking Delay)
-        // Em produção aqui chamaríamos a API da DeepSeek
-        const delay = Math.floor(Math.random() * (30000 - 10000 + 1) + 10000)
+        // 1. Buscar dados do Oraculista e do Cliente
+        const { data: oracle, error: oracleError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', oracleId)
+            .single()
 
-        // Simulando o delay antes de responder
-        // Nota: Em uma Edge Function real usaríamos streams, mas aqui faremos o básico
+        if (oracleError || !oracle) {
+            return NextResponse.json({ error: 'Oráculo não encontrado' }, { status: 404 })
+        }
 
-        // Para efeito de demonstração imediata, vamos apenas simular que a IA recebeu
-        // Em um sistema real, a IA responderia via Supabase (insert message) 
-        // após o delay para que o cliente veja a animação de "Thinking".
+        const { data: { session } } = await supabase.auth.getSession()
+        if (!session) {
+            return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+        }
 
-        return NextResponse.json({ success: true, message: 'Oráculo processando...' })
-    } catch (error) {
-        return NextResponse.json({ error: 'Erro ao processar consulta' }, { status: 500 })
+        // 2. Verificar Créditos (Modelo por mensagem para IA)
+        const price = oracle.price_per_message || 10
+        const { data: wallet } = await supabase
+            .from('wallets')
+            .select('balance')
+            .eq('user_id', session.user.id)
+            .single()
+
+        if (!wallet || wallet.balance < price) {
+            return NextResponse.json({ error: 'Créditos insuficientes para esta consulta' }, { status: 402 })
+        }
+
+        // 3. Deduzir Créditos
+        const { error: walletError } = await supabase
+            .from('wallets')
+            .update({ balance: wallet.balance - price })
+            .eq('user_id', session.user.id)
+
+        if (walletError) throw walletError
+
+        // 4. Preparar Prompt para DeepSeek
+        const systemMessage = `
+            Você é ${oracle.full_name}, um(a) especialista em ${oracle.specialty}.
+            
+            SOBRE VOCÊ:
+            ${oracle.bio || 'Um guia espiritual experiente.'}
+            
+            SUA PERSONALIDADE E ESTILO:
+            ${oracle.personality || 'Acolhedor, místico e direto.'}
+            
+            INSTRUÇÕES DE RESPOSTA:
+            ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
+            
+            Importante: Responda de forma mística, profunda, mas clara. O usuário pagou créditos por esta mensagem, então garanta uma resposta valiosa e completa.
+        `.trim()
+
+        // 5. Chamada para DeepSeek API
+        const apiKey = process.env.DEEPSEEK_API_KEY
+        if (!apiKey) {
+            console.error('DEEPSEEK_API_KEY não configurada')
+            return NextResponse.json({ error: 'Configuração de IA pendente' }, { status: 500 })
+        }
+
+        const deepseekResponse = await fetch('https://api.deepseek.com/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}`
+            },
+            body: JSON.stringify({
+                model: 'deepseek-chat',
+                messages: [
+                    { role: 'system', content: systemMessage },
+                    { role: 'user', content: message }
+                ],
+                temperature: 0.7,
+                max_tokens: 1000
+            })
+        })
+
+        if (!deepseekResponse.ok) {
+            const errData = await deepseekResponse.text()
+            console.error('DeepSeek API Error:', errData)
+            throw new Error('Falha na comunicação com o oráculo')
+        }
+
+        const aiData = await deepseekResponse.json()
+        const aiContent = aiData.choices[0].message.content
+
+        // 6. Salvar Mensagem da IA no Banco
+        const { error: msgError } = await supabase.from('messages').insert({
+            chat_id: chatId,
+            sender_id: oracleId,
+            content: aiContent
+        })
+
+        if (msgError) throw msgError
+
+        // 7. Registrar transação de consumo
+        await supabase.from('transactions').insert({
+            user_id: session.user.id,
+            type: 'consultation_charge',
+            amount: price,
+            metadata: { oracle_id: oracleId, chat_id: chatId, type: 'per_message_ai' },
+            status: 'confirmed'
+        })
+
+        return NextResponse.json({ success: true })
+    } catch (error: any) {
+        console.error('Chat API Error:', error)
+        return NextResponse.json({ error: error.message || 'Erro ao processar consulta' }, { status: 500 })
     }
 }

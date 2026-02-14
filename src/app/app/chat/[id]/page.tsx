@@ -192,15 +192,25 @@ export default function ChatRoomPage() {
 
                 <div className="flex items-center space-x-6">
                     <div className="hidden md:flex flex-col items-end">
-                        <div className="flex items-center text-neon-gold text-xs font-bold">
-                            <Clock size={14} className="mr-1.5" /> 12:45 restantes
+                        <div className="flex items-center text-neon-gold text-xs font-bold uppercase tracking-wider">
+                            {oracle?.is_ai ? (
+                                <>
+                                    <Sparkles size={14} className="mr-1.5" /> {oracle?.price_per_message || 10} CR / Pergunta
+                                </>
+                            ) : (
+                                <>
+                                    <Clock size={14} className="mr-1.5" /> 12:45 restantes
+                                </>
+                            )}
                         </div>
                         <div className="w-24 h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
-                            <motion.div
-                                animate={{ width: ['100%', '0%'] }}
-                                transition={{ duration: 60 * 12, ease: "linear" }}
-                                className="h-full bg-neon-gold shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                            />
+                            {!oracle?.is_ai && (
+                                <motion.div
+                                    animate={{ width: ['100%', '0%'] }}
+                                    transition={{ duration: 60 * 12, ease: "linear" }}
+                                    className="h-full bg-neon-gold shadow-[0_0_10px_rgba(251,191,36,0.5)]"
+                                />
+                            )}
                         </div>
                     </div>
                     <button className="p-2 text-slate-500 hover:text-white transition-colors">
@@ -232,8 +242,8 @@ export default function ChatRoomPage() {
                             className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
                         >
                             <div className={`max-w-[80%] md:max-w-[70%] rounded-2xl p-4 ${isMe
-                                    ? 'bg-neon-purple text-white shadow-[0_10px_20px_rgba(168,85,247,0.2)]'
-                                    : 'bg-white/5 border border-white/10 text-slate-200'
+                                ? 'bg-neon-purple text-white shadow-[0_10px_20px_rgba(168,85,247,0.2)]'
+                                : 'bg-white/5 border border-white/10 text-slate-200'
                                 }`}>
                                 <p className="text-sm leading-relaxed">{msg.content}</p>
                                 <p className={`text-[9px] mt-2 opacity-50 ${isMe ? 'text-right' : 'text-left'}`}>
@@ -278,7 +288,10 @@ export default function ChatRoomPage() {
             {/* Rodapé Informativo */}
             <div className="flex justify-center mt-3 text-[10px] text-slate-600 space-x-4">
                 <span className="flex items-center"><Sparkles size={10} className="mr-1" /> Consulta Assistida por IA DeepSeek</span>
-                <span className="flex items-center"><AlertCircle size={10} className="mr-1" /> O tempo consome créditos em tempo real</span>
+                <span className="flex items-center">
+                    <AlertCircle size={10} className="mr-1" />
+                    {oracle?.is_ai ? 'Cada pergunta enviada consome créditos' : 'O tempo consome créditos em tempo real'}
+                </span>
             </div>
         </div>
     )
