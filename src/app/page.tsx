@@ -33,17 +33,26 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    console.log('Botão de entrar clicado. Iniciando handleSubmit...')
     setError('')
     setFormLoading(true)
 
     try {
+      console.log('Chamando função login do authStore...', { email })
       const result = await login(email, password)
+      console.log('Resultado do login:', result)
+
       if (!result.success) {
+        console.warn('Login falhou:', result.error)
         setError(result.error || 'Erro ao fazer login')
+      } else {
+        console.log('Login com sucesso! Redirecionando em breve...')
       }
     } catch (err) {
+      console.error('Erro não tratado no handleSubmit:', err)
       setError('Ocorreu um erro inesperado')
     } finally {
+      console.log('Finalizando handleSubmit (setFormLoading false)')
       setFormLoading(false)
     }
   }
