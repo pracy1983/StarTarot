@@ -26,12 +26,11 @@ export default function LoginPage() {
   useEffect(() => {
     console.log('useEffect de redirecionamento:', { isLoading, isAuthenticated, role: profile?.role })
     if (!isLoading && isAuthenticated && profile) {
-      console.log('Redirecionando usuário para:', profile.role)
-      if (profile.role === 'owner') router.push('/admin')
-      else if (profile.role === 'oracle') router.push('/oracle')
-      else router.push('/app')
+      console.log('Redirecionando usuário (via window.location) para:', profile.role)
+      const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
+      window.location.href = targetPath
     }
-  }, [isAuthenticated, isLoading, profile, router])
+  }, [isAuthenticated, isLoading, profile])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()

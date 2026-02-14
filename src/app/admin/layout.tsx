@@ -17,6 +17,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
+    console.log('AdminLayout montado! Acessando área administrativa...')
     const { profile, logout } = useAuthStore()
     const router = useRouter()
 

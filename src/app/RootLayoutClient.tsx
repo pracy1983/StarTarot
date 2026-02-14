@@ -9,6 +9,7 @@ export function RootLayoutClient({
   children: React.ReactNode
   className: string
 }) {
+  console.log('RootLayoutClient montado!')
   return (
     <body className={className}>
       {children}
