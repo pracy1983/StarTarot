@@ -19,15 +19,20 @@ export default function NewOraclePage() {
         specialty: 'Tarot',
         bio: '',
         systemPrompt: '',
-        creditsPerMinute: 5
+        personality: '', // Sobre a personalidade/estilo do oráculo
+        creditsPerMinute: 5,
+        pricePerMessage: 10, // Valor para IA
+        avatarUrl: '' // URL da foto
     })
 
     const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
-        1: [{ start: '09:00', end: '18:00', active: true }],
-        2: [{ start: '09:00', end: '18:00', active: true }],
-        3: [{ start: '09:00', end: '18:00', active: true }],
-        4: [{ start: '09:00', end: '18:00', active: true }],
-        5: [{ start: '09:00', end: '18:00', active: true }],
+        0: [{ start: '00:00', end: '23:59', active: true }], // Domingo
+        1: [{ start: '00:00', end: '23:59', active: true }],
+        2: [{ start: '00:00', end: '23:59', active: true }],
+        3: [{ start: '00:00', end: '23:59', active: true }],
+        4: [{ start: '00:00', end: '23:59', active: true }],
+        5: [{ start: '00:00', end: '23:59', active: true }],
+        6: [{ start: '00:00', end: '23:59', active: true }], // Sábado
     })
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -36,10 +41,7 @@ export default function NewOraclePage() {
 
         try {
             if (!isAI) {
-                // Fluxo Humano: Disparar convite (Magic Link ou Sign Up)
-                // Como o Supabase não permite criar usuários diretamente sem ser Admin via API REST comum,
-                // vamos simular o convite inserindo o email em uma fila ou usando o createUser da Admin API do Supabase se disponível.
-                // Como estamos num ambiente simplificado, vamos cadastrar no profiles e assumir que o usuário fará o signup.
+                // Fluxo Humano
                 toast.success(`Convite enviado para ${formData.email}!`)
             } else {
                 // Fluxo IA: Cadastro Direto
@@ -52,7 +54,10 @@ export default function NewOraclePage() {
                     specialty: formData.specialty,
                     bio: formData.bio,
                     system_prompt: formData.systemPrompt,
-                    credits_per_minute: formData.creditsPerMinute,
+                    personality: formData.personality,
+                    credits_per_minute: 0,
+                    price_per_message: formData.pricePerMessage,
+                    avatar_url: formData.avatarUrl,
                     is_online: true
                 }).select().single()
 
@@ -69,12 +74,14 @@ export default function NewOraclePage() {
                 )
 
                 if (scheduleEntries.length > 0) {
-                    await supabase.from('schedules').insert(scheduleEntries)
+                    const { error: schedError } = await supabase.from('schedules').insert(scheduleEntries)
+                    if (schedError) console.error('Erro ao salvar horários:', schedError)
                 }
 
                 toast.success('Oraculista Digital (IA) ativado com sucesso!')
             }
         } catch (err: any) {
+            console.error(err)
             toast.error(err.message || 'Erro ao cadastrar')
         } finally {
             setLoading(false)
@@ -91,26 +98,26 @@ export default function NewOraclePage() {
                 <p className="text-slate-400">Expanda o conhecimento do Templo com novos guias espirituais.</p>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-8">
+            <form onSubmit={handleSubmit} className="space-y-8 pb-20">
                 {/* Switch Humano / IA */}
                 <GlassCard className="border-white/5" hover={false}>
-                    <div className="flex items-center justify-between">
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div>
                             <h3 className="text-lg font-semibold text-white">Natureza do Oraculista</h3>
                             <p className="text-sm text-slate-500">Defina se o guia será uma pessoa real ou uma inteligência artificial.</p>
                         </div>
-                        <div className="flex bg-deep-space p-1 rounded-xl border border-white/10">
+                        <div className="flex bg-deep-space p-1 rounded-xl border border-white/10 w-full md:w-auto">
                             <button
                                 type="button"
                                 onClick={() => setIsAI(false)}
-                                className={`flex items-center px-4 py-2 rounded-lg transition-all ${!isAI ? 'bg-neon-purple text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`flex-1 md:flex-none flex items-center justify-center px-6 py-2.5 rounded-lg transition-all ${!isAI ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 <User size={18} className="mr-2" /> Humano
                             </button>
                             <button
                                 type="button"
                                 onClick={() => setIsAI(true)}
-                                className={`flex items-center px-4 py-2 rounded-lg transition-all ${isAI ? 'bg-neon-cyan text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}
+                                className={`flex-1 md:flex-none flex items-center justify-center px-6 py-2.5 rounded-lg transition-all ${isAI ? 'bg-neon-cyan text-white shadow-lg shadow-neon-cyan/20' : 'text-slate-500 hover:text-slate-300'}`}
                             >
                                 <Brain size={18} className="mr-2" /> IA Digital
                             </button>
@@ -119,15 +126,41 @@ export default function NewOraclePage() {
                 </GlassCard>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Coluna Dados Básicos */}
+                    {/* Coluna Lateral: Identidade e Preço */}
                     <div className="lg:col-span-1 space-y-6">
-                        <GlassCard hover={false}>
-                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Identidade</h3>
-                            <div className="space-y-4">
-                                <div className="w-32 h-32 mx-auto rounded-full bg-deep-space border-2 border-dashed border-white/20 flex flex-col items-center justify-center text-slate-500 hover:border-neon-purple transition-colors cursor-pointer group">
-                                    <ImageIcon size={32} className="group-hover:text-neon-purple transition-colors" />
-                                    <span className="text-[10px] mt-2">Upload Avatar</span>
+                        <GlassCard hover={false} className="h-full">
+                            <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest flex items-center">
+                                <ShieldCheck size={16} className="mr-2 text-neon-purple" /> Identidade
+                            </h3>
+
+                            <div className="space-y-6">
+                                {/* Preview Avatar */}
+                                <div className="space-y-3">
+                                    <div className="w-32 h-32 mx-auto rounded-full bg-deep-space border-2 border-white/10 overflow-hidden relative group">
+                                        {formData.avatarUrl ? (
+                                            <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                                        ) : (
+                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
+                                                <ImageIcon size={32} />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <GlowInput
+                                        label="URL da Foto / Avatar"
+                                        placeholder="https://..."
+                                        value={formData.avatarUrl}
+                                        onChange={e => setFormData({ ...formData, avatarUrl: e.target.value })}
+                                        icon={<ImageIcon size={16} />}
+                                    />
                                 </div>
+
+                                <GlowInput
+                                    label="Nome do Oraculista"
+                                    placeholder="Ex: Mestre Arcanus"
+                                    value={formData.fullName}
+                                    onChange={e => setFormData({ ...formData, fullName: e.target.value })}
+                                    required
+                                />
 
                                 {!isAI && (
                                     <GlowInput
@@ -141,86 +174,102 @@ export default function NewOraclePage() {
                                     />
                                 )}
 
-                                <GlowInput
-                                    label="Nome Completo / Nome Místico"
-                                    placeholder="Ex: Mestre Arcanus"
-                                    icon={<ShieldCheck size={16} />}
-                                    value={formData.fullName}
-                                    onChange={e => setFormData({ ...formData, fullName: e.target.value })}
-                                    required
-                                />
-
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-slate-400 ml-1">Especialidade</label>
+                                    <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
                                     <select
-                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50 transition-all"
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50 transition-all font-medium"
                                         value={formData.specialty}
                                         onChange={e => setFormData({ ...formData, specialty: e.target.value })}
                                     >
-                                        <option value="Tarot">Tarot</option>
-                                        <option value="Astrologia">Astrologia</option>
-                                        <option value="Búzios">Búzios</option>
-                                        <option value="Runas">Runas</option>
-                                        <option value="Numerologia">Numerologia</option>
+                                        <option value="Tarot" className="bg-deep-space">Tarot</option>
+                                        <option value="Astrologia" className="bg-deep-space">Astrologia</option>
+                                        <option value="Búzios" className="bg-deep-space">Búzios</option>
+                                        <option value="Runas" className="bg-deep-space">Runas</option>
+                                        <option value="Numerologia" className="bg-deep-space">Numerologia</option>
                                     </select>
                                 </div>
 
-                                <GlowInput
-                                    label="Créditos por Minuto"
-                                    type="number"
-                                    min="1"
-                                    value={formData.creditsPerMinute}
-                                    onChange={e => setFormData({ ...formData, creditsPerMinute: parseInt(e.target.value) })}
-                                    icon={<Sparkles size={16} />}
-                                />
+                                {isAI ? (
+                                    <GlowInput
+                                        label="Créditos por Pergunta"
+                                        type="number"
+                                        min="1"
+                                        value={formData.pricePerMessage}
+                                        onChange={e => setFormData({ ...formData, pricePerMessage: parseInt(e.target.value) })}
+                                        icon={<Sparkles size={16} className="text-neon-gold" />}
+                                    />
+                                ) : (
+                                    <GlowInput
+                                        label="Créditos por Minuto"
+                                        type="number"
+                                        min="1"
+                                        value={formData.creditsPerMinute}
+                                        onChange={e => setFormData({ ...formData, creditsPerMinute: parseInt(e.target.value) })}
+                                        icon={<Clock size={16} className="text-neon-purple" />}
+                                    />
+                                )}
                             </div>
                         </GlassCard>
                     </div>
 
-                    {/* Coluna Lógica e Horários */}
+                    {/* Coluna Principal: Personalidade e Horários */}
                     <div className="lg:col-span-2 space-y-6">
-                        <AnimatePresence mode="wait">
-                            {isAI && (
-                                <motion.div
-                                    key="ai-fields"
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: -20 }}
-                                >
-                                    <GlassCard hover={false} className="border-neon-cyan/20">
-                                        <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Personalidade Digital</h3>
-                                        <div className="space-y-4">
-                                            <div className="space-y-1.5">
-                                                <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">
-                                                    <Brain size={14} className="mr-2 text-neon-cyan" /> AI System Prompt
-                                                </label>
-                                                <textarea
-                                                    placeholder="Defina as regras, personalidade e forma de tiragem desta IA..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-cyan/50 transition-all h-32 resize-none"
-                                                    value={formData.systemPrompt}
-                                                    onChange={e => setFormData({ ...formData, systemPrompt: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-1.5">
-                                                <label className="text-sm font-medium text-slate-400 ml-1">Biografia Curta</label>
-                                                <textarea
-                                                    placeholder="Aparecerá para o cliente no marketplace..."
-                                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-cyan/50 transition-all h-20 resize-none"
-                                                    value={formData.bio}
-                                                    onChange={e => setFormData({ ...formData, bio: e.target.value })}
-                                                />
-                                            </div>
+                        <GlassCard hover={false} className={isAI ? 'border-neon-cyan/20' : 'border-neon-purple/20'}>
+                            <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest flex items-center">
+                                {isAI ? <Brain size={16} className="mr-2 text-neon-cyan" /> : <User size={16} className="mr-2 text-neon-purple" />}
+                                {isAI ? 'Configuração do Oráculo Digital' : 'Perfil do Guia Spirit'}
+                            </h3>
+
+                            <div className="space-y-6">
+                                <div className="space-y-1.5">
+                                    <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">
+                                        Biografia Curta (Marketplace)
+                                    </label>
+                                    <textarea
+                                        placeholder="Uma frase marcante que descreve o oráculo..."
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50 transition-all h-20 resize-none text-sm"
+                                        value={formData.bio}
+                                        onChange={e => setFormData({ ...formData, bio: e.target.value })}
+                                    />
+                                </div>
+
+                                {isAI && (
+                                    <div className="grid grid-cols-1 gap-6">
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">
+                                                <Brain size={14} className="mr-2 text-neon-cyan" /> AI System Prompt (Instruções Base)
+                                            </label>
+                                            <textarea
+                                                placeholder="Defina as regras técnicas, como ele deve interpretar as cartas e os limites da IA..."
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-cyan/50 transition-all h-32 resize-none text-sm"
+                                                value={formData.systemPrompt}
+                                                onChange={e => setFormData({ ...formData, systemPrompt: e.target.value })}
+                                            />
                                         </div>
-                                    </GlassCard>
-                                </motion.div>
-                            )}
-                        </AnimatePresence>
+
+                                        <div className="space-y-1.5">
+                                            <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">
+                                                <Sparkles size={14} className="mr-2 text-neon-gold" /> Personalidade e Estilo (Obrigatório para Prompt)
+                                            </label>
+                                            <textarea
+                                                placeholder="Fale sobre a história do oráculo, o tom de voz, se ele é acolhedor ou direto, etc. Isso moldará a resposta da IA."
+                                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-gold/50 transition-all h-32 resize-none text-sm"
+                                                value={formData.personality}
+                                                onChange={e => setFormData({ ...formData, personality: e.target.value })}
+                                            />
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </GlassCard>
 
                         <GlassCard hover={false}>
-                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest">Grade de Horários Disponíveis</h3>
-                            <div className="mb-4 flex items-center text-slate-500 text-xs">
-                                <Clock size={14} className="mr-2" />
-                                Os horários definidos aqui controlam a disponibilidade automática no marketplace.
+                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest flex items-center">
+                                <Clock size={16} className="mr-2 text-slate-400" /> Grade de Horários Ativos
+                            </h3>
+                            <div className="mb-6 flex items-start text-slate-500 text-xs bg-white/5 p-3 rounded-lg border border-white/5">
+                                <Clock size={14} className="mr-2 mt-0.5 flex-shrink-0" />
+                                <span>A IA ou o Humano só aparecerão como <b>Online</b> no Templo durante estes horários. Para IA sugerimos 24/7 (00:00 às 23:59 todos os dias).</span>
                             </div>
                             <ScheduleGrid schedule={schedule} onChange={setSchedule} />
                         </GlassCard>
@@ -230,7 +279,7 @@ export default function NewOraclePage() {
                                 variant={isAI ? 'cyan' : 'purple'}
                                 size="lg"
                                 loading={loading}
-                                className="w-full md:w-auto min-w-[200px]"
+                                className="w-full md:w-auto min-w-[250px]"
                             >
                                 {isAI ? 'Ativar Manifestação Digital' : 'Enviar Convite Místico'}
                             </NeonButton>
