@@ -16,6 +16,8 @@ interface OracleCardProps {
         avatar_url: string | null
         is_online: boolean
         credits_per_minute: number
+        price_per_message?: number
+        is_ai?: boolean
         oracle_type: 'human' | 'ai'
     }
 }
@@ -34,8 +36,8 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         >
             {/* Online Badge */}
             <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest z-10 ${oracle.is_online
-                    ? 'bg-green-500/10 text-green-400 border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
-                    : 'bg-slate-800 text-slate-500 border border-white/5'
+                ? 'bg-green-500/10 text-green-400 border border-green-500/20 shadow-[0_0_10px_rgba(34,197,94,0.2)]'
+                : 'bg-slate-800 text-slate-500 border border-white/5'
                 }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${oracle.is_online ? 'bg-green-400 animate-pulse' : 'bg-slate-600'}`} />
                 <span>{oracle.is_online ? 'Disponível' : 'Ausente'}</span>
@@ -70,7 +72,10 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </div>
                     <div className="w-1 h-1 rounded-full bg-white/20" />
                     <div className="flex items-center text-slate-400 text-[10px] font-bold">
-                        <Clock size={12} className="mr-1" /> {oracle.credits_per_minute} cr/min
+                        <Clock size={12} className="mr-1" />
+                        {oracle.is_ai || oracle.oracle_type === 'ai'
+                            ? `${oracle.price_per_message || 10} cr/mens.`
+                            : `${oracle.credits_per_minute} cr/min`}
                     </div>
                 </div>
 
