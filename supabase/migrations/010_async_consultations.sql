@@ -54,18 +54,28 @@ ALTER TABLE public.consultations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.consultation_questions ENABLE ROW LEVEL SECURITY;
 
 -- Consultations: client vê as próprias, oracle vê as dele, owner vê todas
+DROP POLICY IF EXISTS "Clients view own consultations" ON public.consultations;
 CREATE POLICY "Clients view own consultations" ON public.consultations FOR SELECT USING (client_id = auth.uid());
+
+DROP POLICY IF EXISTS "Oracles view their consultations" ON public.consultations;
 CREATE POLICY "Oracles view their consultations" ON public.consultations FOR SELECT USING (oracle_id = auth.uid());
+
+DROP POLICY IF EXISTS "Owner view all consultations" ON public.consultations;
 CREATE POLICY "Owner view all consultations" ON public.consultations FOR SELECT USING (
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'owner')
 );
+
+DROP POLICY IF EXISTS "Clients create consultations" ON public.consultations;
 CREATE POLICY "Clients create consultations" ON public.consultations FOR INSERT WITH CHECK (client_id = auth.uid());
+
+DROP POLICY IF EXISTS "System update consultations" ON public.consultations;
 CREATE POLICY "System update consultations" ON public.consultations FOR UPDATE USING (
   client_id = auth.uid() OR oracle_id = auth.uid() OR 
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'owner')
 );
 
 -- Questions: mesmas regras da consultation pai
+DROP POLICY IF EXISTS "Users view questions of their consultations" ON public.consultation_questions;
 CREATE POLICY "Users view questions of their consultations" ON public.consultation_questions FOR SELECT USING (
   EXISTS (
     SELECT 1 FROM public.consultations 
@@ -74,9 +84,13 @@ CREATE POLICY "Users view questions of their consultations" ON public.consultati
          EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'owner'))
   )
 );
+
+DROP POLICY IF EXISTS "System insert questions" ON public.consultation_questions;
 CREATE POLICY "System insert questions" ON public.consultation_questions FOR INSERT WITH CHECK (
   EXISTS (SELECT 1 FROM public.consultations WHERE id = consultation_id AND client_id = auth.uid())
 );
+
+DROP POLICY IF EXISTS "System update questions" ON public.consultation_questions;
 CREATE POLICY "System update questions" ON public.consultation_questions FOR UPDATE USING (
   EXISTS (SELECT 1 FROM public.profiles WHERE id = auth.uid() AND role = 'owner')
 );
