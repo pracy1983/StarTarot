@@ -17,6 +17,27 @@ export default function InboxPage() {
     useEffect(() => {
         if (profile?.id) {
             fetchMessages()
+
+            // Inscrever para atualizações em tempo real
+            const channel = supabase
+                .channel('inbox_updates')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'inbox_messages',
+                        filter: `recipient_id=eq.${profile.id}`
+                    },
+                    () => {
+                        fetchMessages()
+                    }
+                )
+                .subscribe()
+
+            return () => {
+                supabase.removeChannel(channel)
+            }
         }
     }, [profile?.id])
 
