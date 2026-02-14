@@ -60,12 +60,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-4">
-                    <div className="hidden sm:flex flex-col items-end mr-2">
-                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">Saldo</span>
-                        <span className="text-neon-gold font-bold flex items-center">
-                            <Sparkles size={14} className="mr-1" />
-                            {profile?.credits || 0} <span className="text-[10px] ml-1 opacity-70">CR</span>
+                <div className="flex items-center space-x-2 sm:space-x-4">
+                    {/* Botão Admin (Apenas para Owner) */}
+                    {profile?.role === 'owner' && (
+                        <button
+                            onClick={() => router.push('/admin')}
+                            className="p-2.5 rounded-xl bg-neon-purple/10 border border-neon-purple/30 text-neon-purple hover:bg-neon-purple hover:text-white transition-all group flex items-center space-x-2"
+                            title="Painel Administrativo"
+                        >
+                            <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
+                            <span className="text-xs font-bold hidden lg:block uppercase tracking-wider">Gestão</span>
+                        </button>
+                    )}
+
+                    <div className="hidden sm:flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">Saldo</span>
+                        <span className="text-neon-gold font-bold flex items-center leading-none">
+                            <Sparkles size={12} className="mr-1" />
+                            {profile?.credits || 0} <span className="text-[10px] ml-1 opacity-70 italic font-medium">CR</span>
                         </span>
                     </div>
 
@@ -91,8 +103,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                     key={item.label}
                                     onClick={() => router.push(item.href)}
                                     className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group ${isActive
-                                            ? 'bg-neon-purple/20 text-white shadow-[0_0_20px_rgba(168,85,247,0.15)] border border-neon-purple/30'
-                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                        ? 'bg-neon-purple/20 text-white shadow-[0_0_20px_rgba(168,85,247,0.15)] border border-neon-purple/30'
+                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
                                     <span className={`${isActive ? 'text-neon-purple' : 'group-hover:text-neon-purple'} transition-colors`}>

@@ -18,14 +18,24 @@ export default function MarketplacePage() {
 
     const fetchOracles = async () => {
         try {
+            // Tentamos buscar ordenando por is_online (campo novo)
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('role', 'oracle')
                 .order('is_online', { ascending: false })
 
-            if (error) throw error
-            setOracles(data || [])
+            if (error) {
+                console.warn('Campo is_online não existe, tentando ordenação padrão...')
+                const { data: fallbackData } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .eq('role', 'oracle')
+                    .order('full_name', { ascending: true })
+                setOracles(fallbackData || [])
+            } else {
+                setOracles(data || [])
+            }
         } catch (err) {
             console.error('Erro ao buscar oraculistas:', err)
         } finally {
@@ -92,8 +102,8 @@ export default function MarketplacePage() {
                             key={item.id}
                             onClick={() => setFilter(item.id)}
                             className={`flex items-center space-x-2 px-5 py-2 rounded-full border transition-all whitespace-nowrap ${filter === item.id
-                                    ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
                                 }`}
                         >
                             {item.icon}
