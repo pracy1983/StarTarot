@@ -43,13 +43,52 @@ export default function InboxPage() {
 
     const fetchMessages = async () => {
         try {
-            const { data } = await supabase
+            // 1. Buscar notificações da inbox
+            const { data: inboxData } = await supabase
                 .from('inbox_messages')
                 .select('*')
                 .eq('recipient_id', profile!.id)
                 .order('created_at', { ascending: false })
 
-            setMessages(data || [])
+            // 2. Buscar consultas para garantir que nada ficou pra trás
+            const { data: consultationsData } = await supabase
+                .from('consultations')
+                .select('*, profiles!consultations_oracle_id_fkey(full_name)')
+                .eq('client_id', profile!.id)
+                .order('created_at', { ascending: false })
+
+            // 3. Mesclar dados e evitar duplicidade (se já tiver notificação na inbox)
+            const inboxIds = new Set(inboxData?.map(m => m.metadata?.consultation_id).filter(Boolean))
+
+            const processedConsultations = (consultationsData || [])
+                .filter(c => !inboxIds.has(c.id) && c.status === 'answered')
+                .map(c => ({
+                    id: `cons-${c.id}`,
+                    title: `✨ Resposta de ${c.profiles?.full_name || 'Oraculista'}`,
+                    content: `Sua consulta foi respondida. Clique para ver.`,
+                    created_at: c.answered_at || c.created_at,
+                    is_read: false,
+                    metadata: { type: 'consultation_answered', consultation_id: c.id }
+                }))
+
+            const pendingConsultations = (consultationsData || [])
+                .filter(c => c.status !== 'answered')
+                .map(c => ({
+                    id: `pend-${c.id}`,
+                    title: `🔮 Consulta em processamento...`,
+                    content: `Sua consulta com ${c.profiles?.full_name || 'Oraculista'} está sendo preparada.`,
+                    created_at: c.created_at,
+                    is_read: true, // Pendentes não marcam como unread na bolinha
+                    metadata: { type: 'consultation_pending', consultation_id: c.id }
+                }))
+
+            const allMessages = [
+                ...(inboxData || []),
+                ...processedConsultations,
+                ...pendingConsultations
+            ].sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+
+            setMessages(allMessages)
         } catch (err) {
             console.error('Error fetching inbox:', err)
         } finally {
@@ -58,18 +97,19 @@ export default function InboxPage() {
     }
 
     const handleMessageClick = async (message: any) => {
-        // Marcar como lida
-        if (!message.is_read) {
-            await supabase
-                .from('inbox_messages')
-                .update({ is_read: true })
-                .eq('id', message.id)
-
-            setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m))
-        }
-
-        // Redirecionar se for notificação de consulta
+        // Redirecionar se for consulta respondida
         if (message.metadata?.type === 'consultation_answered' && message.metadata?.consultation_id) {
+            // Se for uma mensagem real da inbox (não as virtuais que criamos), marcar como lida
+            if (typeof message.id === 'string' && !message.id.startsWith('cons-') && !message.id.startsWith('pend-')) {
+                if (!message.is_read) {
+                    await supabase
+                        .from('inbox_messages')
+                        .update({ is_read: true })
+                        .eq('id', message.id)
+
+                    setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m))
+                }
+            }
             router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
         }
     }
@@ -117,7 +157,9 @@ export default function InboxPage() {
                             >
                                 <div className="flex items-start space-x-4">
                                     <div className="flex-shrink-0">
-                                        {msg.is_read ? (
+                                        {msg.metadata?.type === 'consultation_pending' ? (
+                                            <Sparkles size={24} className="text-neon-cyan animate-pulse" />
+                                        ) : msg.is_read ? (
                                             <MailOpen size={24} className="text-slate-500" />
                                         ) : (
                                             <Mail size={24} className="text-neon-purple" />
