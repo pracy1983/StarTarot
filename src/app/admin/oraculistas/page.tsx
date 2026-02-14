@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Users, Plus, Search, Edit2, Trash2, Brain, User } from 'lucide-react'
+import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -141,13 +142,16 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end space-x-2">
-                                            <button
-                                                onClick={() => router.push(`/admin/oraculistas/editar/${o.id}`)}
+
+
+
+                                            <Link
+                                                href={`/admin/oraculistas/editar/${o.id}`}
                                                 className="p-2 text-slate-400 hover:text-neon-cyan transition-colors rounded-lg hover:bg-white/5"
                                                 title="Editar oraculista"
                                             >
                                                 <Edit2 size={16} />
-                                            </button>
+                                            </Link>
                                             <button
                                                 onClick={() => handleDelete(o.id, o.full_name)}
                                                 className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5"
