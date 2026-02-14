@@ -1,26 +1,39 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { motion } from 'framer-motion'
 import {
     Users,
     Settings,
     BarChart3,
     MessageSquare,
     LogOut,
-    Moon,
     Sparkles,
     LayoutDashboard,
-    Eye
+    Wallet
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
+import { RoleSwitcher } from '@/components/ui/RoleSwitcher'
+import { supabase } from '@/lib/supabase'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
-    console.log('AdminLayout montado! Acessando área administrativa...')
     const { profile, logout } = useAuthStore()
     const router = useRouter()
+    const [ownerBalance, setOwnerBalance] = useState<number | null>(null)
+
+    useEffect(() => {
+        if (profile?.id) {
+            supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', profile.id)
+                .single()
+                .then(({ data }) => {
+                    setOwnerBalance(data?.balance ?? 0)
+                })
+        }
+    }, [profile?.id])
 
     const handleLogout = async () => {
         await logout()
@@ -30,6 +43,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const navItems = [
         { label: 'Visão Geral', icon: <LayoutDashboard size={20} />, href: '/admin' },
         { label: 'Oraculistas', icon: <Users size={20} />, href: '/admin/oraculistas' },
+        { label: 'Créditos', icon: <Wallet size={20} />, href: '/admin/creditos' },
         { label: 'Consultas', icon: <MessageSquare size={20} />, href: '/admin/consultas' },
         { label: 'Finanças', icon: <BarChart3 size={20} />, href: '/admin/financeiro' },
         { label: 'Configurações', icon: <Settings size={20} />, href: '/admin/config' },
@@ -39,7 +53,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex min-h-screen bg-deep-space relative">
             <div className="stars-overlay opacity-10" />
 
-            {/* Sidebar Glassmorphism */}
+            {/* Sidebar */}
             <aside className="w-64 glass border-r border-white/5 flex flex-col z-20">
                 <div className="p-8">
                     <div className="flex items-center space-x-3 mb-10">
@@ -93,21 +107,14 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between glass sticky top-0 z-30">
                     <div className="flex items-center text-slate-400 text-xs">
                         <Sparkles size={14} className="mr-2 text-neon-gold" />
-                        Conexão Estelar Estabelecida • Gateway: Supabase Realtime
+                        Conexão Estelar Estabelecida
                     </div>
                     <div className="flex items-center space-x-4">
-                        <button
-                            onClick={() => router.push('/app')}
-                            className="flex items-center space-x-2 px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:border-neon-cyan/30 transition-all text-xs font-bold"
-                            title="Ver como usuário"
-                        >
-                            <Eye size={14} />
-                            <span>Ver Marketplace</span>
-                        </button>
-                        <div className="h-4 w-px bg-white/10 mx-2" />
+                        <RoleSwitcher />
+                        <div className="h-4 w-px bg-white/10" />
                         <div className="flex items-center text-sm font-bold text-neon-gold">
                             <Sparkles size={16} className="mr-2" />
-                            1.250 Credits Total
+                            {ownerBalance !== null ? `${ownerBalance} CR` : '...'}
                         </div>
                     </div>
                 </header>

@@ -31,15 +31,15 @@ export default function ChatRoomPage() {
     const [isThinking, setIsThinking] = useState(false)
     const [loading, setLoading] = useState(true)
     const [chatId, setChatId] = useState<string | null>(null)
-    const [timeLeft, setTimeLeft] = useState(0) // Em segundos por crédito
+    const [walletBalance, setWalletBalance] = useState(0)
 
     const scrollRef = useRef<HTMLDivElement>(null)
 
     useEffect(() => {
-        if (oracleId) {
+        if (oracleId && profile?.id) {
             fetchOracleAndChat()
         }
-    }, [oracleId])
+    }, [oracleId, profile?.id])
 
     useEffect(() => {
         if (chatId) {
@@ -82,31 +82,59 @@ export default function ChatRoomPage() {
             if (oracleError) throw oracleError
             setOracle(oracleData)
 
-            // 2. Criar ou buscar Sessão de Chat (Lógica simplificada: uma sessão por vez)
-            const { data: chatData, error: chatError } = await supabase
-                .from('chats')
-                .insert({
-                    client_id: profile?.id,
-                    oracle_id: oracleId,
-                    status: 'active'
-                })
-                .select()
+            // 2. Buscar saldo da wallet
+            const { data: walletData } = await supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', profile!.id)
                 .single()
 
-            if (chatError) throw chatError
-            setChatId(chatData.id)
+            setWalletBalance(walletData?.balance ?? 0)
 
-            // 3. Buscar histórico (se houver)
+            // 3. Buscar chat existente OU criar novo
+            const { data: existingChat } = await supabase
+                .from('chats')
+                .select('*')
+                .eq('client_id', profile!.id)
+                .eq('oracle_id', oracleId)
+                .eq('status', 'active')
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
+
+            let currentChatId: string
+
+            if (existingChat) {
+                currentChatId = existingChat.id
+            } else {
+                // Criar nova sessão
+                const { data: newChat, error: chatError } = await supabase
+                    .from('chats')
+                    .insert({
+                        client_id: profile!.id,
+                        oracle_id: oracleId,
+                        status: 'active'
+                    })
+                    .select()
+                    .single()
+
+                if (chatError) throw chatError
+                currentChatId = newChat.id
+            }
+
+            setChatId(currentChatId)
+
+            // 4. Buscar histórico de mensagens
             const { data: msgData } = await supabase
                 .from('messages')
                 .select('*')
-                .eq('chat_id', chatData.id)
+                .eq('chat_id', currentChatId)
                 .order('created_at', { ascending: true })
 
             setMessages(msgData || [])
         } catch (err: any) {
+            console.error('Chat init error:', err)
             toast.error('Erro ao iniciar portal: ' + err.message)
-            router.push('/app')
         } finally {
             setLoading(false)
         }
@@ -119,7 +147,18 @@ export default function ChatRoomPage() {
         const content = newMessage
         setNewMessage('')
 
+        // Adicionar mensagem otimisticamente à UI
+        const optimisticMsg = {
+            id: `temp-${Date.now()}`,
+            chat_id: chatId,
+            sender_id: profile.id,
+            content: content,
+            created_at: new Date().toISOString()
+        }
+        setMessages(prev => [...prev, optimisticMsg])
+
         try {
+            // Salvar mensagem no banco
             const { error } = await supabase.from('messages').insert({
                 chat_id: chatId,
                 sender_id: profile.id,
@@ -128,9 +167,9 @@ export default function ChatRoomPage() {
 
             if (error) throw error
 
-            if (oracle?.is_ai) {
+            if (oracle?.is_ai || oracle?.oracle_type === 'ai') {
                 setIsThinking(true)
-                // Aqui chamaremos a Edge Function ou API Route que processa a IA
+                // Chamar API Route que processa a IA
                 await processAIResponse(chatId, content)
             }
         } catch (err: any) {
@@ -150,7 +189,16 @@ export default function ChatRoomPage() {
                 })
             })
 
-            if (!response.ok) throw new Error('O oráculo está em silêncio agora.')
+            const data = await response.json()
+
+            if (!response.ok) {
+                throw new Error(data.error || 'O oráculo está em silêncio agora.')
+            }
+
+            // Atualizar saldo após consumo
+            if (data.newBalance !== undefined) {
+                setWalletBalance(data.newBalance)
+            }
         } catch (err: any) {
             setIsThinking(false)
             toast.error(err.message)
@@ -182,7 +230,7 @@ export default function ChatRoomPage() {
                                 alt={oracle?.full_name}
                             />
                         </div>
-                        <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 rounded-full border-2 border-deep-space" />
+                        <div className={`absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2 border-deep-space ${oracle?.is_online ? 'bg-green-500' : 'bg-slate-600'}`} />
                     </div>
                     <div>
                         <h3 className="text-sm font-bold text-white">{oracle?.full_name}</h3>
@@ -193,29 +241,16 @@ export default function ChatRoomPage() {
                 <div className="flex items-center space-x-6">
                     <div className="hidden md:flex flex-col items-end">
                         <div className="flex items-center text-neon-gold text-xs font-bold uppercase tracking-wider">
-                            {oracle?.is_ai ? (
-                                <>
-                                    <Sparkles size={14} className="mr-1.5" /> {oracle?.price_per_message || 10} CR / Pergunta
-                                </>
-                            ) : (
-                                <>
-                                    <Clock size={14} className="mr-1.5" /> 12:45 restantes
-                                </>
-                            )}
+                            <Sparkles size={14} className="mr-1.5" />
+                            {walletBalance} CR disponíveis
                         </div>
-                        <div className="w-24 h-1 bg-white/5 rounded-full mt-1 overflow-hidden">
-                            {!oracle?.is_ai && (
-                                <motion.div
-                                    animate={{ width: ['100%', '0%'] }}
-                                    transition={{ duration: 60 * 12, ease: "linear" }}
-                                    className="h-full bg-neon-gold shadow-[0_0_10px_rgba(251,191,36,0.5)]"
-                                />
-                            )}
+                        <div className="text-[10px] text-slate-500 mt-0.5">
+                            {oracle?.is_ai
+                                ? `${oracle?.price_per_message || 10} CR por pergunta`
+                                : `${oracle?.credits_per_minute} CR por minuto`
+                            }
                         </div>
                     </div>
-                    <button className="p-2 text-slate-500 hover:text-white transition-colors">
-                        <MoreVertical size={20} />
-                    </button>
                 </div>
             </GlassCard>
 
@@ -232,7 +267,13 @@ export default function ChatRoomPage() {
                     </div>
                 </div>
 
-                {messages.map((msg, idx) => {
+                {messages.length === 0 && (
+                    <div className="flex justify-center py-12">
+                        <p className="text-slate-500 text-sm">Envie sua primeira mensagem para iniciar a consulta...</p>
+                    </div>
+                )}
+
+                {messages.map((msg) => {
                     const isMe = msg.sender_id === profile?.id
                     return (
                         <motion.div
@@ -245,7 +286,7 @@ export default function ChatRoomPage() {
                                 ? 'bg-neon-purple text-white shadow-[0_10px_20px_rgba(168,85,247,0.2)]'
                                 : 'bg-white/5 border border-white/10 text-slate-200'
                                 }`}>
-                                <p className="text-sm leading-relaxed">{msg.content}</p>
+                                <p className="text-sm leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                                 <p className={`text-[9px] mt-2 opacity-50 ${isMe ? 'text-right' : 'text-left'}`}>
                                     {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </p>

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
@@ -14,11 +14,46 @@ import {
     QrCode
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
+import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function WalletPage() {
     const { profile } = useAuthStore()
     const [loading, setLoading] = useState(false)
+    const [balance, setBalance] = useState(0)
+    const [transactions, setTransactions] = useState<any[]>([])
+    const [loadingData, setLoadingData] = useState(true)
+
+    useEffect(() => {
+        if (profile?.id) fetchWalletData()
+    }, [profile?.id])
+
+    const fetchWalletData = async () => {
+        try {
+            // Buscar saldo
+            const { data: walletData } = await supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', profile!.id)
+                .single()
+
+            setBalance(walletData?.balance ?? 0)
+
+            // Buscar transações recentes
+            const { data: txData } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('user_id', profile!.id)
+                .order('created_at', { ascending: false })
+                .limit(10)
+
+            setTransactions(txData || [])
+        } catch (err) {
+            console.error('Wallet data error:', err)
+        } finally {
+            setLoadingData(false)
+        }
+    }
 
     const packages = [
         { id: 1, credits: 20, price: 'R$ 29,90', bonus: 0, popular: false },
@@ -29,11 +64,20 @@ export default function WalletPage() {
 
     const handleRecharge = async (pkg: any) => {
         setLoading(true)
-        // Simulação da integração Asaas Sandbox
         setTimeout(() => {
             toast.success('Gerando PIX de teste (Asaas Sandbox)...')
             setLoading(false)
         }, 1500)
+    }
+
+    const formatTxType = (type: string) => {
+        switch (type) {
+            case 'credit_purchase': return 'Recarga'
+            case 'consultation_charge': return 'Consulta'
+            case 'owner_grant': return 'Créditos do Admin'
+            case 'refund': return 'Reembolso'
+            default: return type
+        }
     }
 
     return (
@@ -53,19 +97,14 @@ export default function WalletPage() {
                             </div>
                             <p className="text-slate-400 text-sm uppercase tracking-widest font-bold mb-2">Saldo Disponível</p>
                             <h2 className="text-5xl font-black text-white flex items-end">
-                                {profile?.credits || 0}
+                                {loadingData ? '...' : balance}
                                 <span className="text-lg text-neon-gold ml-2 mb-2">CR</span>
                             </h2>
-                            <div className="mt-8 p-3 rounded-xl bg-white/5 border border-white/5 w-full">
-                                <p className="text-[10px] text-slate-500 italic">
-                                    "Sua energia está fluindo perfeitamente."
-                                </p>
-                            </div>
                         </div>
                     </GlassCard>
                 </div>
 
-                {/* Histórico Simulado */}
+                {/* Histórico Real */}
                 <div className="lg:col-span-2">
                     <GlassCard hover={false} className="h-full border-white/5">
                         <div className="flex items-center justify-between mb-6">
@@ -75,26 +114,33 @@ export default function WalletPage() {
                         </div>
 
                         <div className="space-y-4">
-                            {[
-                                { type: 'charge', desc: 'Consulta com Sacerdotisa Lunar', value: '-15 CR', date: 'Hoje, 14:20' },
-                                { type: 'recharge', desc: 'Recarga Vital (Pacote Estrela)', value: '+50 CR', date: 'Ontem, 19:45' },
-                            ].map((item, idx) => (
-                                <div key={idx} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                    <div className="flex items-center space-x-4">
-                                        <div className={`p-2 rounded-lg ${item.type === 'recharge' ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                            {item.type === 'recharge' ? <ArrowUpRight size={18} /> : <Zap size={18} />}
+                            {loadingData ? (
+                                <p className="text-center text-xs text-slate-500 py-8">Carregando...</p>
+                            ) : transactions.length === 0 ? (
+                                <p className="text-center text-xs text-slate-500 py-8">Nenhuma transação encontrada.</p>
+                            ) : (
+                                transactions.map((tx) => {
+                                    const isCredit = tx.type === 'credit_purchase' || tx.type === 'owner_grant' || tx.type === 'refund'
+                                    return (
+                                        <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
+                                            <div className="flex items-center space-x-4">
+                                                <div className={`p-2 rounded-lg ${isCredit ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
+                                                    {isCredit ? <ArrowUpRight size={18} /> : <Zap size={18} />}
+                                                </div>
+                                                <div>
+                                                    <p className="text-sm font-bold text-white">{formatTxType(tx.type)}</p>
+                                                    <p className="text-[10px] text-slate-500">
+                                                        {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <span className={`text-sm font-bold ${isCredit ? 'text-neon-cyan' : 'text-slate-400'}`}>
+                                                {isCredit ? '+' : '-'}{tx.amount} CR
+                                            </span>
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white">{item.desc}</p>
-                                            <p className="text-[10px] text-slate-500">{item.date}</p>
-                                        </div>
-                                    </div>
-                                    <span className={`text-sm font-bold ${item.type === 'recharge' ? 'text-neon-cyan' : 'text-slate-400'}`}>
-                                        {item.value}
-                                    </span>
-                                </div>
-                            ))}
-                            <p className="text-center text-xs text-slate-600 pt-4">Nenhuma outra transação encontrada.</p>
+                                    )
+                                })
+                            )}
                         </div>
                     </GlassCard>
                 </div>
@@ -136,7 +182,7 @@ export default function WalletPage() {
                                         {pkg.price}
                                     </div>
                                     <NeonButton
-                                        variant={pkg.popular ? 'purple' : 'purple'}
+                                        variant="purple"
                                         fullWidth
                                         size="md"
                                         onClick={() => handleRecharge(pkg)}

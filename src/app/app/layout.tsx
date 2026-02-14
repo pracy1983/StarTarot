@@ -1,6 +1,6 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import {
     Home,
@@ -14,11 +14,27 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { motion } from 'framer-motion'
+import { RoleSwitcher } from '@/components/ui/RoleSwitcher'
+import { supabase } from '@/lib/supabase'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const { profile, logout } = useAuthStore()
     const router = useRouter()
     const pathname = usePathname()
+    const [walletBalance, setWalletBalance] = useState<number>(0)
+
+    useEffect(() => {
+        if (profile?.id) {
+            supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', profile.id)
+                .single()
+                .then(({ data }) => {
+                    setWalletBalance(data?.balance ?? 0)
+                })
+        }
+    }, [profile?.id])
 
     const handleLogout = async () => {
         await logout()
@@ -61,23 +77,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
 
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Botão Admin (Apenas para Owner) */}
-                    {profile?.role === 'owner' && (
-                        <button
-                            onClick={() => router.push('/admin')}
-                            className="p-2.5 rounded-xl bg-neon-purple/10 border border-neon-purple/30 text-neon-purple hover:bg-neon-purple hover:text-white transition-all group flex items-center space-x-2"
-                            title="Painel Administrativo"
-                        >
-                            <Sparkles size={18} className="group-hover:rotate-12 transition-transform" />
-                            <span className="text-xs font-bold hidden lg:block uppercase tracking-wider">Gestão</span>
-                        </button>
-                    )}
+                    {/* Dropdown de Visões (Apenas para Owner) */}
+                    {profile?.role === 'owner' && <RoleSwitcher />}
 
                     <div className="hidden sm:flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">Saldo</span>
                         <span className="text-neon-gold font-bold flex items-center leading-none">
                             <Sparkles size={12} className="mr-1" />
-                            {profile?.credits || 0} <span className="text-[10px] ml-1 opacity-70 italic font-medium">CR</span>
+                            {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">CR</span>
                         </span>
                     </div>
 

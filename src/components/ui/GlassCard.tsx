@@ -8,13 +8,15 @@ interface GlassCardProps {
     className?: string
     glowColor?: 'purple' | 'cyan' | 'gold' | 'none'
     hover?: boolean
+    onClick?: () => void
 }
 
 export const GlassCard = ({
     children,
     className = '',
     glowColor = 'none',
-    hover = true
+    hover = true,
+    onClick
 }: GlassCardProps) => {
     const glowStyles = {
         purple: 'hover:shadow-[0_0_30px_rgba(168,85,247,0.2)] border-neon-purple/20',
@@ -27,8 +29,10 @@ export const GlassCard = ({
         <motion.div
             whileHover={hover ? { y: -5 } : {}}
             className={`glass rounded-2xl p-6 transition-all duration-300 ${glowStyles[glowColor]} ${className}`}
+            onClick={onClick}
         >
             {children}
         </motion.div>
     )
 }
+

@@ -4,7 +4,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, MessageSquare, Video, Clock, Star } from 'lucide-react'
+import { Sparkles, MessageSquare, Video, Clock } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 
 interface OracleCardProps {
@@ -25,14 +25,20 @@ interface OracleCardProps {
 export const OracleCard = ({ oracle }: OracleCardProps) => {
     const router = useRouter()
 
-    const handleStartConsultation = () => {
+    const handleStartConsultation = (e: React.MouseEvent) => {
+        e.stopPropagation()
         router.push(`/app/chat/${oracle.id}`)
+    }
+
+    const handleViewProfile = () => {
+        router.push(`/app/oraculo/${oracle.id}`)
     }
 
     return (
         <GlassCard
-            className="relative flex flex-col h-full border-white/5 group hover:border-white/20 transition-all duration-500"
+            className="relative flex flex-col h-full border-white/5 group hover:border-white/20 transition-all duration-500 cursor-pointer"
             glowColor={oracle.is_online ? 'purple' : 'none'}
+            onClick={handleViewProfile}
         >
             {/* Online Badge */}
             <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest z-10 ${oracle.is_online
@@ -65,25 +71,29 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </p>
                 </div>
 
-                {/* Info Tags */}
+                {/* Info Tags - sem rating fictício */}
                 <div className="flex items-center space-x-3">
-                    <div className="flex items-center text-neon-gold text-[10px] font-bold">
-                        <Star size={12} className="mr-1 fill-neon-gold" /> 4.9
-                    </div>
-                    <div className="w-1 h-1 rounded-full bg-white/20" />
                     <div className="flex items-center text-slate-400 text-[10px] font-bold">
                         <Clock size={12} className="mr-1" />
                         {oracle.is_ai || oracle.oracle_type === 'ai'
                             ? `${oracle.price_per_message || 10} cr/mens.`
                             : `${oracle.credits_per_minute} cr/min`}
                     </div>
+                    {oracle.is_ai && (
+                        <>
+                            <div className="w-1 h-1 rounded-full bg-white/20" />
+                            <div className="flex items-center text-neon-cyan text-[10px] font-bold">
+                                <Sparkles size={12} className="mr-1" /> IA
+                            </div>
+                        </>
+                    )}
                 </div>
 
                 <p className="text-slate-400 text-sm line-clamp-2 min-h-[40px]">
                     {oracle.bio}
                 </p>
 
-                {/* Feature Icons - Subtle differentiation */}
+                {/* Feature Icons */}
                 <div className="flex items-center justify-center space-x-4 py-2 text-slate-500">
                     <div className="flex flex-col items-center space-y-1">
                         <MessageSquare size={16} className={`${oracle.is_online ? 'text-neon-purple/60' : ''}`} />
