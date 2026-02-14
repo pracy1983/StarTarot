@@ -33,17 +33,31 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.user) {
+        // Buscamos o perfil sem o join primeiro para ver se o erro 500 persiste
         const { data: profile, error } = await supabase
           .from('profiles')
-          .select('*, wallets(balance)')
+          .select('*')
           .eq('id', session.user.id)
           .single()
 
+        if (error) {
+          console.error('Erro ao buscar perfil (checkAuth):', error)
+          set({ profile: null, isAuthenticated: false, isLoading: false })
+          return
+        }
+
         if (profile) {
+          // Buscamos a carteira separadamente para evitar erro de join 500
+          const { data: wallet } = await supabase
+            .from('wallets')
+            .select('balance')
+            .eq('user_id', profile.id)
+            .single()
+
           set({
             profile: {
               ...profile,
-              credits: profile.wallets?.[0]?.balance || 0
+              credits: wallet?.balance || 0
             },
             isAuthenticated: true,
             isLoading: false
@@ -55,6 +69,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ profile: null, isAuthenticated: false, isLoading: false })
       }
     } catch (error) {
+      console.error('Erro no checkAuth:', error)
       set({ profile: null, isAuthenticated: false, isLoading: false })
     }
   },
@@ -65,26 +80,38 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) throw error
 
       if (data.user) {
-        const { data: profile } = await supabase
+        // Query separada para evitar o erro 500 do Join observado no console
+        const { data: profile, error: pError } = await supabase
           .from('profiles')
-          .select('*, wallets(balance)')
+          .select('*')
           .eq('id', data.user.id)
           .single()
 
+        if (pError) {
+          console.error('Erro ao buscar perfil após login:', pError)
+          throw new Error('Perfil não encontrado no banco de dados.')
+        }
+
         if (profile) {
+          const { data: wallet } = await supabase
+            .from('wallets')
+            .select('balance')
+            .eq('user_id', profile.id)
+            .single()
+
           set({
             profile: {
               ...profile,
-              credits: profile.wallets?.[0]?.balance || 0
+              credits: wallet?.balance || 0
             },
             isAuthenticated: true
           })
           return { success: true }
         }
       }
-      return { success: false, error: 'Perfil não encontrado' }
+      return { success: false, error: 'Usuário autenticado mas perfil não localizado.' }
     } catch (error: any) {
-      console.error('Erro no login:', error)
+      console.error('Erro detalhado no login:', error)
       return { success: false, error: error.message || 'Credenciais inválidas' }
     }
   },
