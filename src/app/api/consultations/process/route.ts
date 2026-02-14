@@ -84,7 +84,7 @@ export async function POST(req: Request) {
             .eq('id', consultationId)
 
         // 7. Processar cada pergunta com DeepSeek
-        const apiKey = process.env.DEEPSEEK_API_KEY
+        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
         if (!apiKey) {
             throw new Error('DEEPSEEK_API_KEY não configurada')
         }
