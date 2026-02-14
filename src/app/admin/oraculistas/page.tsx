@@ -38,15 +38,21 @@ export default function AdminOraculistasPage() {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Deseja realmente remover a manifestação de ${name}?`)) return
 
+        // Optimistic: remove da lista imediatamente
+        setOraculistas(prev => prev.filter(o => o.id !== id))
+
         try {
             const { error } = await supabase
                 .from('profiles')
                 .delete()
                 .eq('id', id)
 
-            if (error) throw error
+            if (error) {
+                // Se falhou, restaura a lista
+                fetchOracles()
+                throw error
+            }
             toast.success(`${name} removido com sucesso`)
-            fetchOracles()
         } catch (err: any) {
             toast.error('Erro ao excluir: ' + err.message)
         }
@@ -135,7 +141,11 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end space-x-2">
-                                            <button className="p-2 text-slate-400 hover:text-neon-cyan transition-colors rounded-lg hover:bg-white/5">
+                                            <button
+                                                onClick={() => router.push(`/admin/oraculistas/editar/${o.id}`)}
+                                                className="p-2 text-slate-400 hover:text-neon-cyan transition-colors rounded-lg hover:bg-white/5"
+                                                title="Editar oraculista"
+                                            >
                                                 <Edit2 size={16} />
                                             </button>
                                             <button

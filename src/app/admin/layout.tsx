@@ -11,7 +11,8 @@ import {
     LogOut,
     Moon,
     Sparkles,
-    LayoutDashboard
+    LayoutDashboard,
+    Eye
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
@@ -95,9 +96,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         Conexão Estelar Estabelecida • Gateway: Supabase Realtime
                     </div>
                     <div className="flex items-center space-x-4">
-                        <button className="p-2 text-slate-400 hover:text-white transition-colors relative">
-                            <div className="absolute top-2 right-2 w-1.5 h-1.5 bg-neon-purple rounded-full" />
-                            <MessageSquare size={20} />
+                        <button
+                            onClick={() => router.push('/app')}
+                            className="flex items-center space-x-2 px-4 py-1.5 rounded-lg bg-white/5 border border-white/10 text-slate-400 hover:text-white hover:border-neon-cyan/30 transition-all text-xs font-bold"
+                            title="Ver como usuário"
+                        >
+                            <Eye size={14} />
+                            <span>Ver Marketplace</span>
                         </button>
                         <div className="h-4 w-px bg-white/10 mx-2" />
                         <div className="flex items-center text-sm font-bold text-neon-gold">
