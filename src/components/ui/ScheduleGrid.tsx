@@ -43,7 +43,7 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
                 {DAYS.map((dayName, dayIndex) => {
                     const dayData = schedule[dayIndex] || []
                     const isActive = dayData.length > 0 && dayData[0].active
@@ -51,7 +51,7 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                     return (
                         <div
                             key={dayIndex}
-                            className={`p-4 rounded-xl border transition-all duration-300 ${isActive ? 'bg-neon-purple/5 border-neon-purple/30' : 'bg-white/5 border-white/10 opacity-60'
+                            className={`p-3 sm:p-4 rounded-xl border transition-all duration-300 ${isActive ? 'bg-neon-purple/5 border-neon-purple/30' : 'bg-white/5 border-white/10 opacity-60'
                                 }`}
                         >
                             <div className="flex items-center justify-between mb-3">
@@ -70,19 +70,19 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                             {isActive && (
                                 <div className="space-y-3">
                                     {dayData.map((slot, idx) => (
-                                        <div key={idx} className="flex items-center space-x-2">
+                                        <div key={idx} className="flex items-center justify-between gap-2">
                                             <input
                                                 type="time"
                                                 value={slot.start}
                                                 onChange={(e) => updateTime(dayIndex, idx, 'start', e.target.value)}
-                                                className="bg-deep-space border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                                className="bg-deep-space border border-white/10 rounded px-1.5 py-1 text-[11px] text-white w-[75px] outline-none focus:border-neon-purple/50"
                                             />
-                                            <span className="text-slate-500 text-xs">às</span>
+                                            <span className="text-slate-500 text-[10px] font-bold uppercase">às</span>
                                             <input
                                                 type="time"
                                                 value={slot.end}
                                                 onChange={(e) => updateTime(dayIndex, idx, 'end', e.target.value)}
-                                                className="bg-deep-space border border-white/10 rounded px-2 py-1 text-xs text-white"
+                                                className="bg-deep-space border border-white/10 rounded px-1.5 py-1 text-[11px] text-white w-[75px] outline-none focus:border-neon-purple/50"
                                             />
                                         </div>
                                     ))}

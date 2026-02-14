@@ -10,9 +10,14 @@ import { User, Mail, Sparkles, Brain, Clock, ShieldCheck, Image as ImageIcon } f
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
+import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
+import { useRouter } from 'next/navigation' // Assuming useRouter is needed for router.push
+
 export default function NewOraclePage() {
+    const router = useRouter() // Initialize useRouter
     const [isAI, setIsAI] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [cropModal, setCropModal] = useState<{ open: boolean, image: string }>({ open: false, image: '' })
     const [formData, setFormData] = useState({
         email: '',
         fullName: '',
@@ -34,6 +39,42 @@ export default function NewOraclePage() {
         5: [{ start: '00:00', end: '23:59', active: true }],
         6: [{ start: '00:00', end: '23:59', active: true }], // Sábado
     })
+
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0]
+        if (file) {
+            const reader = new FileReader()
+            reader.onload = () => {
+                setCropModal({ open: true, image: reader.result as string })
+            }
+            reader.readAsDataURL(file)
+        }
+    }
+
+    const handleCropComplete = async (blob: Blob) => {
+        setCropModal({ open: false, image: '' })
+        setLoading(true)
+        try {
+            const fileName = `avatar-${Date.now()}.jpg`
+            const { data, error } = await supabase.storage
+                .from('avatars')
+                .upload(fileName, blob, { contentType: 'image/jpeg' })
+
+            if (error) throw error
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(fileName)
+
+            setFormData(prev => ({ ...prev, avatarUrl: publicUrl }))
+            toast.success('Foto carregada com sucesso!')
+        } catch (err: any) {
+            console.error('Erro no upload:', err)
+            toast.error('Erro ao subir foto. Verifique se o bucket "avatars" existe e é público.')
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -64,25 +105,28 @@ export default function NewOraclePage() {
                 if (error) throw error
 
                 // Salvar Schedule
-                const scheduleEntries = Object.entries(schedule).flatMap(([day, slots]) =>
-                    slots.filter(s => s.active).map(s => ({
-                        oracle_id: data.id,
-                        day_of_week: parseInt(day),
-                        start_time: s.start,
-                        end_time: s.end
-                    }))
-                )
+                if (data) {
+                    const scheduleEntries = Object.entries(schedule).flatMap(([day, slots]) =>
+                        slots.filter(s => s.active).map(s => ({
+                            oracle_id: data.id,
+                            day_of_week: parseInt(day),
+                            start_time: s.start.includes(':') ? (s.start.split(':').length === 2 ? `${s.start}:00` : s.start) : '00:00:00',
+                            end_time: s.end.includes(':') ? (s.end.split(':').length === 2 ? `${s.end}:00` : s.end) : '23:59:00'
+                        }))
+                    )
 
-                if (scheduleEntries.length > 0) {
-                    const { error: schedError } = await supabase.from('schedules').insert(scheduleEntries)
-                    if (schedError) console.error('Erro ao salvar horários:', schedError)
+                    if (scheduleEntries.length > 0) {
+                        const { error: schedError } = await supabase.from('schedules').insert(scheduleEntries)
+                        if (schedError) console.error('Erro ao salvar horários:', schedError)
+                    }
                 }
 
                 toast.success('Oraculista Digital (IA) ativado com sucesso!')
+                router.push('/admin/oraculistas')
             }
         } catch (err: any) {
-            console.error(err)
-            toast.error(err.message || 'Erro ao cadastrar')
+            console.error('Erro no cadastro:', err)
+            toast.error(err.message || 'Erro ao cadastrar. Verifique os campos do banco.')
         } finally {
             setLoading(false)
         }
@@ -90,6 +134,16 @@ export default function NewOraclePage() {
 
     return (
         <div className="p-6 max-w-6xl mx-auto">
+            <AnimatePresence>
+                {cropModal.open && (
+                    <ImageCropperModal
+                        image={cropModal.image}
+                        onCropComplete={handleCropComplete}
+                        onClose={() => setCropModal({ open: false, image: '' })}
+                    />
+                )}
+            </AnimatePresence>
+
             <div className="mb-8">
                 <h1 className="text-3xl font-bold text-white mb-2 flex items-center">
                     <Sparkles className="mr-3 text-neon-gold" />
@@ -134,24 +188,28 @@ export default function NewOraclePage() {
                             </h3>
 
                             <div className="space-y-6">
-                                {/* Preview Avatar */}
-                                <div className="space-y-3">
-                                    <div className="w-32 h-32 mx-auto rounded-full bg-deep-space border-2 border-white/10 overflow-hidden relative group">
-                                        {formData.avatarUrl ? (
-                                            <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover" />
-                                        ) : (
-                                            <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
-                                                <ImageIcon size={32} />
+                                {/* Preview Avatar com Botão de Upload */}
+                                <div className="space-y-4">
+                                    <div className="relative group mx-auto w-40 h-40">
+                                        <div className="w-full h-full rounded-full bg-deep-space border-2 border-white/10 overflow-hidden relative">
+                                            {formData.avatarUrl ? (
+                                                <img src={formData.avatarUrl} alt="Preview" className="w-full h-full object-cover" />
+                                            ) : (
+                                                <div className="w-full h-full flex flex-col items-center justify-center text-slate-600">
+                                                    <ImageIcon size={40} />
+                                                    <span className="text-[10px] mt-2 font-bold uppercase tracking-tighter">Sem Foto</span>
+                                                </div>
+                                            )}
+                                        </div>
+                                        <label className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-full cursor-pointer transition-all border-2 border-neon-purple border-dashed">
+                                            <input type="file" className="hidden" accept="image/*" onChange={handleFileSelect} />
+                                            <div className="text-center">
+                                                <ImageIcon size={24} className="mx-auto text-white" />
+                                                <span className="text-[9px] text-white font-bold uppercase mt-1 block">Trocar Foto</span>
                                             </div>
-                                        )}
+                                        </label>
                                     </div>
-                                    <GlowInput
-                                        label="URL da Foto / Avatar"
-                                        placeholder="https://..."
-                                        value={formData.avatarUrl}
-                                        onChange={e => setFormData({ ...formData, avatarUrl: e.target.value })}
-                                        icon={<ImageIcon size={16} />}
-                                    />
+                                    <p className="text-[10px] text-center text-slate-500 uppercase font-bold tracking-widest">Clique para subir e ajustar a imagem</p>
                                 </div>
 
                                 <GlowInput
