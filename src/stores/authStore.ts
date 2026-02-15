@@ -18,6 +18,8 @@ interface Profile {
   initial_fee?: number
   application_status?: 'pending' | 'approved' | 'rejected' | 'waitlist'
   rejection_reason?: string | null
+  bio?: string | null
+  personality?: string | null
   // Birth Info
   birth_date?: string | null
   birth_time?: string | null
