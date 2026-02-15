@@ -108,6 +108,12 @@ export default function ConsultationResponsePage() {
             return
         }
 
+        const words = testimonial.trim().split(/\s+/).filter(w => w.length > 0)
+        if (words.length < 10) {
+            toast.error('Seu depoimento deve ter pelo menos 10 palavras.')
+            return
+        }
+
         setIsSubmittingRating(true)
         try {
             // 1. Inserir Rating
@@ -118,17 +124,13 @@ export default function ConsultationResponsePage() {
                     client_id: profile!.id,
                     oracle_id: oracle.id,
                     stars,
-                    testimonial
+                    comment: testimonial // Column is 'comment', state is 'testimonial'
                 })
 
             if (ratingError) throw ratingError
 
             // 2. Calcular recompensas
-            let totalReward = REWARD_STARS
-            const words = testimonial.trim().split(/\s+/).filter(w => w.length > 0)
-            if (words.length >= MIN_WORDS_FOR_REWARD) {
-                totalReward += REWARD_TESTIMONIAL
-            }
+            let totalReward = REWARD_STARS + REWARD_TESTIMONIAL
 
             // 3. Adicionar Créditos (Reward)
             const { error: rewardError } = await supabase.rpc('grant_reward_credits', {
@@ -149,7 +151,7 @@ export default function ConsultationResponsePage() {
             toast.success(`Obrigado! Você ganhou ${totalReward} créditos! ✨`)
         } catch (err: any) {
             console.error('Error submitting rating:', err)
-            toast.error('Erro ao enviar avaliação')
+            toast.error('Erro ao enviar avaliação: ' + err.message)
         } finally {
             setIsSubmittingRating(false)
         }

@@ -18,6 +18,22 @@ interface Profile {
   initial_fee?: number
   application_status?: 'pending' | 'approved' | 'rejected' | 'waitlist'
   rejection_reason?: string | null
+  // Birth Info
+  birth_date?: string | null
+  birth_time?: string | null
+  birth_place?: string | null
+  requires_birthdate?: boolean
+  requires_birthtime?: boolean
+  // Billing
+  cpf?: string | null
+  zip_code?: string | null
+  address?: string | null
+  address_number?: string | null
+  address_complement?: string | null
+  neighborhood?: string | null
+  city?: string | null
+  state?: string | null
+  country?: string | null
 }
 
 interface AuthState {

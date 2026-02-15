@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
@@ -13,12 +14,14 @@ import {
     Wallet,
     Power,
     CheckCircle2,
-    XCircle
+    XCircle,
+    Radio
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function OracleDashboard() {
+    const router = useRouter()
     const { profile, setProfile } = useAuthStore()
     const [stats, setStats] = useState({
         totalEarnings: 0,
@@ -42,8 +45,9 @@ export default function OracleDashboard() {
                 .from('transactions')
                 .select('amount')
                 .eq('user_id', profile!.id)
-                .eq('type', 'earnings')
+                .eq('type', 'earnings') // Ensure 'earnings' is in enum
 
+            // Fallback for earnings logic if 'earnings' type not used yet
             const total = earnings?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
             // 2. Consultas concluídas
@@ -51,7 +55,7 @@ export default function OracleDashboard() {
                 .from('consultations')
                 .select('*', { count: 'exact', head: true })
                 .eq('oracle_id', profile!.id)
-                .eq('status', 'answered')
+                .in('status', ['answered', 'completed'])
 
             // 3. Média de Avaliações
             const { data: ratings } = await supabase
@@ -95,6 +99,14 @@ export default function OracleDashboard() {
         }
     }
 
+    const handleEnterServiceRoom = () => {
+        if (!profile?.video_enabled) {
+            toast.error('Habilite o atendimento por vídeo primeiro.')
+            return
+        }
+        router.push('/app/dashboard/sala')
+    }
+
     return (
         <div className="max-w-6xl mx-auto space-y-10">
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -103,27 +115,44 @@ export default function OracleDashboard() {
                     <p className="text-slate-400">Gerencie seus atendimentos e acompanhe seus resultados.</p>
                 </div>
 
-                <div className="flex bg-white/5 border border-white/10 rounded-2xl p-2 gap-2">
+                <div className="flex flex-wrap bg-white/5 border border-white/10 rounded-2xl p-2 gap-2">
                     <button
                         onClick={() => toggleStatus('message')}
                         className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.message_enabled
-                                ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                                : 'text-slate-500 hover:text-white'
+                            ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                            : 'text-slate-500 hover:text-white'
                             }`}
                     >
                         <MessageSquare size={18} className="mr-2" />
                         Mensagens
                     </button>
+
                     <button
                         onClick={() => toggleStatus('video')}
                         className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.video_enabled
-                                ? 'bg-neon-cyan text-deep-space font-bold shadow-[0_0_15px_rgba(34,211,238,0.3)]'
-                                : 'text-slate-500 hover:text-white'
+                            ? 'bg-neon-cyan text-deep-space font-bold shadow-[0_0_15px_rgba(34,211,238,0.3)]'
+                            : 'text-slate-500 hover:text-white'
                             }`}
                     >
                         <Video size={18} className="mr-2" />
                         Vídeo
                     </button>
+
+                    {/* Botão de Status Online/Offline */}
+                    {profile?.video_enabled && (
+                        <div className="pl-2 border-l border-white/10 ml-2">
+                            <button
+                                onClick={handleEnterServiceRoom}
+                                className={`flex items-center px-4 py-2 rounded-xl transition-all font-bold border ${profile?.is_online
+                                    ? 'bg-green-500/20 text-green-400 border-green-500/50 animate-pulse'
+                                    : 'bg-white/5 text-slate-400 border-white/10 hover:text-white hover:border-white/30'
+                                    }`}
+                            >
+                                <Power size={18} className="mr-2" />
+                                {profile?.is_online ? 'VOCÊ ESTÁ ONLINE' : 'ENTRAR NA SALA'}
+                            </button>
+                        </div>
+                    )}
                 </div>
             </header>
 
@@ -165,6 +194,25 @@ export default function OracleDashboard() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content Area */}
                 <div className="lg:col-span-2 space-y-8">
+
+                    {/* Call to Action for Video */}
+                    {profile?.video_enabled && !profile?.is_online && (
+                        <div className="bg-gradient-to-r from-neon-cyan/10 to-transparent p-6 rounded-2xl border border-neon-cyan/20 flex items-center justify-between">
+                            <div className="flex items-center space-x-4">
+                                <div className="p-3 bg-neon-cyan/20 rounded-full text-neon-cyan animate-pulse">
+                                    <Radio size={24} />
+                                </div>
+                                <div>
+                                    <h3 className="text-lg font-bold text-white">Você está Offline para vídeo</h3>
+                                    <p className="text-sm text-slate-400">Entre na sala de atendimento para receber chamadas.</p>
+                                </div>
+                            </div>
+                            <NeonButton variant="cyan" onClick={handleEnterServiceRoom}>
+                                Entrar Agora
+                            </NeonButton>
+                        </div>
+                    )}
+
                     <GlassCard className="border-white/5 h-full" hover={false}>
                         <div className="flex items-center justify-between mb-8">
                             <h2 className="text-xl font-bold text-white flex items-center">

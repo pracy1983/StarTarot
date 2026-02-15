@@ -5,7 +5,7 @@ import { useParams, useRouter } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { QuestionInput, SubjectInfo } from '@/components/consultation/QuestionInput'
-import { ArrowLeft, Send, AlertCircle, Clock } from 'lucide-react'
+import { ArrowLeft, Send, AlertCircle, Clock, Save, User, Calendar, MapPin } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -13,17 +13,26 @@ import toast from 'react-hot-toast'
 export default function NewConsultationPage() {
     const { oracleId } = useParams()
     const router = useRouter()
-    const { profile } = useAuthStore()
+    const { profile, setProfile } = useAuthStore()
 
     const [oracle, setOracle] = useState<any>(null)
     const [walletBalance, setWalletBalance] = useState(0)
     const [questions, setQuestions] = useState([''])
+
+    // Subject Info (Outra pessoa)
     const [subjectName, setSubjectName] = useState('')
     const [subjectBirthdate, setSubjectBirthdate] = useState('')
     const [subjectBirthtime, setSubjectBirthtime] = useState('')
+
+    // Client Info (Eu mesmo)
+    const [clientBirthDate, setClientBirthDate] = useState('')
+    const [clientBirthTime, setClientBirthTime] = useState('')
+    const [clientBirthPlace, setClientBirthPlace] = useState('')
+
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
+    // Derived state
     const isAstroOrNum = oracle?.specialty?.toLowerCase().includes('astrologia') ||
         oracle?.specialty?.toLowerCase().includes('numerologia')
 
@@ -33,9 +42,17 @@ export default function NewConsultationPage() {
         }
     }, [oracleId, profile?.id])
 
+    useEffect(() => {
+        if (profile) {
+            setClientBirthDate(profile.birth_date || '')
+            setClientBirthTime(profile.birth_time || '')
+            setClientBirthPlace(profile.birth_place || '')
+        }
+    }, [profile])
+
     const fetchData = async () => {
         try {
-            // Buscar oracle
+            // Buscar oracle com as novas colunas
             const { data: oracleData, error: oracleError } = await supabase
                 .from('profiles')
                 .select('*')
@@ -62,20 +79,29 @@ export default function NewConsultationPage() {
     }
 
     const handleSubmit = async () => {
-        // Validações
+        // 1. Validação de Perguntas
         const validQuestions = questions.filter(q => q.trim().length > 0)
         if (validQuestions.length === 0) {
             toast.error('Adicione pelo menos uma pergunta')
             return
         }
 
-        if (isAstroOrNum) {
-            if (!subjectName.trim()) {
-                toast.error('Nome completo é obrigatório para esta consulta')
-                return
-            }
+        // 2. Validação dos Dados do Cliente (Seus Dados)
+        if (oracle?.requires_birthdate && !clientBirthDate) {
+            toast.error('O oraculista exige sua Data de Nascimento.')
+            return
+        }
+        if (oracle?.requires_birthtime && !clientBirthTime) {
+            toast.error('O oraculista exige sua Hora de Nascimento.')
+            return
+        }
+
+        // 3. Validação do Subject (Se for Astro/Num E o usuário preencheu nome do subject)
+        // Lógica: Se preencheu nome do subject, assume que é para outra pessoa.
+        // Se é Astro/Num, obriga data de nascimento DO SUBJECT.
+        if (subjectName.trim() && isAstroOrNum) {
             if (!subjectBirthdate) {
-                toast.error('Data de nascimento é obrigatória para esta consulta')
+                toast.error('Data de nascimento é obrigatória para o tema da consulta')
                 return
             }
         }
@@ -92,7 +118,48 @@ export default function NewConsultationPage() {
         setSubmitting(true)
 
         try {
-            // 1. Criar consultation
+            // A. Atualizar perfil do cliente se mudou algo
+            if (
+                clientBirthDate !== profile?.birth_date ||
+                clientBirthTime !== profile?.birth_time ||
+                clientBirthPlace !== profile?.birth_place
+            ) {
+                const { error: profileError } = await supabase
+                    .from('profiles')
+                    .update({
+                        birth_date: clientBirthDate || null,
+                        birth_time: clientBirthTime || null,
+                        birth_place: clientBirthPlace || null
+                    })
+                    .eq('id', profile!.id)
+
+                if (profileError) throw profileError
+
+                // Atualiza store local
+                setProfile({
+                    ...profile!,
+                    birth_date: clientBirthDate,
+                    birth_time: clientBirthTime,
+                    birth_place: clientBirthPlace
+                })
+            }
+
+            // B. Criar consultation
+            // Metadata agora inclui snapshot dos dados do cliente
+            const metadata = {
+                client_snapshot: {
+                    name: profile!.full_name,
+                    birth_date: clientBirthDate,
+                    birth_time: clientBirthTime,
+                    birth_place: clientBirthPlace
+                },
+                subject: subjectName ? {
+                    name: subjectName,
+                    birth_date: subjectBirthdate,
+                    birth_time: subjectBirthtime
+                } : null
+            }
+
             const { data: consultation, error: consultationError } = await supabase
                 .from('consultations')
                 .insert({
@@ -100,9 +167,9 @@ export default function NewConsultationPage() {
                     oracle_id: oracleId,
                     total_questions: validQuestions.length,
                     total_credits: totalCost,
-                    subject_name: subjectName || null,
-                    subject_birthdate: subjectBirthdate || null,
-                    metadata: subjectBirthtime ? { birth_time: subjectBirthtime } : null,
+                    subject_name: subjectName || null, // Mantemos compatibilidade
+                    subject_birthdate: subjectBirthdate || null, // Mantemos compatibilidade
+                    metadata: metadata,
                     status: 'pending'
                 })
                 .select()
@@ -110,7 +177,7 @@ export default function NewConsultationPage() {
 
             if (consultationError) throw consultationError
 
-            // 2. Inserir perguntas
+            // C. Inserir perguntas
             const questionsToInsert = validQuestions.map((q, idx) => ({
                 consultation_id: consultation.id,
                 question_text: q,
@@ -123,19 +190,15 @@ export default function NewConsultationPage() {
 
             if (questionsError) throw questionsError
 
-            // 3. Chamar API para processar
-            const response = await fetch('/api/consultations/process', {
+            // D. Chamar API para processar (Notificações, etc)
+            // Não bloqueia se falhar a API, pois o banco já foi
+            fetch('/api/consultations/process', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ consultationId: consultation.id })
-            })
+            }).catch(e => console.error('Erro ao chamar process:', e))
 
-            if (!response.ok) {
-                const data = await response.json()
-                throw new Error(data.error || 'Erro ao processar consulta')
-            }
-
-            toast.success('Consulta enviada! Você receberá as respostas na sua caixa de entrada.')
+            toast.success('Consulta enviada com sucesso!')
             router.push('/app/mensagens')
         } catch (err: any) {
             console.error('Error submitting consultation:', err)
@@ -192,6 +255,11 @@ export default function NewConsultationPage() {
                     <div className="flex-1">
                         <h2 className="text-xl font-bold text-white">{oracle.full_name}</h2>
                         <p className="text-neon-cyan text-xs font-medium uppercase tracking-wider">{oracle.specialty}</p>
+                        {/* Badges de Requisitos */}
+                        <div className="flex gap-2 mt-2">
+                            {oracle.requires_birthdate && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-300">Exige Nasc.</span>}
+                            {oracle.requires_birthtime && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-300">Exige Hora</span>}
+                        </div>
                     </div>
                     <div className="text-right">
                         <p className="text-xs text-slate-500">Valor por pergunta</p>
@@ -202,9 +270,59 @@ export default function NewConsultationPage() {
 
             {/* Form */}
             <GlassCard className="border-white/5" hover={false}>
-                <h3 className="text-lg font-bold text-white mb-6">Faça suas perguntas ao oráculo</h3>
-
                 <div className="space-y-8">
+
+                    {/* SEUS DADOS (CLIENTE) */}
+                    <div className="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <h3 className="text-sm font-bold text-white flex items-center">
+                            <span className="w-2 h-2 bg-neon-purple rounded-full mr-2" />
+                            Seus Dados para o Atendimento
+                        </h3>
+                        <p className="text-xs text-slate-500">
+                            Confira seus dados. Se alterar aqui, seu perfil será atualizado automaticamente.
+                        </p>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500">Nome Completo</label>
+                                <input disabled value={profile?.full_name || ''} className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-slate-400 text-sm cursor-not-allowed" />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500">Data de Nascimento {oracle.requires_birthdate && <span className="text-neon-purple">*</span>}</label>
+                                <input
+                                    type="date"
+                                    value={clientBirthDate}
+                                    onChange={e => setClientBirthDate(e.target.value)}
+                                    className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthDate && oracle.requires_birthdate ? 'border-red-500/30' : 'border-white/5'}`}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500">Hora de Nascimento {oracle.requires_birthtime && <span className="text-neon-purple">*</span>}</label>
+                                <input
+                                    type="time"
+                                    value={clientBirthTime}
+                                    onChange={e => setClientBirthTime(e.target.value)}
+                                    className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthTime && oracle.requires_birthtime ? 'border-red-500/30' : 'border-white/5'}`}
+                                />
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs text-slate-500">Local de Nascimento</label>
+                                <input
+                                    type="text"
+                                    value={clientBirthPlace}
+                                    onChange={e => setClientBirthPlace(e.target.value)}
+                                    placeholder="Ex: São Paulo, SP"
+                                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="border-t border-white/5 my-4" />
+
                     <SubjectInfo
                         subjectName={subjectName}
                         subjectBirthdate={subjectBirthdate}
@@ -212,7 +330,7 @@ export default function NewConsultationPage() {
                         onNameChange={setSubjectName}
                         onBirthdateChange={setSubjectBirthdate}
                         onBirthtimeChange={setSubjectBirthtime}
-                        isMandatory={isAstroOrNum}
+                        isMandatory={false}
                     />
 
                     <QuestionInput
@@ -221,36 +339,31 @@ export default function NewConsultationPage() {
                         pricePerQuestion={pricePerQuestion}
                     />
 
-                    <div className="space-y-4">
-                        <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
-                            <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
-                            <div className="text-xs text-slate-300 leading-relaxed space-y-2">
-                                <p><strong>Como funciona:</strong> Você envia todas as suas perguntas de uma vez. O oraculista responderá cada uma delas e você receberá as respostas na sua caixa de entrada.</p>
-                                <p className="flex items-center text-neon-cyan">
-                                    <Clock size={14} className="mr-1.5" />
-                                    Tempo médio de resposta deste oraculista: <strong className="ml-1">30 minutos</strong>
-                                </p>
-                                <p className="flex items-center text-green-400">
-                                    <svg className="w-3.5 h-3.5 mr-1.5" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" /></svg>
-                                    Te enviaremos uma notificação no WhatsApp quando suas perguntas forem respondidas
-                                </p>
-                            </div>
+                    {/* Info de como funciona */}
+                    <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+                        <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                        <div className="text-xs text-slate-300 leading-relaxed space-y-2">
+                            <p><strong>Como funciona:</strong> O oraculista responderá suas perguntas e você receberá as respostas na sua caixa de entrada.</p>
+                            <p className="flex items-center text-neon-cyan">
+                                <Clock size={14} className="mr-1.5" />
+                                Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
+                            </p>
                         </div>
+                    </div>
 
-                        <div className="pt-2">
-                            <NeonButton
-                                variant="purple"
-                                size="lg"
-                                fullWidth
-                                onClick={handleSubmit}
-                                loading={submitting}
-                                disabled={questions.filter(q => q.trim()).length === 0}
-                                className="text-base font-bold py-4 gap-3"
-                            >
-                                <Send size={20} />
-                                <span>Enviar Consulta</span>
-                            </NeonButton>
-                        </div>
+                    <div className="pt-2">
+                        <NeonButton
+                            variant="purple"
+                            size="lg"
+                            fullWidth
+                            onClick={handleSubmit}
+                            loading={submitting}
+                            disabled={questions.filter(q => q.trim()).length === 0}
+                            className="text-base font-bold py-4 gap-3"
+                        >
+                            <Send size={20} />
+                            <span>Enviar Consulta</span>
+                        </NeonButton>
                     </div>
                 </div>
             </GlassCard>
