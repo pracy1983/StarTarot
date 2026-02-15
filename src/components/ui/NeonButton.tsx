@@ -5,7 +5,7 @@ import { motion, HTMLMotionProps } from 'framer-motion'
 
 interface NeonButtonProps extends HTMLMotionProps<'button'> {
     children: ReactNode
-    variant?: 'purple' | 'cyan' | 'gold' | 'green' | 'red'
+    variant?: 'purple' | 'cyan' | 'gold' | 'green' | 'red' | 'white'
     size?: 'sm' | 'md' | 'lg'
     fullWidth?: boolean
     loading?: boolean
@@ -26,7 +26,8 @@ export const NeonButton = ({
         cyan: 'bg-neon-cyan/10 border-neon-cyan text-neon-cyan hover:bg-neon-cyan hover:text-white shadow-[0_0_15px_rgba(34,211,238,0.3)]',
         gold: 'bg-neon-gold/10 border-neon-gold text-neon-gold hover:bg-neon-gold hover:text-white shadow-[0_0_15px_rgba(251,191,36,0.3)]',
         green: 'bg-green-500/10 border-green-500 text-green-400 hover:bg-green-500 hover:text-white shadow-[0_0_15px_rgba(34,197,94,0.3)]',
-        red: 'bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500 hover:text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]'
+        red: 'bg-red-500/10 border-red-500 text-red-500 hover:bg-red-500 hover:text-white shadow-[0_0_15px_rgba(239,68,68,0.3)]',
+        white: 'bg-white/10 border-white text-white hover:bg-white hover:text-black shadow-[0_0_15px_rgba(255,255,255,0.3)]'
     }
 
     const sizes = {
