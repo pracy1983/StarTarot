@@ -23,7 +23,7 @@ export default function AdminOraculistasPage() {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('role', 'oracle')
+                .in('role', ['oracle', 'owner'])
                 .order('full_name', { ascending: true })
 
             if (error) throw error

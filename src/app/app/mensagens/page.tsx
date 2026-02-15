@@ -43,21 +43,27 @@ export default function InboxPage() {
     }, [profile?.id])
 
     const fetchMessages = async () => {
+        if (!profile?.id) return
+
         try {
             // 1. Buscar notificações da inbox
-            const { data: inboxData } = await supabase
+            const { data: inboxData, error: iError } = await supabase
                 .from('inbox_messages')
                 .select('*')
-                .eq('recipient_id', profile!.id)
+                .eq('recipient_id', profile.id)
                 .eq('is_deleted', false)
                 .order('created_at', { ascending: false })
 
-            // 2. Buscar consultas para garantir que nada ficou pra trás
-            const { data: consultationsData } = await supabase
+            if (iError) console.error('Error fetching inbox:', iError)
+
+            // 2. Buscar consultas
+            const { data: consultationsData, error: cError } = await supabase
                 .from('consultations')
-                .select('*, profiles!consultations_oracle_id_fkey(full_name)')
-                .eq('client_id', profile!.id)
+                .select('*, oracle:profiles!oracle_id(full_name)')
+                .eq('client_id', profile.id)
                 .order('created_at', { ascending: false })
+
+            if (cError) console.error('Error fetching consultations:', cError)
 
             // 3. Mesclar dados e evitar duplicidade (se já tiver notificação na inbox)
             const inboxIds = new Set(inboxData?.map(m => m.metadata?.consultation_id).filter(Boolean))
@@ -66,7 +72,7 @@ export default function InboxPage() {
                 .filter(c => !inboxIds.has(c.id) && c.status === 'answered')
                 .map(c => ({
                     id: `cons-${c.id}`,
-                    title: `✨ Resposta de ${c.profiles?.full_name || 'Oraculista'}`,
+                    title: `✨ Resposta de ${c.oracle?.full_name || 'Oraculista'}`,
                     content: `Sua consulta foi respondida. Clique para ver.`,
                     created_at: c.answered_at || c.created_at,
                     is_read: false,
@@ -78,7 +84,7 @@ export default function InboxPage() {
                 .map(c => ({
                     id: `pend-${c.id}`,
                     title: `🔮 Consulta em processamento...`,
-                    content: `Sua consulta com ${c.profiles?.full_name || 'Oraculista'} está sendo preparada.`,
+                    content: `Sua consulta com ${c.oracle?.full_name || 'Oraculista'} está sendo preparada.`,
                     created_at: c.created_at,
                     is_read: true, // Pendentes não marcam como unread na bolinha
                     metadata: { type: 'consultation_pending', consultation_id: c.id }

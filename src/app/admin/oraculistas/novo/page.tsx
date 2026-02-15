@@ -236,16 +236,40 @@ export default function NewOraclePage() {
                                     <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
                                     <select
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50 transition-all font-medium"
-                                        value={formData.specialty}
-                                        onChange={e => setFormData({ ...formData, specialty: e.target.value })}
+                                        value={['Tarot', 'Astrologia', 'Búzios', 'Runas', 'Numerologia'].includes(formData.specialty) ? formData.specialty : (formData.specialty === '' ? 'Outros' : 'Outros')}
+                                        onChange={e => {
+                                            if (e.target.value === 'Outros') {
+                                                setFormData({ ...formData, specialty: '' })
+                                            } else {
+                                                setFormData({ ...formData, specialty: e.target.value })
+                                            }
+                                        }}
                                     >
                                         <option value="Tarot" className="bg-deep-space">Tarot</option>
                                         <option value="Astrologia" className="bg-deep-space">Astrologia</option>
                                         <option value="Búzios" className="bg-deep-space">Búzios</option>
                                         <option value="Runas" className="bg-deep-space">Runas</option>
                                         <option value="Numerologia" className="bg-deep-space">Numerologia</option>
+                                        <option value="Outros" className="bg-deep-space">Outros (Personalizado)</option>
                                     </select>
                                 </div>
+
+                                {/* Campo para especialidade personalizada */}
+                                {(!['Tarot', 'Astrologia', 'Búzios', 'Runas', 'Numerologia'].includes(formData.specialty) || formData.specialty === '') && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="space-y-1.5"
+                                    >
+                                        <GlowInput
+                                            label="Qual Especialidade?"
+                                            placeholder="Ex: Baralho Cigano, Reiki..."
+                                            value={formData.specialty}
+                                            onChange={e => setFormData({ ...formData, specialty: e.target.value })}
+                                            required
+                                        />
+                                    </motion.div>
+                                )}
 
                                 {isAI ? (
                                     <GlowInput

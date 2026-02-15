@@ -18,24 +18,28 @@ export default function MarketplacePage() {
 
     const fetchOracles = async () => {
         try {
-            // Tentamos buscar ordenando por is_online (campo novo)
-            const { data, error } = await supabase
+            // 1. Busca perfis de oraculistas
+            const { data: profiles, error: pError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('role', 'oracle')
                 .order('is_online', { ascending: false })
 
-            if (error) {
-                console.warn('Campo is_online não existe, tentando ordenação padrão...')
-                const { data: fallbackData } = await supabase
-                    .from('profiles')
-                    .select('*')
-                    .eq('role', 'oracle')
-                    .order('full_name', { ascending: true })
-                setOracles(fallbackData || [])
-            } else {
-                setOracles(data || [])
-            }
+            if (pError) throw pError
+
+            // 2. Busca todos os horários para esses oraculistas
+            const { data: schedules } = await supabase
+                .from('schedules')
+                .select('*')
+                .in('oracle_id', profiles.map(p => p.id))
+
+            // 3. Mapeia horários para cada perfil
+            const oraclesWithSchedules = profiles.map(p => ({
+                ...p,
+                schedules: schedules?.filter(s => s.oracle_id === p.id) || []
+            }))
+
+            setOracles(oraclesWithSchedules)
         } catch (err) {
             console.error('Erro ao buscar oraculistas:', err)
         } finally {
