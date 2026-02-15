@@ -15,10 +15,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
         }
 
-        // 1. Buscar consultation
+        // 1. Buscar consultation com dados do Oracle E do Cliente
         const { data: consultation, error: consultationError } = await supabaseAdmin
             .from('consultations')
-            .select('*, profiles!consultations_oracle_id_fkey(*)')
+            .select('*, oracle:profiles!consultations_oracle_id_fkey(*), client:profiles!consultations_client_id_fkey(*)')
             .eq('id', consultationId)
             .single()
 
@@ -26,7 +26,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Consulta não encontrada' }, { status: 404 })
         }
 
-        const oracle = consultation.profiles
+        const oracle = consultation.oracle
+        const client = consultation.client
 
         // 2. Verificar créditos
         const { data: wallet } = await supabaseAdmin
@@ -97,6 +98,15 @@ export async function POST(req: Request) {
             ? `\n\nEsta consulta é sobre: ${consultation.subject_name}${consultation.subject_birthdate ? `, nascido(a) em ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
             : ''
 
+        const clientBirthInfo = `
+Dados do Consulente (apenas se necessário para o método):
+Nome: ${client.full_name}
+Data de Nascimento: ${client.birth_date ? new Date(client.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
+Hora de Nascimento: ${client.birth_time || 'Não informado'}
+Local de Nascimento: ${client.birth_place || 'Não informado'}
+${subjectContext}
+`.trim()
+
         const systemMessage = `
 Você é ${oracle.full_name}, um(a) especialista em ${oracle.specialty}.
 
@@ -106,15 +116,21 @@ ${oracle.bio || 'Um guia espiritual experiente.'}
 SUA PERSONALIDADE E ESTILO:
 ${oracle.personality || 'Acolhedor, místico e direto.'}
 
-REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
-1. FALA DIRETA: Fale sempre diretamente para a pessoa (ex: "Você verá...", "Suas energias indicam...").
-2. SEM DESCRIÇÕES: NUNCA descreva cenas, ações, gestos ou o ambiente (ex: NÃO use "*embaralha as cartas*", "*olha para o céu*").
-3. APENAS TEXTO CORRIDO: Dê apenas a resposta mística e direta. Sem comentários fora de contexto ou introduções desnecessárias.
-4. SEM NOTAS: Não inclua notas de rodapé ou explicações sobre a consulta.
+REGRAS CRÍTICAS DE PERSONA (O QUE VOCÊ É E NÃO É):
+1. VOCÊ NÃO É UMA IA: Jamais, em hipótese alguma, diga que é uma Inteligência Artificial, um modelo de linguagem ou um assistente virtual.
+2. SE PERGUNTAREM SE É ROBÔ: Leve na brincadeira, tire um sarro leve (ex: "Minha conexão é com o divino, não com o wi-fi", "Sou feito de carne, osso e poeira estelar"). Se insistirem muito, apresente-se com sua história e experiência descritas acima.
+3. FALA DIRETA: Fale sempre diretamente para o consulente.
 
-INSTRUÇÕES DE RESPOSTA:
-${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
-${subjectContext}
+REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
+1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações, gestos ou o ambiente (ex: NÃO use "*embaralha as cartas*", "*fecha os olhos*", "*respira fundo*"). Vá direto ao ponto.
+2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura" ou "Espero ter ajudado".
+3. SEM NOTAS: Não inclua notas de rodapé, avisos médicos ou explicações sobre a consulta.
+
+DADOS PARA A LEITURA:
+${clientBirthInfo}
+
+INSTRUÇÕES DO SEU MÉTODO DE LEITURA:
+${oracle.system_prompt || 'Responda como um oráculo tradicional, usando sua intuição e conhecimento.'}
 
 Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamente no que foi perguntado.
         `.trim()

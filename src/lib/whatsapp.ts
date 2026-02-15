@@ -67,6 +67,7 @@ O oraculista *${oracleName}* respondeu suas perguntas.
 🔮 Acesse agora para ver as respostas:
 https://startarot.netlify.app/app/mensagens
 
+(mande um oi para o link ficar clicável ou adicione este contato)
 ⭐`
 
         return this.sendTextMessage({ phone, message })
