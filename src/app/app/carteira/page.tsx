@@ -1,427 +1,289 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Modal } from '@/components/ui/Modal'
-import { GlowInput } from '@/components/ui/GlowInput'
-import {
-    CreditCard,
-    Sparkles,
-    ArrowUpRight,
-    History,
-    Zap,
-    ShoppingBag,
-    QrCode,
-    MapPin,
-    FileText,
-    Globe
-} from 'lucide-react'
-import { useAuthStore } from '@/stores/authStore'
+import { Wallet, Sparkles, CreditCard, CheckCircle2, QrCode, Copy, Clock, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function WalletPage() {
-    const { profile, setProfile } = useAuthStore()
-    const [loading, setLoading] = useState(false)
-    const [balance, setBalance] = useState(0)
-    const [transactions, setTransactions] = useState<any[]>([])
-    const [loadingData, setLoadingData] = useState(true)
-
-    // Billing Modal State
-    const [isBillingModalOpen, setIsBillingModalOpen] = useState(false)
-    const [isInternational, setIsInternational] = useState(false)
-    const [billingLoading, setBillingLoading] = useState(false)
-    const [pendingPackage, setPendingPackage] = useState<any>(null)
-
-    const [billingData, setBillingData] = useState({
-        cpf: '',
-        zip_code: '',
-        address: '',
-        address_number: '',
-        address_complement: '',
-        neighborhood: '',
-        city: '',
-        state: '',
-        country: 'Brasil'
-    })
+    const { profile } = useAuthStore()
+    const [balance, setBalance] = useState<number | null>(null)
+    const [packages, setPackages] = useState<any[]>([])
+    const [loading, setLoading] = useState(true)
+    const [selectedPackage, setSelectedPackage] = useState<any>(null)
+    const [step, setStep] = useState<'selection' | 'checkout' | 'pix'>('selection')
+    const [cpf, setCpf] = useState('')
+    const [pixData, setPixData] = useState<any>(null)
+    const [isProcessing, setIsProcessing] = useState(false)
 
     useEffect(() => {
         if (profile?.id) {
             fetchWalletData()
-            // Init billing data if exists
-            setBillingData({
-                cpf: profile.cpf || '',
-                zip_code: profile.zip_code || '',
-                address: profile.address || '',
-                address_number: profile.address_number || '',
-                address_complement: profile.address_complement || '',
-                neighborhood: profile.neighborhood || '',
-                city: profile.city || '',
-                state: profile.state || '',
-                country: profile.country || 'Brasil'
-            })
-            if (profile.country && profile.country !== 'Brasil') {
-                setIsInternational(true)
-            }
         }
     }, [profile?.id])
 
     const fetchWalletData = async () => {
         try {
-            const { data: walletData } = await supabase
+            // 1. Saldo
+            const { data: wallet } = await supabase
                 .from('wallets')
                 .select('balance')
                 .eq('user_id', profile!.id)
                 .single()
+            setBalance(wallet?.balance || 0)
 
-            setBalance(walletData?.balance ?? 0)
-
-            const { data: txData } = await supabase
-                .from('transactions')
+            // 2. Pacotes
+            const { data: pkgs } = await supabase
+                .from('credit_packages')
                 .select('*')
-                .eq('user_id', profile!.id)
-                .order('created_at', { ascending: false })
-                .limit(10)
-
-            setTransactions(txData || [])
+                .eq('is_active', true)
+                .order('price_brl', { ascending: true })
+            setPackages(pkgs || [])
         } catch (err) {
-            console.error('Wallet data error:', err)
+            console.error('Error fetching wallet:', err)
         } finally {
-            setLoadingData(false)
+            setLoading(false)
         }
     }
 
-    const packages = [
-        { id: 1, credits: 20, price: 'R$ 29,90', bonus: 0, popular: false },
-        { id: 2, credits: 50, price: 'R$ 59,90', bonus: 5, popular: true },
-        { id: 3, credits: 100, price: 'R$ 99,90', bonus: 15, popular: false },
-        { id: 4, credits: 250, price: 'R$ 199,90', bonus: 50, popular: false },
-    ]
-
-    // --- Billing Logic ---
-
-    const formatCPF = (value: string) => {
-        return value
-            .replace(/\D/g, '')
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d)/, '$1.$2')
-            .replace(/(\d{3})(\d{1,2})/, '$1-$2')
-            .replace(/(-\d{2})\d+?$/, '$1')
+    const handleStartPurchase = (pkg: any) => {
+        setSelectedPackage(pkg)
+        setStep('checkout')
     }
 
-    const formatCEP = (value: string) => {
-        return value.replace(/\D/g, '').replace(/^(\d{5})(\d)/, '$1-$2').slice(0, 9)
-    }
-
-    const handleCepBlur = async () => {
-        if (isInternational) return
-        const cep = billingData.zip_code.replace(/\D/g, '')
-        if (cep.length === 8) {
-            try {
-                setBillingLoading(true)
-                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
-                const data = await res.json()
-                if (!data.erro) {
-                    setBillingData(prev => ({
-                        ...prev,
-                        address: data.logradouro,
-                        neighborhood: data.bairro,
-                        city: data.localidade,
-                        state: data.uf
-                    }))
-                }
-            } catch (error) {
-                console.error('Erro ao buscar CEP', error)
-            } finally {
-                setBillingLoading(false)
-            }
-        }
-    }
-
-    const validateBilling = () => {
-        if (!isInternational) {
-            if (billingData.cpf.length < 14) return false // CPF incompleto
-            if (!billingData.zip_code || !billingData.address || !billingData.address_number || !billingData.city || !billingData.state) return false
-        } else {
-            if (!billingData.address || !billingData.city || !billingData.country) return false
-        }
-        return true
-    }
-
-    const saveBilling = async () => {
-        if (!validateBilling()) {
-            toast.error('Preencha todos os campos obrigatórios.')
+    const handleCreatePayment = async () => {
+        if (!cpf || cpf.length < 11) {
+            toast.error('Informe um CPF válido')
             return
         }
-        setBillingLoading(true)
+
+        setIsProcessing(true)
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update(billingData)
-                .eq('id', profile!.id)
+            const res = await fetch('/api/payments/create', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    packageId: selectedPackage.id,
+                    cpfCnpj: cpf.replace(/\D/g, '')
+                })
+            })
 
-            if (error) throw error
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error)
 
-            setProfile({ ...profile!, ...billingData })
-            setIsBillingModalOpen(false)
-            toast.success('Dados de faturamento salvos!')
-
-            if (pendingPackage) {
-                proceedToRecharge(pendingPackage)
-            }
+            setPixData(data)
+            setStep('pix')
+            toast.success('PIX gerado com sucesso!')
         } catch (err: any) {
-            toast.error('Erro ao salvar dados: ' + err.message)
+            toast.error(err.message || 'Erro ao processar pagamento')
         } finally {
-            setBillingLoading(false)
+            setIsProcessing(false)
         }
     }
 
-    const handleRechargeClick = (pkg: any) => {
-        // Verifica se tem dados de faturamento (CPF e Endereço)
-        const hasBilling = profile?.cpf && profile?.address && profile?.address_number
-
-        if (!hasBilling) {
-            setPendingPackage(pkg)
-            setIsBillingModalOpen(true)
-        } else {
-            proceedToRecharge(pkg)
+    const copyPix = () => {
+        if (pixData?.payload) {
+            navigator.clipboard.writeText(pixData.payload)
+            toast.success('Código PIX copiado!')
         }
     }
 
-    const proceedToRecharge = async (pkg: any) => {
-        setLoading(true)
-        // Simulação de criação de PIX
-        setTimeout(() => {
-            toast.success(`Gerando PIX de teste para ${pkg.price}...`)
-            setLoading(false)
-            setPendingPackage(null)
-        }, 1500)
-    }
-
-    const formatTxType = (type: string) => {
-        switch (type) {
-            case 'credit_purchase': return 'Recarga'
-            case 'consultation_charge': return 'Consulta'
-            case 'owner_grant': return 'Créditos do Admin'
-            case 'refund': return 'Reembolso'
-            default: return type
-        }
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center min-h-[60vh]">
+                <div className="w-12 h-12 border-4 border-neon-purple border-t-transparent rounded-full animate-spin" />
+            </div>
+        )
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-10">
-            <header>
-                <h1 className="text-3xl font-bold text-white mb-2">Sua Carteira Mística</h1>
-                <p className="text-slate-400">Gerencie seus créditos para consultas profundas.</p>
+        <div className="max-w-5xl mx-auto space-y-8 pb-20">
+            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                <div>
+                    <h1 className="text-3xl font-bold text-white">Minha <span className="neon-text-purple">Carteira</span></h1>
+                    <p className="text-slate-400">Adquira Lumina Coins para suas consultas místicas.</p>
+                </div>
+
+                <GlassCard className="border-neon-purple/20 bg-neon-purple/5 px-8 py-4" hover={false}>
+                    <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 rounded-full bg-neon-purple/20 flex items-center justify-center text-neon-purple">
+                            <Wallet size={24} />
+                        </div>
+                        <div>
+                            <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Saldo Atual</p>
+                            <p className="text-2xl font-black text-white">{balance} <span className="text-sm text-neon-purple font-normal">Coins</span></p>
+                        </div>
+                    </div>
+                </GlassCard>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Saldo Atual */}
-                <div className="lg:col-span-1">
-                    <GlassCard glowColor="gold" className="h-full bg-gradient-to-br from-neon-gold/5 to-transparent">
-                        <div className="flex flex-col items-center text-center py-6">
-                            <div className="p-4 rounded-full bg-neon-gold/10 text-neon-gold mb-6 shadow-[0_0_30px_rgba(251,191,36,0.2)]">
-                                <Sparkles size={40} />
-                            </div>
-                            <p className="text-slate-400 text-sm uppercase tracking-widest font-bold mb-2">Saldo Disponível</p>
-                            <h2 className="text-5xl font-black text-white flex items-end">
-                                {loadingData ? '...' : balance}
-                                <span className="text-lg text-neon-gold ml-2 mb-2">CR</span>
-                            </h2>
-                        </div>
-                    </GlassCard>
-                </div>
-
-                {/* Histórico Real */}
-                <div className="lg:col-span-2">
-                    <GlassCard hover={false} className="h-full border-white/5">
-                        <div className="flex items-center justify-between mb-6">
-                            <h3 className="font-bold flex items-center">
-                                <History size={18} className="mr-2 text-neon-cyan" /> Movimentações Recentes
-                            </h3>
-                        </div>
-
-                        <div className="space-y-4">
-                            {loadingData ? (
-                                <p className="text-center text-xs text-slate-500 py-8">Carregando...</p>
-                            ) : transactions.length === 0 ? (
-                                <p className="text-center text-xs text-slate-500 py-8">Nenhuma transação encontrada.</p>
-                            ) : (
-                                transactions.map((tx) => {
-                                    const isCredit = tx.type === 'credit_purchase' || tx.type === 'owner_grant' || tx.type === 'refund' || tx.type === 'earnings'
-                                    return (
-                                        <div key={tx.id} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
-                                            <div className="flex items-center space-x-4">
-                                                <div className={`p-2 rounded-lg ${isCredit ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-400'}`}>
-                                                    {isCredit ? <ArrowUpRight size={18} /> : <Zap size={18} />}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-white">{formatTxType(tx.type)}</p>
-                                                    <p className="text-[10px] text-slate-500">
-                                                        {new Date(tx.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                            <span className={`text-sm font-bold ${isCredit ? 'text-neon-cyan' : 'text-slate-400'}`}>
-                                                {isCredit ? '+' : '-'}{tx.amount} CR
-                                            </span>
-                                        </div>
-                                    )
-                                })
-                            )}
-                        </div>
-                    </GlassCard>
-                </div>
-            </div>
-
-            {/* Pacotes de Recarga */}
-            <section className="space-y-6">
-                <h3 className="text-xl font-bold flex items-center text-white">
-                    <ShoppingBag size={20} className="mr-3 text-neon-purple" /> Amplie sua Energia
-                </h3>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                    {packages.map((pkg) => (
-                        <motion.div key={pkg.id} whileHover={{ y: -5 }}>
+            <AnimatePresence mode='wait'>
+                {step === 'selection' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6"
+                    >
+                        {packages.map((pkg) => (
                             <GlassCard
-                                className={`flex flex-col h-full border-white/5 text-center relative ${pkg.popular ? 'border-neon-purple/40 bg-neon-purple/5' : ''}`}
-                                glowColor={pkg.popular ? 'purple' : 'none'}
+                                key={pkg.id}
+                                className="relative flex flex-col items-center p-8 border-white/5 group hover:border-neon-purple/50 transition-all cursor-pointer"
+                                onClick={() => handleStartPurchase(pkg)}
                             >
-                                {pkg.popular && (
-                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[10px] font-bold px-3 py-1 rounded-full uppercase tracking-tighter shadow-lg">
-                                        Mais Escolhido
+                                {pkg.tag_label && (
+                                    <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-neon-purple text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-tighter shadow-lg shadow-neon-purple/30 z-10">
+                                        {pkg.tag_label}
                                     </div>
                                 )}
 
-                                <h4 className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-4">Créditos de Luz</h4>
-                                <div className="flex items-center justify-center space-x-1 mb-2">
-                                    <span className="text-4xl font-black text-white">{pkg.credits}</span>
-                                    <span className="text-neon-purple font-bold">CR</span>
+                                <div className="mb-6 p-4 rounded-2xl bg-white/5 group-hover:bg-neon-purple/10 transition-colors">
+                                    <Sparkles size={32} className="text-neon-gold group-hover:scale-110 transition-transform" />
                                 </div>
 
-                                {pkg.bonus > 0 && (
-                                    <p className="text-xs text-neon-cyan font-bold mb-6 flex items-center justify-center">
-                                        <Zap size={12} className="mr-1" /> Bonus +{pkg.bonus} CR
-                                    </p>
+                                <h3 className="text-white font-bold mb-1">{pkg.name}</h3>
+                                <div className="text-3xl font-black text-white mb-2">
+                                    {pkg.coins_amount + (pkg.bonus_amount || 0)}
+                                    <span className="text-xs text-slate-500 ml-1 font-normal uppercase">Coins</span>
+                                </div>
+
+                                {pkg.bonus_amount > 0 && (
+                                    <div className="text-[10px] font-bold text-green-400 bg-green-400/10 px-2 py-0.5 rounded-full mb-6">
+                                        +{pkg.bonus_amount} BÔNUS GRÁTIS!
+                                    </div>
                                 )}
 
-                                <div className="mt-auto pt-6">
-                                    <div className="text-2xl font-bold text-white mb-6 leading-none">
-                                        {pkg.price}
-                                    </div>
-                                    <NeonButton
-                                        variant="purple"
-                                        fullWidth
-                                        size="md"
-                                        onClick={() => handleRechargeClick(pkg)}
-                                        loading={loading}
-                                    >
-                                        Recarregar {pkg.credits} CR
-                                    </NeonButton>
-                                    <p className="text-[10px] text-slate-500 mt-4 flex items-center justify-center">
-                                        <QrCode size={12} className="mr-1" /> Ativação Imediata via PIX
-                                    </p>
+                                <div className="mt-auto w-full pt-6 border-t border-white/5">
+                                    <p className="text-center text-slate-500 text-sm mb-4">Por apenas <span className="text-white font-bold">R$ {pkg.price_brl.toFixed(2)}</span></p>
+                                    <NeonButton variant="purple" fullWidth>Selecionar</NeonButton>
                                 </div>
                             </GlassCard>
-                        </motion.div>
-                    ))}
-                </div>
-            </section>
+                        ))}
+                    </motion.div>
+                )}
 
-            {/* Modal de Faturamento */}
-            <Modal
-                isOpen={isBillingModalOpen}
-                onClose={() => setIsBillingModalOpen(false)}
-                title="Complete seu Cadastro"
-                className="max-w-xl"
-            >
-                <div className="space-y-6">
-                    <p className="text-sm text-slate-400">
-                        Para emitir sua nota fiscal e validar sua compra, precisamos de alguns dados.
-                    </p>
+                {step === 'checkout' && selectedPackage && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="max-w-xl mx-auto"
+                    >
+                        <GlassCard className="p-8 border-white/5">
+                            <button onClick={() => setStep('selection')} className="text-slate-500 hover:text-white mb-6 text-sm flex items-center">
+                                ← Voltar para pacotes
+                            </button>
+                            <h2 className="text-xl font-bold text-white mb-6">Finalizar Recarga</h2>
 
-                    <div className="flex items-center space-x-2 text-sm text-slate-300 bg-white/5 p-3 rounded-lg cursor-pointer max-w-max" onClick={() => setIsInternational(!isInternational)}>
-                        <Globe size={16} className={isInternational ? 'text-neon-cyan' : 'text-slate-500'} />
-                        <span className={isInternational ? 'text-neon-cyan font-bold' : ''}>Moro fora do Brasil</span>
-                    </div>
+                            <div className="bg-white/5 rounded-2xl p-6 mb-8 border border-white/10">
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-slate-400">Pacote Escolhido:</span>
+                                    <span className="text-white font-bold">{selectedPackage.name}</span>
+                                </div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-slate-400">Total em Moedas:</span>
+                                    <span className="text-neon-purple font-black">{selectedPackage.coins_amount + selectedPackage.bonus_amount} Coins</span>
+                                </div>
+                                <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                                    <span className="text-slate-400 font-bold">Valor a Pagar:</span>
+                                    <span className="text-2xl font-black text-white">R$ {selectedPackage.price_brl.toFixed(2)}</span>
+                                </div>
+                            </div>
 
-                    {!isInternational && (
-                        <GlowInput
-                            label="CPF"
-                            icon={<FileText size={18} />}
-                            placeholder="000.000.000-00"
-                            value={billingData.cpf}
-                            onChange={(e) => setBillingData({ ...billingData, cpf: formatCPF(e.target.value) })}
-                        />
-                    )}
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-2 block">Seu CPF (necessário para o PIX)</label>
+                                    <input
+                                        type="text"
+                                        placeholder="000.000.000-00"
+                                        value={cpf}
+                                        onChange={(e) => setCpf(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50"
+                                    />
+                                </div>
+                                <NeonButton
+                                    variant="purple"
+                                    fullWidth
+                                    size="lg"
+                                    onClick={handleCreatePayment}
+                                    loading={isProcessing}
+                                >
+                                    Gerar Pagamento PIX
+                                </NeonButton>
+                                <p className="text-[10px] text-center text-slate-600">
+                                    Ao clicar em pagar, você será direcionado para o pagamento seguro via PIX.
+                                </p>
+                            </div>
+                        </GlassCard>
+                    </motion.div>
+                )}
 
-                    <div className="grid grid-cols-2 gap-4">
-                        <GlowInput
-                            label="CEP / Código Postal"
-                            icon={<MapPin size={18} />}
-                            placeholder="00000-000"
-                            value={billingData.zip_code}
-                            onChange={(e) => setBillingData({ ...billingData, zip_code: isInternational ? e.target.value : formatCEP(e.target.value) })}
-                            onBlur={handleCepBlur}
-                        />
-                        <GlowInput
-                            label={isInternational ? "País" : "Estado"}
-                            value={isInternational ? billingData.country : billingData.state}
-                            onChange={(e) => setBillingData({ ...billingData, [isInternational ? 'country' : 'state']: e.target.value })}
-                        />
-                    </div>
+                {step === 'pix' && pixData && (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        className="max-w-xl mx-auto text-center"
+                    >
+                        <GlassCard className="p-8 border-white/5">
+                            <div className="flex flex-col items-center">
+                                <div className="w-16 h-16 rounded-full bg-green-500/10 flex items-center justify-center text-green-400 mb-6">
+                                    <QrCode size={32} />
+                                </div>
+                                <h2 className="text-2xl font-black text-white mb-2">Pagamento Gerado!</h2>
+                                <p className="text-slate-400 text-sm mb-8">Escaneie o QR Code ou copie o código abaixo para pagar.</p>
 
-                    <div className="grid grid-cols-3 gap-4">
-                        <div className="col-span-2">
-                            <GlowInput
-                                label="Endereço"
-                                value={billingData.address}
-                                onChange={(e) => setBillingData({ ...billingData, address: e.target.value })}
-                            />
+                                <div className="p-4 bg-white rounded-2xl mb-8">
+                                    <img src={`data:image/png;base64,${pixData.encodedImage}`} alt="QR Code PIX" className="w-64 h-64" />
+                                </div>
+
+                                <div className="w-full space-y-4">
+                                    <div className="bg-white/5 rounded-xl p-3 flex items-center justify-between border border-white/10">
+                                        <p className="text-xs text-slate-400 font-mono truncate mr-4">{pixData.payload}</p>
+                                        <button
+                                            onClick={copyPix}
+                                            className="p-2 bg-neon-purple/20 text-neon-purple rounded-lg hover:bg-neon-purple/30 transition-colors"
+                                        >
+                                            <Copy size={16} />
+                                        </button>
+                                    </div>
+                                    <div className="flex items-center justify-center text-xs text-slate-500 font-medium">
+                                        <Clock size={14} className="mr-2" />
+                                        Expira em 24 horas
+                                    </div>
+                                    <NeonButton variant="purple" fullWidth onClick={() => setStep('selection')}>
+                                        Já paguei, voltar
+                                    </NeonButton>
+                                    <p className="text-[10px] text-slate-600 italic">
+                                        O saldo será creditado automaticamente após a confirmação bancária.
+                                    </p>
+                                </div>
+                            </div>
+                        </GlassCard>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Historico Simples Mockado (Temporário) */}
+            <GlassCard className="border-white/5" hover={false}>
+                <h3 className="text-lg font-bold text-white mb-6">Histórico Recente</h3>
+                <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                        <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
+                                <CheckCircle2 size={18} />
+                            </div>
+                            <div>
+                                <p className="text-sm font-bold text-white">Recarga Inicial</p>
+                                <p className="text-xs text-slate-500">Saldo inicial do sistema</p>
+                            </div>
                         </div>
-                        <GlowInput
-                            label="Número"
-                            value={billingData.address_number}
-                            onChange={(e) => setBillingData({ ...billingData, address_number: e.target.value })}
-                        />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                        <GlowInput
-                            label="Complemento"
-                            value={billingData.address_complement}
-                            onChange={(e) => setBillingData({ ...billingData, address_complement: e.target.value })}
-                        />
-                        <GlowInput
-                            label="Bairro"
-                            value={billingData.neighborhood}
-                            onChange={(e) => setBillingData({ ...billingData, neighborhood: e.target.value })}
-                        />
-                    </div>
-
-                    {!isInternational && (
-                        <GlowInput
-                            label="Cidade"
-                            value={billingData.city}
-                            onChange={(e) => setBillingData({ ...billingData, city: e.target.value })}
-                        />
-                    )}
-
-                    <div className="pt-4">
-                        <NeonButton
-                            variant="purple"
-                            fullWidth
-                            size="lg"
-                            onClick={saveBilling}
-                            loading={billingLoading}
-                        >
-                            Salvar e Continuar
-                        </NeonButton>
+                        <span className="text-green-500 font-bold">+0 Coins</span>
                     </div>
                 </div>
-            </Modal>
+            </GlassCard>
         </div>
     )
 }

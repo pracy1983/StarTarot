@@ -2,6 +2,7 @@ import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
 import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { whatsappService } from '@/lib/whatsapp'
+import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
 export async function POST(req: Request) {
     const supabase = createRouteHandlerClient({ cookies })
@@ -15,7 +16,7 @@ export async function POST(req: Request) {
         }
 
         // 1. Buscar consultation
-        const { data: consultation, error: consultationError } = await supabase
+        const { data: consultation, error: consultationError } = await supabaseAdmin
             .from('consultations')
             .select('*, profiles!consultations_oracle_id_fkey(*)')
             .eq('id', consultationId)
@@ -28,18 +29,18 @@ export async function POST(req: Request) {
         const oracle = consultation.profiles
 
         // 2. Verificar créditos
-        const { data: wallet } = await supabase
+        const { data: wallet } = await supabaseAdmin
             .from('wallets')
             .select('balance')
             .eq('user_id', consultation.client_id)
             .maybeSingle()
 
-        if (!wallet || wallet.balance < consultation.total_credits) {
+        if (!wallet || (wallet.balance < consultation.total_credits)) {
             return NextResponse.json({ error: 'Créditos insuficientes' }, { status: 402 })
         }
 
         // 3. Deduzir créditos do cliente
-        const { error: deductError } = await supabase
+        const { error: deductError } = await supabaseAdmin
             .from('wallets')
             .update({
                 balance: wallet.balance - consultation.total_credits,
@@ -47,17 +48,20 @@ export async function POST(req: Request) {
             })
             .eq('user_id', consultation.client_id)
 
-        if (deductError) throw deductError
+        if (deductError) {
+            console.error('Error deducting credits:', deductError)
+            throw new Error('Erro ao processar pagamento de créditos')
+        }
 
         // 4. Adicionar créditos ao oraculista
-        const { data: oracleWallet } = await supabase
+        const { data: oracleWallet } = await supabaseAdmin
             .from('wallets')
             .select('balance')
             .eq('user_id', oracle.id)
             .maybeSingle()
 
         if (oracleWallet) {
-            await supabase
+            await supabaseAdmin
                 .from('wallets')
                 .update({
                     balance: (oracleWallet.balance || 0) + consultation.total_credits,
@@ -67,7 +71,7 @@ export async function POST(req: Request) {
         }
 
         // 5. Buscar perguntas
-        const { data: questions } = await supabase
+        const { data: questions } = await supabaseAdmin
             .from('consultation_questions')
             .select('*')
             .eq('consultation_id', consultationId)
@@ -78,7 +82,7 @@ export async function POST(req: Request) {
         }
 
         // 6. Atualizar status para processing
-        await supabase
+        await supabaseAdmin
             .from('consultations')
             .update({ status: 'processing' })
             .eq('id', consultationId)
@@ -115,6 +119,8 @@ ${subjectContext}
 Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamente no que foi perguntado.
         `.trim()
 
+        let hasError = false
+
         for (const question of questions) {
             try {
                 const deepseekResponse = await fetch('https://api.deepseek.com/chat/completions', {
@@ -135,31 +141,36 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 })
 
                 if (!deepseekResponse.ok) {
-                    console.error('DeepSeek API Error:', await deepseekResponse.text())
-                    throw new Error('Falha na comunicação com o oráculo')
+                    const errorText = await deepseekResponse.text()
+                    console.error('DeepSeek API Error:', errorText)
+                    throw new Error('Falha na comunicação com o oráculo: ' + errorText)
                 }
 
                 const aiData = await deepseekResponse.json()
                 const answer = aiData.choices[0].message.content
 
-                // Salvar resposta
-                await supabase
+                if (!answer) throw new Error('AI retornou resposta vazia')
+
+                // Salvar resposta usando Admin
+                const { error: updateError } = await supabaseAdmin
                     .from('consultation_questions')
                     .update({ answer_text: answer })
                     .eq('id', question.id)
 
+                if (updateError) throw updateError
+
             } catch (err: any) {
                 console.error(`Error processing question ${question.id}:`, err)
-                // Continuar com as outras perguntas mesmo se uma falhar
-                await supabase
+                hasError = true
+                await supabaseAdmin
                     .from('consultation_questions')
-                    .update({ answer_text: 'Erro ao processar esta pergunta. Por favor, entre em contato com o suporte.' })
+                    .update({ answer_text: 'Erro ao gerar resposta automática. O suporte foi notificado.' })
                     .eq('id', question.id)
             }
         }
 
         // 8. Atualizar status para answered
-        await supabase
+        await supabaseAdmin
             .from('consultations')
             .update({
                 status: 'answered',
@@ -168,7 +179,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             .eq('id', consultationId)
 
         // 9. Criar notificação na inbox
-        await supabase.from('inbox_messages').insert({
+        await supabaseAdmin.from('inbox_messages').insert({
             recipient_id: consultation.client_id,
             sender_id: oracle.id,
             title: `✨ Sua consulta com ${oracle.full_name} foi respondida!`,
@@ -178,7 +189,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
 
         // 10. Enviar notificação WhatsApp
         try {
-            const { data: clientData } = await supabase
+            const { data: clientData } = await supabaseAdmin
                 .from('profiles')
                 .select('full_name, phone')
                 .eq('id', consultation.client_id)
@@ -193,11 +204,10 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             }
         } catch (whatsappError) {
             console.error('WhatsApp notification error:', whatsappError)
-            // Não bloqueia o fluxo se WhatsApp falhar
         }
 
         // 11. Registrar transações
-        await supabase.from('transactions').insert([
+        await supabaseAdmin.from('transactions').insert([
             {
                 user_id: consultation.client_id,
                 type: 'consultation_charge',
@@ -207,7 +217,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             },
             {
                 user_id: oracle.id,
-                type: 'credit_purchase',
+                type: 'earnings', // Usar o novo tipo corrigido na migração 016
                 amount: consultation.total_credits,
                 status: 'confirmed',
                 metadata: { consultation_id: consultationId, client_id: consultation.client_id }

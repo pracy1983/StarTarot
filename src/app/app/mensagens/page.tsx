@@ -56,16 +56,17 @@ export default function InboxPage() {
 
             if (iError) console.error('Error fetching inbox:', iError)
 
-            // 2. Buscar consultas
+            // 2. Buscar consultas (não ocultas da inbox)
             const { data: consultationsData, error: cError } = await supabase
                 .from('consultations')
                 .select('*, oracle:profiles!oracle_id(full_name)')
                 .eq('client_id', profile.id)
+                .eq('hidden_inbox', false)
                 .order('created_at', { ascending: false })
 
             if (cError) console.error('Error fetching consultations:', cError)
 
-            // 3. Mesclar dados e evitar duplicidade (se já tiver notificação na inbox)
+            // 3. Mesclar dados e evitar duplicidade
             const inboxIds = new Set(inboxData?.map(m => m.metadata?.consultation_id).filter(Boolean))
 
             const processedConsultations = (consultationsData || [])
@@ -86,7 +87,7 @@ export default function InboxPage() {
                     title: `🔮 Consulta em processamento...`,
                     content: `Sua consulta com ${c.oracle?.full_name || 'Oraculista'} está sendo preparada.`,
                     created_at: c.created_at,
-                    is_read: true, // Pendentes não marcam como unread na bolinha
+                    is_read: true,
                     metadata: { type: 'consultation_pending', consultation_id: c.id }
                 }))
 
@@ -106,9 +107,9 @@ export default function InboxPage() {
 
     const handleMessageClick = async (message: any) => {
         // Redirecionar se for consulta respondida
-        if (message.metadata?.type === 'consultation_answered' && message.metadata?.consultation_id) {
-            // Se for uma mensagem real da inbox (não as virtuais que criamos), marcar como lida
-            if (typeof message.id === 'string' && !message.id.startsWith('cons-') && !message.id.startsWith('pend-')) {
+        if ((message.metadata?.type === 'consultation_answered' || message.metadata?.type === 'consultation_pending') && message.metadata?.consultation_id) {
+            // Se for uma mensagem real da inbox, marcar como lida
+            if (typeof message.id === 'number' || (typeof message.id === 'string' && !message.id.startsWith('cons-') && !message.id.startsWith('pend-'))) {
                 if (!message.is_read) {
                     await supabase
                         .from('inbox_messages')
@@ -118,29 +119,29 @@ export default function InboxPage() {
                     setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m))
                 }
             }
-            router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+            if (message.metadata?.type === 'consultation_answered') {
+                router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+            }
         }
     }
 
     const handleDelete = async (e: React.MouseEvent, message: any) => {
-        e.stopPropagation() // Não abrir a mensagem ao clicar em deletar
+        e.stopPropagation()
 
         const isVirtual = typeof message.id === 'string' && (message.id.startsWith('cons-') || message.id.startsWith('pend-'))
-        const isOwner = profile?.role === 'owner'
+        const consultationId = message.metadata?.consultation_id
 
         try {
-            if (isOwner) {
-                // Owner deleta definitivamente para todos (se for inbox_message)
-                if (!isVirtual) {
-                    await supabase.from('inbox_messages').delete().eq('id', message.id)
-                }
-                // Se for consulta direto, talvez precise deletar a consulta ou marcar? 
-                // Por agora, deletamos apenas a entrada da inbox
+            if (isVirtual && consultationId) {
+                // Para mensagens virtuais (consultas), marcamos como hidden_inbox
+                const { error } = await supabase
+                    .from('consultations')
+                    .update({ hidden_inbox: true })
+                    .eq('id', consultationId)
+                if (error) throw error
             } else {
-                // Cliente apenas "esconde" (soft delete)
-                if (!isVirtual) {
-                    await supabase.from('inbox_messages').update({ is_deleted: true }).eq('id', message.id)
-                }
+                // Para mensagens reais da inbox table
+                await supabase.from('inbox_messages').update({ is_deleted: true }).eq('id', message.id)
             }
 
             setMessages(prev => prev.filter(m => m.id !== message.id))

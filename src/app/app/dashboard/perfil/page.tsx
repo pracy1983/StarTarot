@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -20,6 +20,7 @@ export default function OracleProfilePage() {
         bio: '',
         specialty: '',
         personality: '',
+        price_brl_per_minute: 5.00,
         requires_birthdate: false,
         requires_birthtime: false
     })
@@ -37,25 +38,37 @@ export default function OracleProfilePage() {
                 bio: profile.bio || '',
                 specialty: profile.specialty || '',
                 personality: profile.personality || '',
+                price_brl_per_minute: profile.price_brl_per_minute || 5.00,
                 requires_birthdate: profile.requires_birthdate || false,
                 requires_birthtime: profile.requires_birthtime || false
             })
         }
     }, [profile])
 
+    const handlePriceChange = (value: string) => {
+        const val = parseFloat(value) || 0
+        setFormData(prev => ({ ...prev, price_brl_per_minute: val }))
+    }
+
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
         setSaving(true)
 
         try {
+            // No banco guardamos o preco_brl_per_minute e atualizamos credits_per_minute (coins)
+            const credits_per_minute = Math.round(formData.price_brl_per_minute * 10)
+
             const { error } = await supabase
                 .from('profiles')
-                .update(formData)
+                .update({
+                    ...formData,
+                    credits_per_minute
+                })
                 .eq('id', profile!.id)
 
             if (error) throw error
 
-            setProfile({ ...profile!, ...formData })
+            setProfile({ ...profile!, ...formData, credits_per_minute })
             toast.success('Perfil de oraculista atualizado!')
         } catch (err: any) {
             console.error('Error updating profile:', err)
@@ -70,7 +83,7 @@ export default function OracleProfilePage() {
     }
 
     return (
-        <div className="max-w-5xl mx-auto space-y-10">
+        <div className="max-w-5xl mx-auto space-y-10 pb-20">
             <header className="flex items-center justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2">Editor de <span className="neon-text-purple">Perfil Profissional</span></h1>
@@ -82,7 +95,7 @@ export default function OracleProfilePage() {
             </header>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Avatar & Requirements */}
+                {/* Avatar & Financials */}
                 <div className="space-y-6">
                     <GlassCard className="text-center p-8 border-white/5">
                         <div className="relative inline-block mb-4">
@@ -102,6 +115,45 @@ export default function OracleProfilePage() {
                         <h2 className="text-xl font-bold text-white">{profile?.full_name}</h2>
                         <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-neon-gold uppercase tracking-wider">
                             <Star size={10} className="mr-1 fill-neon-gold" /> Oraculista
+                        </div>
+                    </GlassCard>
+
+                    {/* Preço e Conversão */}
+                    <GlassCard className="border-white/5" glowColor="gold">
+                        <div className="flex items-center space-x-2 text-neon-gold mb-4">
+                            <CreditCard size={18} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Sua Tarifa</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 ml-1 italic">
+                                    Quanto você deseja ganhar por minuto?
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.10"
+                                        value={formData.price_brl_per_minute}
+                                        onChange={(e) => handlePriceChange(e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-gold/50"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-neon-gold/5 rounded-xl border border-neon-gold/20">
+                                <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Custo para o Usuário Final</p>
+                                <div className="flex items-end space-x-2">
+                                    <p className="text-2xl font-black text-white">
+                                        {Math.round(formData.price_brl_per_minute * 10)}
+                                    </p>
+                                    <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Coins / minuto</p>
+                                </div>
+                                <p className="text-[9px] text-slate-600 mt-2">
+                                    * O sistema converte automaticamente R$ 1,00 para 10 Moedas.
+                                </p>
+                            </div>
                         </div>
                     </GlassCard>
 

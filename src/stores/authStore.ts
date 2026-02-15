@@ -27,6 +27,7 @@ interface Profile {
   requires_birthdate?: boolean
   requires_birthtime?: boolean
   is_online?: boolean
+  is_oracle?: boolean
   // Billing
   cpf?: string | null
   zip_code?: string | null
@@ -37,6 +38,9 @@ interface Profile {
   city?: string | null
   state?: string | null
   country?: string | null
+  price_brl_per_minute?: number
+  credits_per_minute?: number
+  metadata?: any
 }
 
 interface AuthState {

@@ -92,8 +92,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
 
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Dropdown de Visões (Apenas para Owner) */}
-                    {profile?.role === 'owner' && <RoleSwitcher />}
+                    {/* Dropdown de Visões (Apenas para Oráculo ou Owner) */}
+                    {(profile?.role === 'owner' || profile?.role === 'oracle' || profile?.is_oracle) && <RoleSwitcher />}
 
                     <div className="hidden sm:flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">

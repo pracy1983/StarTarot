@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { Crown, User, Sparkles, ChevronDown } from 'lucide-react'
+import { useAuthStore } from '@/stores/authStore'
 
 const views = [
     { id: 'owner', label: 'Painel Owner', icon: <Crown size={14} />, href: '/admin', color: 'text-neon-gold' },
@@ -11,10 +12,19 @@ const views = [
 ]
 
 export function RoleSwitcher() {
+    const { profile } = useAuthStore()
     const [open, setOpen] = useState(false)
     const router = useRouter()
     const pathname = usePathname()
     const ref = useRef<HTMLDivElement>(null)
+
+    // Filtrar visões baseadas no papel do usuário
+    const availableViews = views.filter(v => {
+        if (profile?.role === 'owner') return true // Owner vê tudo
+        if (v.id === 'client') return true // Todos vêm visão cliente
+        if (v.id === 'oracle' && (profile?.role === 'oracle' || profile?.is_oracle)) return true
+        return false
+    })
 
     // Detectar visão atual
     const current = pathname.startsWith('/admin') ? 'owner'
@@ -32,6 +42,8 @@ export function RoleSwitcher() {
         return () => document.removeEventListener('mousedown', handler)
     }, [])
 
+    if (availableViews.length <= 1) return null
+
     return (
         <div ref={ref} className="relative">
             <button
@@ -45,7 +57,7 @@ export function RoleSwitcher() {
 
             {open && (
                 <div className="absolute top-full right-0 mt-2 w-48 bg-[#12122a] border border-white/10 rounded-xl overflow-hidden shadow-2xl z-50">
-                    {views.map((v) => (
+                    {availableViews.map((v) => (
                         <button
                             key={v.id}
                             onClick={() => {
