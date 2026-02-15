@@ -9,6 +9,7 @@ import { GlowInput } from '@/components/ui/GlowInput'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck } from 'lucide-react'
 import { whatsappService } from '@/lib/whatsapp'
+import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 const countryCodes = [
@@ -62,10 +63,28 @@ export default function LoginPage() {
 
     try {
       const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
+
+      // 1. Verificação de duplicidade antes de enviar o código
+      const { data: existingUser, error: checkError } = await supabase
+        .from('profiles')
+        .select('id, email, phone')
+        .or(`email.eq.${email.trim().toLowerCase()},phone.eq.${fullPhone}`)
+        .maybeSingle()
+
+      if (existingUser) {
+        if (existingUser.email === email.trim().toLowerCase()) {
+          setError('Este e-mail já está em uso.')
+        } else {
+          setError('Este número de WhatsApp já está cadastrado.')
+        }
+        setFormLoading(false)
+        return
+      }
+
       const code = generateOtp()
       setGeneratedOtp(code)
 
-      // Envia via WhatsApp
+      // 2. Envia via WhatsApp
       const success = await whatsappService.sendTextMessage({
         phone: fullPhone,
         message: `✨ *Star Tarot* \n\nSeu código de verificação é: *${code}*\n\nNão compartilhe este código com ninguém.`
