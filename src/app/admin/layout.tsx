@@ -57,12 +57,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             {/* Sidebar */}
             <aside className="w-64 glass border-r border-white/5 flex flex-col z-20">
                 <div className="p-8">
-                    <div className="flex items-center space-x-3 mb-10">
+                    <div className="flex items-center space-x-3 mb-10 cursor-pointer" onClick={() => router.push('/admin')}>
                         <div className="w-8 h-8 relative">
-                            <div className="absolute inset-0 bg-neon-purple blur-md opacity-30" />
+                            <div className="absolute inset-0 bg-neon-gold blur-md opacity-30 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-pulse" />
                             <img src="/logo.png" alt="Star Tarot" className="relative z-10 w-full" />
                         </div>
-                        <span className="text-xl font-bold tracking-tighter text-white">Owner <span className="text-neon-purple">Star</span></span>
+                        <span className="text-xl font-bold tracking-tighter text-white">Owner <span className="text-neon-gold">Star</span></span>
                     </div>
 
                     <nav className="space-y-1">
@@ -72,7 +72,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                                 onClick={() => router.push(item.href)}
                                 className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                             >
-                                <span className="group-hover:text-neon-purple transition-colors">{item.icon}</span>
+                                <span className="group-hover:text-neon-gold transition-colors">{item.icon}</span>
                                 <span className="text-sm font-medium">{item.label}</span>
                             </button>
                         ))}
@@ -80,10 +80,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 </div>
 
                 <div className="mt-auto p-8 border-t border-white/5">
-                    <div className="flex items-center space-x-3 mb-6 p-2 rounded-xl bg-white/5">
-                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-purple to-neon-cyan p-0.5">
+                    <div className="flex items-center space-x-3 mb-6 p-2 rounded-xl bg-white/5 border border-white/5">
+                        <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-gold to-neon-purple p-0.5 shadow-[0_0_10px_rgba(251,191,36,0.2)]">
                             <div className="w-full h-full rounded-full bg-deep-space flex items-center justify-center overflow-hidden">
-                                <img src={profile?.avatar_url || 'https://ui-avatars.com/api/?name=Owner'} alt="Admin" />
+                                <img src={profile?.avatar_url || 'https://ui-avatars.com/api/?name=Owner&background=0a0a1a&color=fbbf24'} alt="Admin" />
                             </div>
                         </div>
                         <div className="flex-1 min-w-0">

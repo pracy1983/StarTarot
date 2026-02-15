@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Search, Filter, Download, Eye, Sparkles, Calendar } from 'lucide-react'
+import { Search, Filter, Download, Eye, Sparkles, Calendar, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -66,6 +66,25 @@ export default function AdminConsultationsPage() {
 
         setModalQuestions(questions || [])
         setSelectedConsultation(consultation)
+    }
+
+    const handleDeleteConsultation = async (id: string) => {
+        if (!confirm('Tem certeza que deseja excluir esta consulta permanentemente? Esta ação não pode ser desfeita.')) return
+
+        try {
+            const { error } = await supabase
+                .from('consultations')
+                .delete()
+                .eq('id', id)
+
+            if (error) throw error
+
+            setConsultations(prev => prev.filter(c => c.id !== id))
+            toast.success('Consulta excluída com sucesso!')
+        } catch (err) {
+            console.error('Error deleting consultation:', err)
+            toast.error('Erro ao excluir consulta')
+        }
     }
 
     const handleExportCSV = () => {
@@ -245,8 +264,8 @@ export default function AdminConsultationsPage() {
                                         <td className="px-6 py-4 text-sm text-white">{c.oracle.full_name}</td>
                                         <td className="px-6 py-4">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${c.oracle.is_ai || c.oracle.oracle_type === 'ai'
-                                                    ? 'bg-neon-purple/10 text-neon-purple'
-                                                    : 'bg-neon-cyan/10 text-neon-cyan'
+                                                ? 'bg-neon-purple/10 text-neon-purple'
+                                                : 'bg-neon-cyan/10 text-neon-cyan'
                                                 }`}>
                                                 {c.oracle.is_ai || c.oracle.oracle_type === 'ai' ? 'IA' : 'Humano'}
                                             </span>
@@ -260,8 +279,8 @@ export default function AdminConsultationsPage() {
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${c.status === 'answered' ? 'bg-green-500/10 text-green-400' :
-                                                    c.status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
-                                                        'bg-slate-500/10 text-slate-400'
+                                                c.status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
+                                                    'bg-slate-500/10 text-slate-400'
                                                 }`}>
                                                 {c.status === 'answered' ? '✓ Respondida' : c.status === 'processing' ? '⏳ Processando' : '⏸ Pendente'}
                                             </span>
@@ -276,6 +295,13 @@ export default function AdminConsultationsPage() {
                                                 title="Ver detalhes"
                                             >
                                                 <Eye size={16} />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteConsultation(c.id)}
+                                                className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1"
+                                                title="Excluir permanentemente"
+                                            >
+                                                <Trash2 size={16} />
                                             </button>
                                         </td>
                                     </tr>

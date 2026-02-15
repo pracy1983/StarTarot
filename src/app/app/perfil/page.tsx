@@ -5,14 +5,49 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Wallet, Phone } from 'lucide-react'
+import { User, Mail, Camera, Wallet, Phone, Calendar, Clock, MapPin, FileText } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 export default function PerfilPage() {
     const { profile, setProfile } = useAuthStore()
-    const [phone, setPhone] = useState(profile?.phone || '')
     const [saving, setSaving] = useState(false)
+    const [formData, setFormData] = useState({
+        phone: profile?.phone || '',
+        birth_date: profile?.birth_date || '',
+        birth_time: profile?.birth_time || '',
+        birth_place: profile?.birth_place || '',
+        cpf: profile?.cpf || '',
+        zip_code: profile?.zip_code || '',
+        address: profile?.address || '',
+        address_number: profile?.address_number || '',
+        address_complement: profile?.address_complement || '',
+        neighborhood: profile?.neighborhood || '',
+        city: profile?.city || '',
+        state: profile?.state || ''
+    })
+
+    const handleCepLookup = async (cep: string) => {
+        const cleanCep = cep.replace(/\D/g, '')
+        if (cleanCep.length === 8) {
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`)
+                const data = await res.json()
+                if (!data.erro) {
+                    setFormData(prev => ({
+                        ...prev,
+                        zip_code: cep,
+                        address: data.logradouro,
+                        neighborhood: data.bairro,
+                        city: data.localidade,
+                        state: data.uf
+                    }))
+                }
+            } catch (err) {
+                console.error('Error lookup CEP:', err)
+            }
+        }
+    }
 
     const handleSave = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -21,12 +56,12 @@ export default function PerfilPage() {
         try {
             const { error } = await supabase
                 .from('profiles')
-                .update({ phone })
+                .update(formData)
                 .eq('id', profile!.id)
 
             if (error) throw error
 
-            setProfile({ ...profile!, phone })
+            setProfile({ ...profile!, ...formData })
             toast.success('Perfil atualizado com sucesso!')
         } catch (err: any) {
             console.error('Error updating profile:', err)
@@ -91,10 +126,101 @@ export default function PerfilPage() {
                             <GlowInput
                                 label="WhatsApp (para notificações)"
                                 icon={<Phone size={18} />}
-                                value={phone}
-                                onChange={(e) => setPhone(e.target.value)}
+                                value={formData.phone}
+                                onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                                 placeholder="(11) 98765-4321"
                             />
+
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                                <GlowInput
+                                    label="Data de Nascimento"
+                                    type="date"
+                                    icon={<Calendar size={18} />}
+                                    value={formData.birth_date}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, birth_date: e.target.value }))}
+                                />
+                                <GlowInput
+                                    label="Hora"
+                                    type="time"
+                                    icon={<Clock size={18} />}
+                                    value={formData.birth_time}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, birth_time: e.target.value }))}
+                                />
+                                <GlowInput
+                                    label="Local de Nascimento"
+                                    placeholder="Cidade, Estado"
+                                    icon={<MapPin size={18} />}
+                                    value={formData.birth_place}
+                                    onChange={(e) => setFormData(prev => ({ ...prev, birth_place: e.target.value }))}
+                                />
+                            </div>
+
+                            <div className="space-y-6 pt-4 border-t border-white/5">
+                                <h3 className="text-sm font-bold text-neon-gold flex items-center">
+                                    <FileText size={16} className="mr-2" />
+                                    DADOS DE FATURAMENTO
+                                </h3>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GlowInput
+                                        label="CPF"
+                                        placeholder="000.000.000-00"
+                                        value={formData.cpf}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, cpf: e.target.value }))}
+                                    />
+                                    <GlowInput
+                                        label="CEP"
+                                        placeholder="00000-000"
+                                        value={formData.zip_code}
+                                        onChange={(e) => {
+                                            const val = e.target.value
+                                            setFormData(prev => ({ ...prev, zip_code: val }))
+                                            if (val.length === 8 || val.length === 9) handleCepLookup(val)
+                                        }}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                    <div className="md:col-span-2">
+                                        <GlowInput
+                                            label="Endereço"
+                                            value={formData.address}
+                                            onChange={(e) => setFormData(prev => ({ ...prev, address: e.target.value }))}
+                                        />
+                                    </div>
+                                    <GlowInput
+                                        label="Número"
+                                        value={formData.address_number}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, address_number: e.target.value }))}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GlowInput
+                                        label="Bairro"
+                                        value={formData.neighborhood}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, neighborhood: e.target.value }))}
+                                    />
+                                    <GlowInput
+                                        label="Complemento"
+                                        value={formData.address_complement}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, address_complement: e.target.value }))}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GlowInput
+                                        label="Cidade"
+                                        value={formData.city}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, city: e.target.value }))}
+                                    />
+                                    <GlowInput
+                                        label="Estado (UF)"
+                                        value={formData.state}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, state: e.target.value }))}
+                                    />
+                                </div>
+                            </div>
 
                             <div className="pt-4 border-t border-white/5">
                                 <NeonButton loading={saving} type="submit">Salvar Alterações</NeonButton>

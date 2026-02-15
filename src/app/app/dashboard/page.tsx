@@ -39,31 +39,35 @@ export default function OracleDashboard() {
 
     const fetchStats = async () => {
         try {
-            // 1. Ganhos Totais (Transações do tipo 'consultation_fee' para o oráculo)
-            // Nota: Isso depende da estrutura exata da tabela de transações
-            const { data: earnings } = await supabase
+            // 1. Ganhos Totais
+            const { data: earnings, error: eError } = await supabase
                 .from('transactions')
                 .select('amount')
                 .eq('user_id', profile!.id)
-                .eq('type', 'earnings') // Ensure 'earnings' is in enum
+                .eq('type', 'earnings')
 
-            // Fallback for earnings logic if 'earnings' type not used yet
+            if (eError) console.warn('Earnings fetch issue (likely migration pending):', eError)
+
             const total = earnings?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
 
             // 2. Consultas concluídas
-            const { count: completed } = await supabase
+            const { count: completed, error: cError } = await supabase
                 .from('consultations')
                 .select('*', { count: 'exact', head: true })
                 .eq('oracle_id', profile!.id)
                 .in('status', ['answered', 'completed'])
 
+            if (cError) console.warn('Consultations fetch issue:', cError)
+
             // 3. Média de Avaliações
-            const { data: ratings } = await supabase
+            const { data: ratings, error: rError } = await supabase
                 .from('ratings')
                 .select('stars')
                 .eq('oracle_id', profile!.id)
 
-            const avg = ratings?.length
+            if (rError) console.warn('Ratings fetch issue (likely migration pending):', rError)
+
+            const avg = ratings && ratings.length > 0
                 ? ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length
                 : 0
 
@@ -71,7 +75,7 @@ export default function OracleDashboard() {
                 totalEarnings: total,
                 completedConsultations: completed || 0,
                 averageRating: Number(avg.toFixed(1)),
-                totalHours: 0 // Placeholder por enquanto
+                totalHours: 0
             })
         } catch (err) {
             console.error('Error fetching stats:', err)
