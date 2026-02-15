@@ -13,6 +13,11 @@ interface Profile {
   specialty: string | null
   credits?: number
   phone?: string | null
+  video_enabled?: boolean
+  message_enabled?: boolean
+  initial_fee?: number
+  application_status?: 'pending' | 'approved' | 'rejected' | 'waitlist'
+  rejection_reason?: string | null
 }
 
 interface AuthState {
@@ -21,6 +26,7 @@ interface AuthState {
   isLoading: boolean
   checkAuth: () => Promise<void>
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
+  signUp: (email: string, password: string, full_name: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   setProfile: (profile: Profile) => void
 }
@@ -115,6 +121,34 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch (error: any) {
       console.error('Erro detalhado no login:', error)
       return { success: false, error: error.message || 'Credenciais inválidas' }
+    }
+  },
+
+  signUp: async (email: string, password: string, full_name: string, role: UserRole = 'client') => {
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name,
+            role
+          }
+        }
+      })
+
+      if (error) throw error
+
+      if (data.user) {
+        // O trigger handle_new_auth_user no Postgres cuidará de criar o perfil
+        // Mas podemos forçar o login ou informar ao usuário para checar e-mail (se confirmação ativa)
+        // Por padrão, vamos tentar logar ou assumir sucesso.
+        return { success: true }
+      }
+      return { success: false, error: 'Ocorreu um erro ao criar a conta.' }
+    } catch (error: any) {
+      console.error('Erro no signUp:', error)
+      return { success: false, error: error.message || 'Erro ao criar conta' }
     }
   },
 

@@ -8,14 +8,17 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { motion } from 'framer-motion'
-import { Mail, Lock, Sparkles } from 'lucide-react'
+import { Mail, Lock, Sparkles, User, ArrowLeft } from 'lucide-react'
 
 export default function LoginPage() {
   const router = useRouter()
-  const { login, isAuthenticated, isLoading, checkAuth, profile } = useAuthStore()
+  const { login, signUp, isAuthenticated, isLoading, checkAuth, profile } = useAuthStore()
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [fullName, setFullName] = useState('')
+  const [isRegistering, setIsRegistering] = useState(false)
+  const [registrationRole, setRegistrationRole] = useState<'client' | 'oracle'>('client')
   const [error, setError] = useState('')
   const [formLoading, setFormLoading] = useState(false)
 
@@ -24,59 +27,44 @@ export default function LoginPage() {
   }, [checkAuth])
 
   useEffect(() => {
-    // DESATIVADO TEMPORARIAMENTE PARA EVITAR O LOOP DE PISCADA
-    /*
     if (!isLoading && isAuthenticated && profile) {
-      console.log('Usuário autenticado detectado. Role:', profile.role)
-      const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
-      if (window.location.pathname === targetPath) return
+      const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/app' : '/app')
       router.push(targetPath)
     }
-    */
   }, [isAuthenticated, isLoading, profile, router])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    console.log('Botão de entrar clicado. Iniciando handleSubmit...')
     setError('')
     setFormLoading(true)
 
     try {
-      console.log('Chamando função login do authStore...', { email })
-      const result = await login(email, password)
-      console.log('Resultado do login:', result)
-
-      if (!result.success) {
-        console.warn('Login falhou:', result.error)
-        setError(result.error || 'Erro ao fazer login')
-      } else {
-        console.log('Login com sucesso! Forçando redirecionamento...')
-        // Força redirecionamento manual caso o useEffect falhe
-        // Pequeno delay para garantir que o estado atualizou, mas vamos confiar no router direto aqui também se possível
-        // Mas como role vem do profile que é async, talvez não tenhamos o profile atualizado AQUI Imediatamente.
-        // Vamos tentar ler do store direto ou apenas confiar no reload.
-
-        // Melhor estratégia: recarregar a página ou forçar checkAuth se necessário.
-        // Mas vamos deixar o useEffect fazer o trabalho, se ele não rodar, algo está bloqueando a renderização.
-
-        // Vamos tentar um push direto para /app como fallback se não for owner, mas é arriscado sem saber a role.
-        // Vamos esperar o useEffect.
-        if (profile) {
-          console.log('Login realizado com sucesso no banco. Perfil:', profile.role)
-          const targetPath = profile.role === 'owner' ? '/admin' : (profile.role === 'oracle' ? '/oracle' : '/app')
-          router.push(targetPath)
+      if (isRegistering) {
+        const result = await signUp(email, password, fullName, registrationRole)
+        if (!result.success) {
+          setError(result.error || 'Erro ao criar conta')
         } else {
-          // Fallback if profile is not immediately available after successful login
-          // This might happen if the profile fetch is still in progress.
-          // In this case, we can push to a default path and let useEffect handle the final redirect.
+          // Após registro, tentar login automático ou informar sucesso
+          const loginResult = await login(email, password)
+          if (loginResult.success) {
+            router.push('/app')
+          } else {
+            setError('Conta criada! Por favor, faça login.')
+            setIsRegistering(false)
+          }
+        }
+      } else {
+        const result = await login(email, password)
+        if (!result.success) {
+          setError(result.error || 'Erro ao fazer login')
+        } else {
           router.push('/app')
         }
       }
     } catch (err) {
-      console.error('Erro não tratado no handleSubmit:', err)
+      console.error('Erro no handleSubmit:', err)
       setError('Ocorreu um erro inesperado')
     } finally {
-      console.log('Finalizando handleSubmit (setFormLoading false)')
       setFormLoading(false)
     }
   }
@@ -102,6 +90,23 @@ export default function LoginPage() {
       <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-neon-purple/20 blur-[120px] rounded-full" />
       <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-neon-cyan/20 blur-[120px] rounded-full" />
 
+      {/* Link para Oraculista */}
+      <div className="absolute top-6 right-6 z-20">
+        <button
+          onClick={() => {
+            setIsRegistering(true)
+            setRegistrationRole('oracle')
+            setFullName('')
+            setEmail('')
+            setPassword('')
+          }}
+          className="text-xs font-bold text-slate-400 hover:text-neon-purple transition-all flex items-center bg-white/5 border border-white/10 px-4 py-2 rounded-full backdrop-blur-md"
+        >
+          <Sparkles size={14} className="mr-2 text-neon-gold" />
+          Seja um oraculista StarTarot
+        </button>
+      </div>
+
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -125,11 +130,27 @@ export default function LoginPage() {
             <span className="text-white">Star</span>
             <span className="neon-text-purple ml-2">Tarot</span>
           </h1>
-          <p className="text-slate-400 font-medium">O universo tem algo a lhe dizer.</p>
+          <p className="text-slate-400 font-medium">
+            {isRegistering
+              ? (registrationRole === 'oracle' ? 'Inicie sua jornada como guia espiritual.' : 'Crie sua conta para receber orientação.')
+              : 'O universo tem algo a lhe dizer.'}
+          </p>
         </div>
 
-        <GlassCard glowColor="purple">
+        <GlassCard glowColor={registrationRole === 'oracle' ? 'gold' : 'purple'}>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {isRegistering && (
+              <GlowInput
+                label="Nome Completo"
+                type="text"
+                placeholder="Seu nome"
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                icon={<User size={18} />}
+                required
+              />
+            )}
+
             <GlowInput
               label="E-mail"
               type="email"
@@ -162,23 +183,42 @@ export default function LoginPage() {
 
             <NeonButton
               type="submit"
-              variant="purple"
+              variant={registrationRole === 'oracle' ? 'gold' : 'purple'}
               fullWidth
               loading={formLoading}
               size="lg"
             >
-              Entrar no Portal
+              {isRegistering ? 'Criar minha conta' : 'Entrar no Portal'}
             </NeonButton>
           </form>
 
           <div className="mt-8 flex flex-col space-y-4 text-center">
-            <button className="text-sm text-slate-400 hover:text-neon-cyan transition-colors">
-              Esqueceu sua chave de acesso?
-            </button>
-            <div className="h-px bg-white/10 w-full" />
-            <p className="text-sm text-slate-500">
-              Novo no templo? <button className="text-neon-gold hover:underline">Iniciar jornada</button>
-            </p>
+            {isRegistering ? (
+              <button
+                onClick={() => setIsRegistering(false)}
+                className="text-sm text-slate-400 hover:text-white flex items-center justify-center"
+              >
+                <ArrowLeft size={14} className="mr-2" /> Já tenho uma conta
+              </button>
+            ) : (
+              <>
+                <button className="text-sm text-slate-400 hover:text-neon-cyan transition-colors">
+                  Esqueceu sua chave de acesso?
+                </button>
+                <div className="h-px bg-white/10 w-full" />
+                <p className="text-sm text-slate-500">
+                  Novo no templo? <button
+                    onClick={() => {
+                      setIsRegistering(true)
+                      setRegistrationRole('client')
+                    }}
+                    className="text-neon-gold hover:underline"
+                  >
+                    Iniciar jornada
+                  </button>
+                </p>
+              </>
+            )}
           </div>
         </GlassCard>
       </motion.div>

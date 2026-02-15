@@ -4,19 +4,33 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare } from 'lucide-react'
+import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare, Star, Heart, Award } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
-import { motion } from 'framer-motion'
+import { useAuthStore } from '@/stores/authStore'
+import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
+
+const REWARD_STARS = 5
+const REWARD_TESTIMONIAL = 15
+const MIN_WORDS_FOR_REWARD = 10
 
 export default function ConsultationResponsePage() {
     const { id } = useParams()
     const router = useRouter()
+    const { profile, setProfile } = useAuthStore()
 
     const [consultation, setConsultation] = useState<any>(null)
     const [oracle, setOracle] = useState<any>(null)
     const [questions, setQuestions] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+
+    // Rating State
+    const [stars, setStars] = useState(0)
+    const [hoverStars, setHoverStars] = useState(0)
+    const [testimonial, setTestimonial] = useState('')
+    const [isSubmittingRating, setIsSubmittingRating] = useState(false)
+    const [hasRated, setHasRated] = useState(false)
+    const [showRatingPrompt, setShowRatingPrompt] = useState(false)
 
     useEffect(() => {
         if (id) fetchConsultation()
@@ -53,6 +67,91 @@ export default function ConsultationResponsePage() {
             toast.error('Erro ao carregar consulta: ' + err.message)
         } finally {
             setLoading(false)
+        }
+    }
+
+    const checkExistingRating = async () => {
+        const { data } = await supabase
+            .from('ratings')
+            .select('*')
+            .eq('consultation_id', id)
+            .single()
+
+        if (data) {
+            setStars(data.stars)
+            setTestimonial(data.testimonial)
+            setHasRated(true)
+        }
+    }
+
+    useEffect(() => {
+        if (consultation) {
+            checkExistingRating()
+        }
+    }, [consultation])
+
+    // "Don't leave" guard
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (!hasRated && stars === 0) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [hasRated, stars])
+
+    const handleRatingSubmit = async () => {
+        if (stars === 0) {
+            toast.error('Por favor, selecione uma nota.')
+            return
+        }
+
+        setIsSubmittingRating(true)
+        try {
+            // 1. Inserir Rating
+            const { error: ratingError } = await supabase
+                .from('ratings')
+                .insert({
+                    consultation_id: id,
+                    client_id: profile!.id,
+                    oracle_id: oracle.id,
+                    stars,
+                    testimonial
+                })
+
+            if (ratingError) throw ratingError
+
+            // 2. Calcular recompensas
+            let totalReward = REWARD_STARS
+            const words = testimonial.trim().split(/\s+/).filter(w => w.length > 0)
+            if (words.length >= MIN_WORDS_FOR_REWARD) {
+                totalReward += REWARD_TESTIMONIAL
+            }
+
+            // 3. Adicionar Créditos (Reward)
+            const { error: rewardError } = await supabase.rpc('grant_reward_credits', {
+                user_id: profile!.id,
+                amount: totalReward,
+                description: `Recompensa por avaliação da consulta ${id}`
+            })
+
+            if (rewardError) throw rewardError
+
+            // 4. Sucesso!
+            setHasRated(true)
+            setProfile({
+                ...profile!,
+                credits: (profile?.credits || 0) + totalReward
+            })
+
+            toast.success(`Obrigado! Você ganhou ${totalReward} créditos! ✨`)
+        } catch (err: any) {
+            console.error('Error submitting rating:', err)
+            toast.error('Erro ao enviar avaliação')
+        } finally {
+            setIsSubmittingRating(false)
         }
     }
 
@@ -166,6 +265,87 @@ export default function ConsultationResponsePage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Rating Section */}
+            {!hasRated ? (
+                <GlassCard className="border-neon-purple/20 bg-neon-purple/5" hover={false}>
+                    <div className="text-center space-y-6 py-4">
+                        <div className="space-y-2">
+                            <h3 className="text-xl font-bold text-white flex items-center justify-center">
+                                <Heart className="mr-2 text-red-500 fill-red-500" size={20} />
+                                O que achou do atendimento?
+                            </h3>
+                            <p className="text-slate-400 text-sm">
+                                Ganhe até <span className="text-neon-gold font-bold">20 CR</span> avaliando agora!
+                            </p>
+                        </div>
+
+                        {/* Stars */}
+                        <div className="flex justify-center space-x-2">
+                            {[1, 2, 3, 4, 5].map((num) => (
+                                <button
+                                    key={num}
+                                    onMouseEnter={() => setHoverStars(num)}
+                                    onMouseLeave={() => setHoverStars(0)}
+                                    onClick={() => setStars(num)}
+                                    className="transform transition-all active:scale-90"
+                                >
+                                    <Star
+                                        size={40}
+                                        className={`${(hoverStars || stars) >= num
+                                            ? 'text-neon-gold fill-neon-gold'
+                                            : 'text-slate-600'
+                                            } transition-colors`}
+                                    />
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Testimonial */}
+                        <div className="max-w-xl mx-auto space-y-3">
+                            <textarea
+                                value={testimonial}
+                                onChange={(e) => setTestimonial(e.target.value)}
+                                placeholder="Deixe um depoimento sobre sua experiência..."
+                                className="w-full bg-deep-space/50 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:outline-none focus:border-neon-purple/50 transition-colors min-h-[100px]"
+                            />
+
+                            <div className="flex flex-wrap justify-center gap-4 text-xs">
+                                <div className={`flex items-center ${stars > 0 ? 'text-green-400' : 'text-slate-500'}`}>
+                                    <Award size={14} className="mr-1" /> +5 CR pela nota
+                                </div>
+                                <div className={`flex items-center ${testimonial.trim().split(/\s+/).filter(Boolean).length >= MIN_WORDS_FOR_REWARD ? 'text-green-400' : 'text-slate-500'}`}>
+                                    <Award size={14} className="mr-1" /> +15 CR pelo depoimento (&gt;10 palavras)
+                                </div>
+                            </div>
+
+                            <NeonButton
+                                variant="gold"
+                                fullWidth
+                                loading={isSubmittingRating}
+                                onClick={handleRatingSubmit}
+                            >
+                                Enviar e Coletar Recompensa
+                            </NeonButton>
+                        </div>
+                    </div>
+                </GlassCard>
+            ) : (
+                <GlassCard className="border-white/5 bg-white/5" hover={false}>
+                    <div className="text-center py-4 space-y-3">
+                        <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                            <Sparkles className="text-green-400" size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white">Avaliação Enviada!</h3>
+                        <p className="text-slate-400 text-sm italic">"{testimonial}"</p>
+                        <div className="flex justify-center space-x-1">
+                            {[1, 2, 3, 4, 5].map(n => (
+                                <Star key={n} size={16} className={n <= stars ? 'text-neon-gold fill-neon-gold' : 'text-slate-700'} />
+                            ))}
+                        </div>
+                    </div>
+                </GlassCard>
+            )}
 
             {/* Footer */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-6 bg-white/5 border border-white/10 rounded-xl">

@@ -3,10 +3,11 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Inbox, Mail, MailOpen, ExternalLink, Sparkles } from 'lucide-react'
+import { Inbox, Mail, MailOpen, ExternalLink, Sparkles, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
+import toast from 'react-hot-toast'
 
 export default function InboxPage() {
     const { profile } = useAuthStore()
@@ -48,6 +49,7 @@ export default function InboxPage() {
                 .from('inbox_messages')
                 .select('*')
                 .eq('recipient_id', profile!.id)
+                .eq('is_deleted', false)
                 .order('created_at', { ascending: false })
 
             // 2. Buscar consultas para garantir que nada ficou pra trás
@@ -114,6 +116,35 @@ export default function InboxPage() {
         }
     }
 
+    const handleDelete = async (e: React.MouseEvent, message: any) => {
+        e.stopPropagation() // Não abrir a mensagem ao clicar em deletar
+
+        const isVirtual = typeof message.id === 'string' && (message.id.startsWith('cons-') || message.id.startsWith('pend-'))
+        const isOwner = profile?.role === 'owner'
+
+        try {
+            if (isOwner) {
+                // Owner deleta definitivamente para todos (se for inbox_message)
+                if (!isVirtual) {
+                    await supabase.from('inbox_messages').delete().eq('id', message.id)
+                }
+                // Se for consulta direto, talvez precise deletar a consulta ou marcar? 
+                // Por agora, deletamos apenas a entrada da inbox
+            } else {
+                // Cliente apenas "esconde" (soft delete)
+                if (!isVirtual) {
+                    await supabase.from('inbox_messages').update({ is_deleted: true }).eq('id', message.id)
+                }
+            }
+
+            setMessages(prev => prev.filter(m => m.id !== message.id))
+            toast.success('Mensagem removida')
+        } catch (err) {
+            console.error('Error deleting message:', err)
+            toast.error('Erro ao deletar')
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -143,61 +174,74 @@ export default function InboxPage() {
                 </GlassCard>
             ) : (
                 <div className="space-y-3">
-                    {messages.map((msg, idx) => (
-                        <motion.div
-                            key={msg.id}
-                            initial={{ opacity: 0, x: -20 }}
-                            animate={{ opacity: 1, x: 0 }}
-                            transition={{ delay: idx * 0.05 }}
-                        >
-                            <GlassCard
-                                className={`border-white/5 cursor-pointer transition-all ${!msg.is_read ? 'bg-neon-purple/5 border-neon-purple/20' : ''
-                                    }`}
-                                onClick={() => handleMessageClick(msg)}
+                    <AnimatePresence mode="popLayout">
+                        {messages.map((msg, idx) => (
+                            <motion.div
+                                key={msg.id}
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                exit={{ opacity: 0, x: 20 }}
+                                transition={{ delay: idx * 0.05 }}
                             >
-                                <div className="flex items-start space-x-4">
-                                    <div className="flex-shrink-0">
-                                        {msg.metadata?.type === 'consultation_pending' ? (
-                                            <Sparkles size={24} className="text-neon-cyan animate-pulse" />
-                                        ) : msg.is_read ? (
-                                            <MailOpen size={24} className="text-slate-500" />
-                                        ) : (
-                                            <Mail size={24} className="text-neon-purple" />
-                                        )}
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <h3 className={`font-bold ${msg.is_read ? 'text-slate-300' : 'text-white'}`}>
-                                                {msg.title}
-                                            </h3>
-                                            <span className="text-xs text-slate-500">
-                                                {new Date(msg.created_at).toLocaleDateString('pt-BR', {
-                                                    day: '2-digit',
-                                                    month: 'short',
-                                                    hour: '2-digit',
-                                                    minute: '2-digit'
-                                                })}
-                                            </span>
-                                        </div>
-                                        <p className={`text-sm ${msg.is_read ? 'text-slate-500' : 'text-slate-300'} line-clamp-2`}>
-                                            {msg.content}
-                                        </p>
-                                        {msg.metadata?.type === 'consultation_answered' && (
-                                            <div className="flex items-center mt-3 text-xs text-neon-cyan font-medium">
-                                                <ExternalLink size={14} className="mr-1" />
-                                                Clique para ver as respostas
+                                <GlassCard
+                                    className={`border-white/5 cursor-pointer group transition-all ${!msg.is_read ? 'bg-neon-purple/5 border-neon-purple/20' : ''
+                                        }`}
+                                    onClick={() => handleMessageClick(msg)}
+                                >
+                                    <div className="relative">
+                                        <button
+                                            onClick={(e) => handleDelete(e, msg)}
+                                            className="absolute -top-2 -right-2 p-2 rounded-full bg-deep-space border border-white/5 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
+                                            title="Remover"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+
+                                        <div className="flex items-start space-x-4">
+                                            <div className="flex-shrink-0">
+                                                {msg.metadata?.type === 'consultation_pending' ? (
+                                                    <Sparkles size={24} className="text-neon-cyan animate-pulse" />
+                                                ) : msg.is_read ? (
+                                                    <MailOpen size={24} className="text-slate-500" />
+                                                ) : (
+                                                    <Mail size={24} className="text-neon-purple" />
+                                                )}
                                             </div>
-                                        )}
-                                    </div>
-                                    {!msg.is_read && (
-                                        <div className="flex-shrink-0">
-                                            <div className="w-2 h-2 rounded-full bg-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex items-center justify-between mb-2">
+                                                    <h3 className={`font-bold ${msg.is_read ? 'text-slate-300' : 'text-white'}`}>
+                                                        {msg.title}
+                                                    </h3>
+                                                    <span className="text-xs text-slate-500">
+                                                        {new Date(msg.created_at).toLocaleDateString('pt-BR', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </span>
+                                                </div>
+                                                <p className={`text-sm ${msg.is_read ? 'text-slate-500' : 'text-slate-300'} line-clamp-2`}>
+                                                    {msg.content}
+                                                </p>
+                                                {msg.metadata?.type === 'consultation_answered' && (
+                                                    <div className="flex items-center mt-3 text-xs text-neon-cyan font-medium">
+                                                        <ExternalLink size={14} className="mr-1" />
+                                                        Clique para ver as respostas
+                                                    </div>
+                                                )}
+                                            </div>
+                                            {!msg.is_read && (
+                                                <div className="flex-shrink-0">
+                                                    <div className="w-2 h-2 rounded-full bg-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
+                                                </div>
+                                            )}
                                         </div>
-                                    )}
-                                </div>
-                            </GlassCard>
-                        </motion.div>
-                    ))}
+                                    </div>
+                                </GlassCard>
+                            </motion.div>
+                        ))}
+                    </AnimatePresence>
                 </div>
             )}
         </div>
