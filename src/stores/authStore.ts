@@ -141,9 +141,35 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) throw error
 
       if (data.user) {
-        // O trigger handle_new_auth_user no Postgres cuidará de criar o perfil
-        // Mas podemos forçar o login ou informar ao usuário para checar e-mail (se confirmação ativa)
-        // Por padrão, vamos tentar logar ou assumir sucesso.
+        // Tenta buscar o perfil para garantir que foi criado
+        // Se a trigger falhar por algum motivo, podemos tentar criar manualmente aqui como fallback
+        // Mas a trigger é o método preferido.
+
+        // Aguarda um momento para a trigger rodar
+        await new Promise(resolve => setTimeout(resolve, 1000));
+
+        // Tenta fazer login automático
+        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
+        if (!loginError) {
+          // Verifica se o perfil existe
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('id')
+            .eq('id', data.user.id)
+            .single()
+
+          if (!profile) {
+            // Trigger falhou, tenta criar manualmente
+            await supabase.from('profiles').insert({
+              id: data.user.id,
+              email,
+              full_name,
+              role,
+              phone
+            })
+          }
+        }
+
         return { success: true }
       }
       return { success: false, error: 'Ocorreu um erro ao criar a conta.' }
