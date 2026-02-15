@@ -41,12 +41,12 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data: { session } } = await supabase.auth.getSession()
 
       if (session?.user) {
-        // Buscamos o perfil sem o join primeiro para ver se o erro 500 persiste
+        // Usamos maybeSingle() para evitar erro 406/PGRST116 se o perfil não existir
         const { data: profile, error } = await supabase
           .from('profiles')
           .select('*')
           .eq('id', session.user.id)
-          .single()
+          .maybeSingle()
 
         if (error) {
           console.error('Erro ao buscar perfil (checkAuth):', error)
@@ -55,12 +55,11 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
 
         if (profile) {
-          // Buscamos a carteira separadamente para evitar erro de join 500
           const { data: wallet } = await supabase
             .from('wallets')
             .select('balance')
             .eq('user_id', profile.id)
-            .single()
+            .maybeSingle()
 
           set({
             profile: {
@@ -71,6 +70,8 @@ export const useAuthStore = create<AuthState>((set) => ({
             isLoading: false
           })
         } else {
+          // Sessão existe mas perfil foi deletado (Sessão órfã)
+          await supabase.auth.signOut()
           set({ profile: null, isAuthenticated: false, isLoading: false })
         }
       } else {
