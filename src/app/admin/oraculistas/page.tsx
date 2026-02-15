@@ -2,11 +2,24 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+
+const StatusBadge = ({ status }: { status?: string }) => {
+    switch (status) {
+        case 'approved':
+            return <span className="text-[10px] bg-green-500/20 text-green-500 border border-green-500/30 px-2 py-0.5 rounded-full font-bold uppercase">Aprovado</span>
+        case 'pending':
+            return <span className="text-[10px] bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">Pendente</span>
+        case 'rejected':
+            return <span className="text-[10px] bg-red-500/20 text-red-500 border border-red-500/30 px-2 py-0.5 rounded-full font-bold uppercase">Rejeitado</span>
+        default:
+            return <span className="text-[10px] bg-slate-500/20 text-slate-500 border border-slate-500/30 px-2 py-0.5 rounded-full font-bold uppercase">N/A</span>
+    }
+}
 
 export default function AdminOraculistasPage() {
     const router = useRouter()
@@ -59,6 +72,26 @@ export default function AdminOraculistasPage() {
         }
     }
 
+    const handleStatusChange = async (id: string, newStatus: string) => {
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({ application_status: newStatus })
+                .eq('id', id)
+
+            if (error) throw error
+
+            setOraculistas(prev => prev.map(o =>
+                o.id === id ? { ...o, application_status: newStatus } : o
+            ))
+
+            toast.success(`Status atualizado para: ${newStatus === 'approved' ? 'Aprovado' : 'Rejeitado'}`)
+        } catch (err: any) {
+            console.error('Erro ao atualizar status:', err)
+            toast.error('Erro ao atualizar status')
+        }
+    }
+
     const filteredOracles = oraculistas.filter(o =>
         o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
@@ -105,7 +138,8 @@ export default function AdminOraculistasPage() {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status App</th>
+                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status Online</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
                             </tr>
                         </thead>
@@ -133,6 +167,9 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4 text-sm text-slate-400">{o.specialty}</td>
                                     <td className="px-6 py-4">
+                                        <StatusBadge status={o.application_status} />
+                                    </td>
+                                    <td className="px-6 py-4">
                                         <div className="flex items-center space-x-1.5">
                                             <div className={`w-1.5 h-1.5 rounded-full ${o.is_online ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
                                             <span className={`text-xs ${o.is_online ? 'text-green-500' : 'text-slate-500'}`}>
@@ -142,8 +179,24 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end space-x-2">
-
-
+                                            {o.application_status === 'pending' && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleStatusChange(o.id, 'approved')}
+                                                        className="p-2 text-green-400 hover:text-green-300 hover:bg-green-400/10 rounded-lg transition-colors"
+                                                        title="Aprovar"
+                                                    >
+                                                        <Check size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleStatusChange(o.id, 'rejected')}
+                                                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
+                                                        title="Rejeitar"
+                                                    >
+                                                        <X size={16} />
+                                                    </button>
+                                                </>
+                                            )}
 
                                             <Link
                                                 href={`/admin/oraculistas/editar/${o.id}`}

@@ -23,6 +23,7 @@ export default function MarketplacePage() {
                 .from('profiles')
                 .select('*')
                 .eq('role', 'oracle')
+                .eq('application_status', 'approved')
                 .order('is_online', { ascending: false })
 
             if (pError) throw pError

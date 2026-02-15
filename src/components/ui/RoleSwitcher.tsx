@@ -7,7 +7,7 @@ import { Crown, User, Sparkles, ChevronDown } from 'lucide-react'
 const views = [
     { id: 'owner', label: 'Painel Owner', icon: <Crown size={14} />, href: '/admin', color: 'text-neon-gold' },
     { id: 'client', label: 'Visão Cliente', icon: <User size={14} />, href: '/app', color: 'text-neon-cyan' },
-    { id: 'oracle', label: 'Visão Oráculo', icon: <Sparkles size={14} />, href: '/oracle', color: 'text-neon-purple' },
+    { id: 'oracle', label: 'Visão do Oraculista', icon: <Sparkles size={14} />, href: '/app/dashboard', color: 'text-neon-purple' },
 ]
 
 export function RoleSwitcher() {
@@ -18,7 +18,7 @@ export function RoleSwitcher() {
 
     // Detectar visão atual
     const current = pathname.startsWith('/admin') ? 'owner'
-        : pathname.startsWith('/oracle') ? 'oracle'
+        : pathname.startsWith('/app/dashboard') || pathname.startsWith('/app/tornar-se-oraculo') ? 'oracle'
             : 'client'
 
     const currentView = views.find(v => v.id === current) || views[0]
@@ -53,8 +53,8 @@ export function RoleSwitcher() {
                                 setOpen(false)
                             }}
                             className={`w-full flex items-center space-x-3 px-4 py-3 text-sm transition-all ${v.id === current
-                                    ? 'bg-white/10 text-white font-bold'
-                                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                                ? 'bg-white/10 text-white font-bold'
+                                : 'text-slate-400 hover:bg-white/5 hover:text-white'
                                 }`}
                         >
                             <span className={v.color}>{v.icon}</span>
