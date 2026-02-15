@@ -24,6 +24,7 @@ interface Profile {
   birth_place?: string | null
   requires_birthdate?: boolean
   requires_birthtime?: boolean
+  is_online?: boolean
   // Billing
   cpf?: string | null
   zip_code?: string | null
