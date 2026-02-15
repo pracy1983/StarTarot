@@ -2,7 +2,7 @@
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL || process.env.NEXT_PUBLIC_EVOLUTION_API_URL || 'https://pracy-evolution-api.vrdrcy.easypanel.host'
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY || process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || '5DDE367613D4-4254-99E6-E393189459E5'
-const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAT'
+const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE || process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAt'
 
 interface SendMessageParams {
     phone: string
