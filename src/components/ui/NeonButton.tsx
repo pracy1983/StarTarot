@@ -39,6 +39,7 @@ export const NeonButton = ({
             whileTap={{ scale: 0.98 }}
             className={`
         relative overflow-hidden border rounded-lg transition-all duration-300 font-medium
+        flex items-center justify-center
         ${variants[variant]}
         ${sizes[size]}
         ${fullWidth ? 'w-full' : ''}

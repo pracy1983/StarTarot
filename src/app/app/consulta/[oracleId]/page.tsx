@@ -20,8 +20,12 @@ export default function NewConsultationPage() {
     const [questions, setQuestions] = useState([''])
     const [subjectName, setSubjectName] = useState('')
     const [subjectBirthdate, setSubjectBirthdate] = useState('')
+    const [subjectBirthtime, setSubjectBirthtime] = useState('')
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
+
+    const isAstroOrNum = oracle?.specialty?.toLowerCase().includes('astrologia') ||
+        oracle?.specialty?.toLowerCase().includes('numerologia')
 
     useEffect(() => {
         if (oracleId && profile?.id) {
@@ -65,6 +69,17 @@ export default function NewConsultationPage() {
             return
         }
 
+        if (isAstroOrNum) {
+            if (!subjectName.trim()) {
+                toast.error('Nome completo é obrigatório para esta consulta')
+                return
+            }
+            if (!subjectBirthdate) {
+                toast.error('Data de nascimento é obrigatória para esta consulta')
+                return
+            }
+        }
+
         const pricePerQuestion = oracle?.price_per_message || 10
         const totalCost = validQuestions.length * pricePerQuestion
 
@@ -87,6 +102,7 @@ export default function NewConsultationPage() {
                     total_credits: totalCost,
                     subject_name: subjectName || null,
                     subject_birthdate: subjectBirthdate || null,
+                    metadata: subjectBirthtime ? { birth_time: subjectBirthtime } : null,
                     status: 'pending'
                 })
                 .select()
@@ -192,8 +208,11 @@ export default function NewConsultationPage() {
                     <SubjectInfo
                         subjectName={subjectName}
                         subjectBirthdate={subjectBirthdate}
+                        subjectBirthtime={subjectBirthtime}
                         onNameChange={setSubjectName}
                         onBirthdateChange={setSubjectBirthdate}
+                        onBirthtimeChange={setSubjectBirthtime}
+                        isMandatory={isAstroOrNum}
                     />
 
                     <QuestionInput
@@ -226,10 +245,10 @@ export default function NewConsultationPage() {
                                 onClick={handleSubmit}
                                 loading={submitting}
                                 disabled={questions.filter(q => q.trim()).length === 0}
-                                className="text-base font-bold"
+                                className="text-base font-bold py-4 gap-3"
                             >
-                                <Send size={20} className="mr-2" />
-                                Enviar Consulta
+                                <Send size={20} />
+                                <span>Enviar Consulta</span>
                             </NeonButton>
                         </div>
                     </div>
