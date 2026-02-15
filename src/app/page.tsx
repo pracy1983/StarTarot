@@ -267,13 +267,23 @@ export default function LoginPage() {
                 Confirmar e Entrar
               </NeonButton>
 
-              <button
-                type="button"
-                onClick={() => setShowOtpScreen(false)}
-                className="w-full text-sm text-slate-500 hover:text-white transition-colors"
-              >
-                Alterar número de telefone
-              </button>
+              <div className="flex flex-col gap-3">
+                <button
+                  type="button"
+                  onClick={handleStartRegister}
+                  className="text-xs text-slate-400 hover:text-neon-cyan transition-colors"
+                >
+                  Não recebeu? <span className="font-bold">Reenviar código</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowOtpScreen(false)}
+                  className="text-xs text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-1"
+                >
+                  <ArrowLeft size={12} /> Digitei o número errado
+                </button>
+              </div>
             </form>
           ) : isRegistering ? (
             <form onSubmit={handleStartRegister} className="space-y-4">
