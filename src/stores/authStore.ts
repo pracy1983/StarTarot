@@ -141,33 +141,37 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (error) throw error
 
       if (data.user) {
-        // Tenta buscar o perfil para garantir que foi criado
-        // Se a trigger falhar por algum motivo, podemos tentar criar manualmente aqui como fallback
-        // Mas a trigger é o método preferido.
+        // 1. Aguarda um momento para a trigger rodar
+        await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // Aguarda um momento para a trigger rodar
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // 2. Verifica se o perfil foi criado pela trigger
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('id')
+          .eq('id', data.user.id)
+          .maybeSingle()
 
-        // Tenta fazer login automático
-        const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-        if (!loginError) {
-          // Verifica se o perfil existe
-          const { data: profile } = await supabase
-            .from('profiles')
-            .select('id')
-            .eq('id', data.user.id)
-            .single()
+        if (!profile) {
+          console.log('Trigger delayed or failed, creating profile manually...')
+          // Fallback: Cria o perfil manualmente
+          await supabase.from('profiles').insert({
+            id: data.user.id,
+            email: email.trim().toLowerCase(),
+            full_name: full_name.trim(),
+            role: role,
+            phone: phone
+          })
+        }
 
-          if (!profile) {
-            // Trigger falhou, tenta criar manualmente
-            await supabase.from('profiles').insert({
-              id: data.user.id,
-              email,
-              full_name,
-              role,
-              phone
-            })
-          }
+        // 3. Garante que a carteira exista (para evitar erro 406 no checkAuth)
+        const { data: wallet } = await supabase
+          .from('wallets')
+          .select('user_id')
+          .eq('user_id', data.user.id)
+          .maybeSingle()
+
+        if (!wallet) {
+          await supabase.from('wallets').insert({ user_id: data.user.id, balance: 0 })
         }
 
         return { success: true }
