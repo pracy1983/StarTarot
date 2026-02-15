@@ -64,8 +64,8 @@ export default function LandingPage() {
       // 1. Busca perfis de oraculistas
       const { data: profiles, error: pError } = await supabase
         .from('profiles')
-        .select('*')
-        .eq('role', 'oracle')
+        .select('*, allows_video, allows_text')
+        .in('role', ['oracle', 'owner'])
         .eq('application_status', 'approved')
         .order('is_online', { ascending: false })
 

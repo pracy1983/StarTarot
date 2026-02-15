@@ -103,13 +103,13 @@ export default function OracleDashboard() {
         }
     }
 
-    const handleEnterServiceRoom = () => {
-        if (!profile?.video_enabled) {
-            toast.error('Habilite o atendimento por vídeo primeiro.')
-            return
-        }
-        router.push('/app/dashboard/sala')
-    }
+    // const handleEnterServiceRoom = () => {
+    //     if (!profile?.video_enabled) {
+    //         toast.error('Habilite o atendimento por vídeo primeiro.')
+    //         return
+    //     }
+    //     router.push('/app/dashboard/sala')
+    // }
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
@@ -142,19 +142,12 @@ export default function OracleDashboard() {
                         Vídeo
                     </button>
 
-                    {/* Botão de Status Online/Offline */}
+                    {/* Botão de Status Online/Offline - AGORA NO HEADER GLOBAL */}
                     {profile?.video_enabled && (
-                        <div className="pl-2 border-l border-white/10 ml-2">
-                            <button
-                                onClick={handleEnterServiceRoom}
-                                className={`flex items-center px-4 py-2 rounded-xl transition-all font-bold border ${profile?.is_online
-                                    ? 'bg-green-500/20 text-green-400 border-green-500/50 animate-pulse'
-                                    : 'bg-white/5 text-slate-400 border-white/10 hover:text-white hover:border-white/30'
-                                    }`}
-                            >
-                                <Power size={18} className="mr-2" />
-                                {profile?.is_online ? 'VOCÊ ESTÁ ONLINE' : 'ENTRAR NA SALA'}
-                            </button>
+                        <div className="pl-2 border-l border-white/10 ml-2 flex items-center">
+                            <span className={`text-xs font-bold ${profile?.is_online ? 'text-green-400' : 'text-slate-500'}`}>
+                                {profile?.is_online ? 'ONLINE GLOBALMENTE' : 'OFFLINE'}
+                            </span>
                         </div>
                     )}
                 </div>
@@ -208,12 +201,9 @@ export default function OracleDashboard() {
                                 </div>
                                 <div>
                                     <h3 className="text-lg font-bold text-white">Você está Offline para vídeo</h3>
-                                    <p className="text-sm text-slate-400">Entre na sala de atendimento para receber chamadas.</p>
+                                    <p className="text-sm text-slate-400">Clique no botão "Offline" no topo da página para ficar Online.</p>
                                 </div>
                             </div>
-                            <NeonButton variant="cyan" onClick={handleEnterServiceRoom}>
-                                Entrar Agora
-                            </NeonButton>
                         </div>
                     )}
 
@@ -240,16 +230,22 @@ export default function OracleDashboard() {
                                     <p className="text-sm font-bold text-white">Tarifa por Minuto</p>
                                     <p className="text-xs text-slate-500">Valor para Video Chamadas</p>
                                 </div>
-                                <span className="text-neon-cyan font-bold">5.00 CR</span>
+                                <span className="text-neon-cyan font-bold">{profile?.credits_per_minute || 0} CR</span>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
                                 <div>
                                     <p className="text-sm font-bold text-white">Tarifa Inicial</p>
                                     <p className="text-xs text-slate-500">Taxa para abrir chat</p>
                                 </div>
-                                <span className="text-neon-gold font-bold">0.00 CR</span>
+                                <span className="text-neon-gold font-bold">{profile?.initial_fee_credits || 0} CR</span>
                             </div>
-                            <NeonButton variant="purple" fullWidth size="sm" className="mt-4">
+                            <NeonButton
+                                variant="purple"
+                                fullWidth
+                                size="sm"
+                                className="mt-4"
+                                onClick={() => router.push('/app/dashboard/perfil')}
+                            >
                                 Editar Tarifas
                             </NeonButton>
                         </div>

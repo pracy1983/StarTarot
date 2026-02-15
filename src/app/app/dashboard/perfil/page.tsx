@@ -32,6 +32,7 @@ export default function OracleProfilePage() {
         personality: '',
         price_brl_per_minute: 5.00,
         initial_fee_brl: 0.00,
+        price_per_message: 10,
         requires_birthdate: false,
         requires_birthtime: false
     })
@@ -51,6 +52,7 @@ export default function OracleProfilePage() {
                 personality: profile.personality || '',
                 price_brl_per_minute: profile.price_brl_per_minute || 5.00,
                 initial_fee_brl: profile.initial_fee_brl || 0.00,
+                price_per_message: profile.price_per_message || 10,
                 requires_birthdate: profile.requires_birthdate || false,
                 requires_birthtime: profile.requires_birthtime || false
             })
@@ -74,9 +76,18 @@ export default function OracleProfilePage() {
             const { error } = await supabase
                 .from('profiles')
                 .update({
-                    ...formData,
+                    full_name: formData.full_name,
+                    phone: formData.phone,
+                    bio: formData.bio,
+                    specialty: formData.specialty,
+                    personality: formData.personality,
+                    price_brl_per_minute: formData.price_brl_per_minute,
+                    initial_fee_brl: formData.initial_fee_brl,
                     credits_per_minute,
-                    initial_fee_credits
+                    initial_fee_credits,
+                    price_per_message: formData.price_per_message,
+                    requires_birthdate: formData.requires_birthdate,
+                    requires_birthtime: formData.requires_birthtime
                 })
                 .eq('id', profile!.id)
 
@@ -317,6 +328,33 @@ export default function OracleProfilePage() {
                                     * Cobrado apenas no 1º minuto. Livre após o 2º min até o fim da consulta.
                                 </p>
                             </div>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard className="border-white/5" glowColor="purple">
+                        <div className="flex items-center space-x-2 text-neon-purple mb-4">
+                            <MessageSquare size={18} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Preço por Pergunta</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 ml-1 italic">
+                                    Quantos Créditos por pergunta no Chat?
+                                </label>
+                                <div className="relative">
+                                    <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+                                    <input
+                                        type="number"
+                                        value={formData.price_per_message}
+                                        onChange={(e) => setFormData(prev => ({ ...prev, price_per_message: parseInt(e.target.value) || 0 }))}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-purple/50"
+                                    />
+                                </div>
+                            </div>
+                            <p className="text-[9px] text-slate-600 italic">
+                                * Este valor é em Créditos (Coins) diretamente.
+                            </p>
                         </div>
                     </GlassCard>
 

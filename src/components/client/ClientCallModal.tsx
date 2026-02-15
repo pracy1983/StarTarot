@@ -1,0 +1,58 @@
+import React, { useEffect, useState } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { GlassCard } from '@/components/ui/GlassCard'
+import { NeonButton } from '@/components/ui/NeonButton'
+import { PhoneOutgoing, X, Loader2 } from 'lucide-react'
+
+interface ClientCallModalProps {
+    isOpen: boolean
+    oracleName: string
+    avatarUrl: string
+    onCancel: () => void
+}
+
+export function ClientCallModal({ isOpen, oracleName, avatarUrl, onCancel }: ClientCallModalProps) {
+    if (!isOpen) return null
+
+    return (
+        <AnimatePresence>
+            <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+            >
+                <GlassCard className="max-w-sm w-full border-neon-purple/50 shadow-[0_0_50px_rgba(168,85,247,0.2)] p-8 text-center relative overflow-hidden">
+                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-neon-purple to-transparent animate-pulse" />
+
+                    <div className="relative mb-6">
+                        <div className="w-24 h-24 mx-auto rounded-full p-1 bg-gradient-to-tr from-neon-purple to-neon-cyan animate-spin-slow">
+                            <img
+                                src={avatarUrl}
+                                alt={oracleName}
+                                className="w-full h-full rounded-full object-cover border-4 border-black"
+                            />
+                        </div>
+                        <div className="absolute bottom-0 right-1/3 bg-green-500 w-4 h-4 rounded-full border-2 border-black animate-pulse" />
+                    </div>
+
+                    <h3 className="text-2xl font-bold text-white mb-2">Chamando...</h3>
+                    <p className="text-slate-400 mb-8">Aguarde {oracleName} aceitar a chamada.</p>
+
+                    <div className="flex justify-center mb-8">
+                        <div className="flex space-x-2">
+                            <span className="w-3 h-3 bg-neon-purple rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="w-3 h-3 bg-neon-purple rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="w-3 h-3 bg-neon-purple rounded-full animate-bounce"></span>
+                        </div>
+                    </div>
+
+                    <NeonButton variant="red" fullWidth onClick={onCancel}>
+                        <X size={18} className="mr-2" />
+                        Cancelar Chamada
+                    </NeonButton>
+                </GlassCard>
+            </motion.div>
+        </AnimatePresence>
+    )
+}

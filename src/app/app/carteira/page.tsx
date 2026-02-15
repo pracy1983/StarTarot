@@ -24,6 +24,21 @@ export default function WalletPage() {
     const [isProcessing, setIsProcessing] = useState(false)
     const [transactions, setTransactions] = useState<any[]>([])
 
+    // Custom Amount State
+    const [customAmount, setCustomAmount] = useState('')
+    const COIN_PRICE = 0.20 // 5 Coins = 1 BRL (Example, adjust as needed)
+
+    // Billing Info State
+    const [billingInfo, setBillingInfo] = useState({
+        cpf: '',
+        postal_code: '',
+        address: '',
+        address_number: '',
+        city: '',
+        state: ''
+    })
+    const [showBillingModal, setShowBillingModal] = useState(false)
+
     useEffect(() => {
         if (profile?.id) {
             fetchWalletData()
@@ -66,8 +81,68 @@ export default function WalletPage() {
     }
 
     const handleStartPurchase = (pkg: any) => {
+        // Validate Billing Info
+        if (!billingInfo.cpf || !billingInfo.address) {
+            setSelectedPackage(pkg)
+            setShowBillingModal(true)
+            return
+        }
+
         setSelectedPackage(pkg)
         setStep('checkout')
+    }
+
+    const handleCustomPurchase = () => {
+        const amount = parseFloat(customAmount.replace(',', '.'))
+        if (!amount || amount < 5) {
+            toast.error('Valor mínimo: R$ 5,00')
+            return
+        }
+
+        const coins = Math.floor(amount / COIN_PRICE)
+        const customPkg = {
+            id: 'custom',
+            name: 'Recarga Personalizada',
+            coins_amount: coins,
+            bonus_amount: 0,
+            price_brl: amount
+        }
+
+        handleStartPurchase(customPkg)
+    }
+
+    const saveBillingInfo = async () => {
+        if (!billingInfo.cpf || !billingInfo.address || !billingInfo.postal_code) {
+            toast.error('Preencha os campos obrigatórios')
+            return
+        }
+
+        setIsProcessing(true)
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    cpf: billingInfo.cpf,
+                    postal_code: billingInfo.postal_code,
+                    address: billingInfo.address,
+                    address_number: billingInfo.address_number,
+                    city: billingInfo.city,
+                    state: billingInfo.state
+                })
+                .eq('id', profile!.id)
+
+            if (error) throw error
+
+            toast.success('Dados salvos!')
+            setShowBillingModal(false)
+            if (selectedPackage) {
+                setStep('checkout')
+            }
+        } catch (err) {
+            toast.error('Erro ao salvar dados')
+        } finally {
+            setIsProcessing(false)
+        }
     }
 
     const handleCreatePayment = async () => {
@@ -147,6 +222,34 @@ export default function WalletPage() {
                     </div>
                 </GlassCard>
             </header>
+
+            {/* Custom Amount Section */}
+            <GlassCard className="border-neon-cyan/20 bg-neon-cyan/5 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+                <div>
+                    <h2 className="text-xl font-bold text-white mb-1">Recarga Personalizada</h2>
+                    <p className="text-sm text-slate-400">Escolha o valor exato que deseja recarregar.</p>
+                </div>
+                <div className="flex items-center gap-4 bg-black/20 p-2 rounded-xl border border-white/5">
+                    <span className="text-slate-400 font-bold ml-2">R$</span>
+                    <input
+                        type="number"
+                        value={customAmount}
+                        onChange={e => setCustomAmount(e.target.value)}
+                        placeholder="0,00"
+                        className="bg-transparent border-none outline-none text-white font-black text-xl w-24"
+                    />
+                    <div className="h-8 w-px bg-white/10" />
+                    <div className="text-right pr-2">
+                        <span className="block text-xs text-slate-500 font-bold uppercase">Você Recebe</span>
+                        <span className="text-neon-cyan font-black">
+                            {customAmount ? Math.floor(parseFloat(customAmount) / COIN_PRICE) : 0} Coins
+                        </span>
+                    </div>
+                    <NeonButton variant="cyan" size="sm" onClick={handleCustomPurchase}>
+                        Comprar
+                    </NeonButton>
+                </div>
+            </GlassCard>
 
             <AnimatePresence mode='wait'>
                 {step === 'selection' && (
@@ -344,6 +447,75 @@ export default function WalletPage() {
                         </GlassCard>
                     </motion.div>
                 )}
+                {/* Billing Modal */}
+                {showBillingModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+                    >
+                        <GlassCard className="max-w-md w-full p-8 border-neon-purple/50 shadow-2xl">
+                            <h2 className="text-xl font-bold text-white mb-4">Complete seu Cadastro</h2>
+                            <p className="text-slate-400 text-sm mb-6">Para sua primeira recarga, precisamos de alguns dados para emissão da nota fiscal (obrigatório por lei).</p>
+
+                            <div className="space-y-4">
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">CPF</label>
+                                    <input
+                                        value={billingInfo.cpf}
+                                        onChange={e => setBillingInfo({ ...billingInfo, cpf: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
+                                        placeholder="000.000.000-00"
+                                    />
+                                </div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">CEP</label>
+                                        <input
+                                            value={billingInfo.postal_code}
+                                            onChange={e => setBillingInfo({ ...billingInfo, postal_code: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Cidade/UF</label>
+                                        <input
+                                            value={billingInfo.city} // Simplificado, idealmente auto-complete pelo CEP
+                                            onChange={e => setBillingInfo({ ...billingInfo, city: e.target.value })}
+                                            className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
+                                            placeholder="Cidade - UF"
+                                        />
+                                    </div>
+                                </div>
+                                <div>
+                                    <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">Endereço Completo</label>
+                                    <input
+                                        value={billingInfo.address}
+                                        onChange={e => setBillingInfo({ ...billingInfo, address: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
+                                        placeholder="Rua, Número, Bairro"
+                                    />
+                                </div>
+
+                                <div className="pt-4 flex gap-3">
+                                    <button
+                                        onClick={() => setShowBillingModal(false)}
+                                        className="flex-1 py-3 rounded-xl border border-white/10 text-slate-400 hover:bg-white/5"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <NeonButton
+                                        variant="purple"
+                                        fullWidth
+                                        onClick={saveBillingInfo}
+                                        loading={isProcessing}
+                                    >
+                                        Salvar e Continuar
+                                    </NeonButton>
+                                </div>
+                            </div>
+                        </GlassCard>
+                    </motion.div>
+                )}
             </AnimatePresence>
 
             {/* Historico Simples Mockado (Temporário) */}
@@ -370,6 +542,6 @@ export default function WalletPage() {
                     )}
                 </div>
             </GlassCard>
-        </div>
+        </div >
     )
 }

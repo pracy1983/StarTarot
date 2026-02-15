@@ -11,6 +11,12 @@ export default function MarketplacePage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
     const [searchTerm, setSearchTerm] = useState('')
+    const [specialtyFilter, setSpecialtyFilter] = useState('all')
+    const [filterVideo, setFilterVideo] = useState(false)
+    const [filterChat, setFilterChat] = useState(false)
+
+    // Derived from DB or Static
+    const specialties = ['Tarot', 'Astrologia', 'Búzios', 'Numerologia', 'Reiki', 'Vidência']
 
     useEffect(() => {
         fetchOracles()
@@ -21,9 +27,8 @@ export default function MarketplacePage() {
             // 1. Busca perfis de oraculistas
             const { data: profiles, error: pError } = await supabase
                 .from('profiles')
-                .select('*')
+                .select('*, allows_video, allows_text')
                 .in('role', ['oracle', 'owner'])
-                .eq('application_status', 'approved')
                 .eq('application_status', 'approved')
             // Suspensão é tratada no client-side filter por enquanto, ou em view SQL
             // Mas vamos filtrar aqui o básico se possível, mas como é coluna nova pode ser null
@@ -75,11 +80,23 @@ export default function MarketplacePage() {
         const matchesSearch = o.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.specialty.toLowerCase().includes(searchTerm.toLowerCase())
 
-        if (filter === 'all') return matchesSearch
-        if (filter === 'online') return matchesSearch && o.is_online
-        if (filter === 'tarot') return matchesSearch && o.specialty === 'Tarot'
-        if (filter === 'ia') return matchesSearch && o.is_ai // Apenas para debug ou se você decidir mostrar
-        return matchesSearch
+        let matchesStatus = true
+        if (filter === 'online') matchesStatus = o.is_online
+
+        // Specialty Filter
+        let matchesSpecialty = true
+        if (specialtyFilter !== 'all') {
+            matchesSpecialty = o.specialty?.toLowerCase() === specialtyFilter.toLowerCase()
+        }
+
+        // Capabilities Filter
+        let matchesVideo = true
+        if (filterVideo) matchesVideo = !!o.allows_video
+
+        let matchesChat = true
+        if (filterChat) matchesChat = !!o.allows_text
+
+        return matchesSearch && matchesStatus && matchesSpecialty && matchesVideo && matchesChat
     })
 
     // Paginação
@@ -121,38 +138,78 @@ export default function MarketplacePage() {
                 </div>
             </section>
 
-            {/* Filters & Search */}
-            <section className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <div className="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0 hide-scrollbar">
-                    {[
-                        { id: 'all', label: 'Todos', icon: <Sun size={14} /> },
-                        { id: 'online', label: 'Online Agora', icon: <Moon size={14} /> },
-                        { id: 'tarot', label: 'Tarot', icon: <Star size={14} /> },
-                        { id: 'astrologia', label: 'Astrologia', icon: <Sparkles size={14} /> },
-                    ].map((item) => (
-                        <button
-                            key={item.id}
-                            onClick={() => { setFilter(item.id); setPage(1) }}
-                            className={`flex items-center space-x-2 px-5 py-2 rounded-full border transition-all whitespace-nowrap ${filter === item.id
-                                ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                                }`}
-                        >
-                            {item.icon}
-                            <span className="text-sm font-bold">{item.label}</span>
-                        </button>
-                    ))}
+            {/* Advanced Filters & Search */}
+            <section className="flex flex-col gap-6">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    {/* Status Tabs */}
+                    <div className="flex items-center space-x-2 bg-white/5 p-1 rounded-full border border-white/5 w-fit">
+                        {[
+                            { id: 'all', label: 'Todos', icon: <Sun size={14} /> },
+                            { id: 'online', label: 'Online Agora', icon: <Moon size={14} /> },
+                        ].map((item) => (
+                            <button
+                                key={item.id}
+                                onClick={() => { setFilter(item.id); setPage(1) }}
+                                className={`flex items-center space-x-2 px-4 py-1.5 rounded-full transition-all whitespace-nowrap text-sm font-medium ${filter === item.id
+                                    ? 'bg-neon-purple text-white shadow-lg'
+                                    : 'text-slate-400 hover:text-white'
+                                    }`}
+                            >
+                                {item.icon}
+                                <span>{item.label}</span>
+                            </button>
+                        ))}
+                    </div>
+
+                    {/* Search Bar */}
+                    <div className="relative w-full md:w-72 group">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Nome ou especialidade..."
+                            value={searchTerm}
+                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
+                            className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
+                        />
+                    </div>
                 </div>
 
-                <div className="relative w-full md:w-72 group">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Filtrar guias..."
-                        value={searchTerm}
-                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
-                        className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-12 pr-4 text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
-                    />
+                {/* Secondary Filters: Specialty & Capabilities */}
+                <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+
+                    {/* Specialty Select */}
+                    <div className="relative">
+                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                        <select
+                            value={specialtyFilter}
+                            onChange={(e) => { setSpecialtyFilter(e.target.value); setPage(1) }}
+                            className="bg-deep-space border border-white/10 rounded-xl pl-9 pr-8 py-2 text-sm text-white appearance-none outline-none focus:border-neon-purple/50 cursor-pointer min-w-[160px]"
+                        >
+                            <option value="all">Todas Especialidades</option>
+                            {specialties.map(s => (
+                                <option key={s} value={s}>{s}</option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {/* Checkboxes */}
+                    <div className="flex items-center gap-4 border-l border-white/10 pl-4 ml-2">
+                        <label className="flex items-center space-x-2 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterVideo ? 'bg-neon-cyan border-neon-cyan text-deep-space' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {filterVideo && <Sparkles size={12} />}
+                                <input type="checkbox" checked={filterVideo} onChange={e => setFilterVideo(e.target.checked)} className="hidden" />
+                            </div>
+                            <span className={`text-sm ${filterVideo ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Vídeo</span>
+                        </label>
+
+                        <label className="flex items-center space-x-2 cursor-pointer group">
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterChat ? 'bg-neon-purple border-neon-purple text-white' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {filterChat && <Sparkles size={12} />}
+                                <input type="checkbox" checked={filterChat} onChange={e => setFilterChat(e.target.checked)} className="hidden" />
+                            </div>
+                            <span className={`text-sm ${filterChat ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Msg</span>
+                        </label>
+                    </div>
                 </div>
             </section>
 

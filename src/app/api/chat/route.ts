@@ -139,6 +139,10 @@ export async function POST(req: Request) {
 
         if (msgError) throw msgError
 
+        // Artificial Delay (Thinking Time) - 2 to 5 seconds
+        const delay = Math.floor(Math.random() * (5000 - 2000 + 1) + 2000)
+        await new Promise(resolve => setTimeout(resolve, delay))
+
         // 9. Registrar transações
         // Consumo do cliente
         await supabase.from('transactions').insert({

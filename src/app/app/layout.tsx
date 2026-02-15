@@ -19,12 +19,65 @@ import { useAuthStore } from '@/stores/authStore'
 import { motion } from 'framer-motion'
 import { RoleSwitcher } from '@/components/ui/RoleSwitcher'
 import { supabase } from '@/lib/supabase'
+import { IncomingCallModal } from '@/components/oracle/IncomingCallModal'
+import { OracleStatusToggle } from '@/components/oracle/OracleStatusToggle'
+import { useRealtimeCalls } from '@/hooks/useRealtimeCalls'
+import toast from 'react-hot-toast'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const { profile, logout } = useAuthStore()
     const router = useRouter()
     const pathname = usePathname()
     const [walletBalance, setWalletBalance] = useState<number>(0)
+    const [unreadCount, setUnreadCount] = useState(0)
+
+    // Realtime Calls Hook (Global)
+    const { isOnline, incomingCall, acceptCall, rejectCall, toggleOnline } = useRealtimeCalls()
+
+    // Handle Accept Call
+    const handleAcceptCall = async () => {
+        const consultationId = await acceptCall()
+        if (consultationId) {
+            router.push(`/app/dashboard/sala?consultationId=${consultationId}`)
+        }
+    }
+
+    useEffect(() => {
+        if (!profile?.id) return
+
+        // Fetch initial unread count
+        const fetchUnread = async () => {
+            const { count } = await supabase
+                .from('inbox_messages')
+                .select('*', { count: 'exact', head: true })
+                .eq('recipient_id', profile.id)
+                .eq('is_read', false)
+            setUnreadCount(count || 0)
+        }
+
+        fetchUnread()
+
+        // Subscribe to changes
+        const channel = supabase
+            .channel('layout_inbox_count')
+            .on(
+                'postgres_changes',
+                {
+                    event: '*',
+                    schema: 'public',
+                    table: 'inbox_messages',
+                    filter: `recipient_id=eq.${profile.id}`
+                },
+                () => {
+                    fetchUnread()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [profile?.id])
 
     useEffect(() => {
         if (profile?.id) {
@@ -59,6 +112,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const oracleNav = [
         { label: 'Dashboard', icon: <LayoutDashboard size={22} />, href: '/app/dashboard' },
         { label: 'Sala de Atendimento', icon: <Radio size={22} />, href: '/app/dashboard/sala' },
+        { label: 'Meus Ganhos', icon: <Wallet size={22} />, href: '/app/dashboard/ganhos' },
         { label: 'Meus Cupons', icon: <Ticket size={22} />, href: '/app/dashboard/cupons' },
         { label: 'Mensagens', icon: <Inbox size={22} />, href: '/app/mensagens?view=oracle' },
         { label: 'Meu Perfil Profissional', icon: <User size={22} />, href: '/app/dashboard/perfil' },
@@ -97,6 +151,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     {/* Dropdown de Visões (Apenas para Oráculo ou Owner) */}
                     {(profile?.role === 'owner' || profile?.role === 'oracle' || profile?.is_oracle) && <RoleSwitcher />}
 
+                    {/* Global Oracle Status Toggle */}
+                    {(profile?.role === 'oracle' || (profile?.role === 'owner' && isOracleView)) && (
+                        <div className="hidden sm:block">
+                            <OracleStatusToggle isOnline={isOnline} onToggle={toggleOnline} />
+                        </div>
+                    )}
+
                     <div className="hidden sm:flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
                             {isOracleView ? 'Ganhos' : 'Saldo'}
@@ -121,14 +182,14 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className="flex flex-1 relative">
                 {/* Desktop Sidebar */}
                 <aside className="w-20 lg:w-64 border-r border-white/5 glass flex flex-col sticky top-20 h-[calc(100vh-80px)] hidden md:flex">
-                    <nav className="flex-1 py-8 px-4 space-y-2">
+                    <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href
                             return (
                                 <button
                                     key={item.label}
                                     onClick={() => router.push(item.href)}
-                                    className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group ${isActive
+                                    className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group relative ${isActive
                                         ? `bg-${themeColor}/20 text-white shadow-[0_0_20px_${themeGlow}] border border-${themeColor}/30`
                                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                                         }`}
@@ -136,8 +197,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                     <span className={`${isActive ? `text-${themeColor}` : `group-hover:text-${themeColor}`} transition-colors`}>
                                         {item.icon}
                                     </span>
-                                    <span className={`text-sm font-medium hidden lg:block`}>{item.label}</span>
+                                    <span className={`text-sm font-medium hidden lg:block text-left`}>{item.label}</span>
                                     {isActive && <motion.div layoutId="nav-glow" className={`absolute right-0 w-1 h-8 bg-${themeColor} rounded-l-full`} />}
+                                    {item.label === 'Mensagens' && unreadCount > 0 && (
+                                        <div className="absolute right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                                            {unreadCount}
+                                        </div>
+                                    )}
                                 </button>
                             )
                         })}
@@ -167,6 +233,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             >
                                 {item.icon}
                                 <span className="text-[10px] font-medium">{item.label}</span>
+                                {item.label === 'Mensagens' && unreadCount > 0 && (
+                                    <div className="absolute top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">
+                                        {unreadCount}
+                                    </div>
+                                )}
                             </button>
                         )
                     })}
@@ -177,6 +248,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     {children}
                 </main>
             </div>
+
+            {/* Global Incoming Call Modal */}
+            <IncomingCallModal
+                call={incomingCall}
+                onAccept={handleAcceptCall}
+                onReject={rejectCall}
+            />
         </div>
     )
 }

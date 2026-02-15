@@ -1,11 +1,16 @@
 import React from 'react'
+import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, MessageSquare, Video, DollarSign, Calendar } from 'lucide-react'
+import { Sparkles, MessageSquare, Video, DollarSign, Calendar, Star } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
+
+import { ClientCallModal } from './ClientCallModal'
+import { ClientQueueModal } from './ClientQueueModal'
+import { supabase } from '@/lib/supabase'
 
 interface OracleCardProps {
     oracle: {
@@ -21,13 +26,132 @@ interface OracleCardProps {
         oracle_type: 'human' | 'ai'
         schedules?: any[]
         initial_fee_credits?: number
+        allows_video?: boolean
+        allows_text?: boolean
+        rating?: number
     }
 }
 
 export const OracleCard = ({ oracle }: OracleCardProps) => {
     const router = useRouter()
     const pathname = usePathname()
-    const { isAuthenticated } = useAuthStore()
+    const { isAuthenticated, profile } = useAuthStore()
+
+    // Call States
+    const [isChecking, setIsChecking] = React.useState(false)
+    const [callModalOpen, setCallModalOpen] = React.useState(false)
+    const [queueModalOpen, setQueueModalOpen] = React.useState(false)
+    const [queuePosition, setQueuePosition] = React.useState(1)
+    const [consultationId, setConsultationId] = React.useState<string | null>(null)
+
+    // Listen to consultation changes when modal is open
+    React.useEffect(() => {
+        if (!consultationId || !callModalOpen) return
+
+        const channel = supabase
+            .channel(`consultation_${consultationId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'consultations',
+                    filter: `id=eq.${consultationId}`
+                },
+                (payload) => {
+                    const newStatus = payload.new.status
+                    if (newStatus === 'active') {
+                        // Accepted!
+                        router.push(`/app/consulta/${oracle.id}?consultationId=${consultationId}&type=video`)
+                    } else if (newStatus === 'canceled' || newStatus === 'missed') {
+                        // Rejected/Timeout
+                        setCallModalOpen(false)
+                        setConsultationId(null)
+                        toast.error('O oraculista não pôde atender no momento.')
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [consultationId, callModalOpen])
+
+    const startCallFlow = async () => {
+        if (!isAuthenticated) return handleStartConsultation({ stopPropagation: () => { } } as any)
+
+        setIsChecking(true)
+        try {
+            // Check if oracle is busy
+            const { count } = await supabase
+                .from('consultations')
+                .select('*', { count: 'exact', head: true })
+                .eq('oracle_id', oracle.id)
+                .eq('status', 'active')
+
+            if (count && count > 0) {
+                // Busy -> Offer Queue
+                // Get queue position
+                const { count: pendingCount } = await supabase
+                    .from('consultations')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('oracle_id', oracle.id)
+                    .eq('status', 'pending')
+
+                setQueuePosition((pendingCount || 0) + 1)
+                setQueueModalOpen(true)
+            } else {
+                // Available -> Call
+                await createConsultation()
+            }
+        } catch (err) {
+            toast.error('Erro ao verificar disponibilidade')
+        } finally {
+            setIsChecking(false)
+        }
+    }
+
+    const createConsultation = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('consultations')
+                .insert({
+                    oracle_id: oracle.id,
+                    client_id: profile?.id,
+                    type: 'video',
+                    status: 'pending',
+                    is_using_bonus: false // Todo: Check logic
+                })
+                .select()
+                .single()
+
+            if (error) throw error
+
+            setConsultationId(data.id)
+            setCallModalOpen(true)
+            setQueueModalOpen(false)
+        } catch (err) {
+            console.error(err)
+            toast.error('Erro ao iniciar chamada')
+        }
+    }
+
+    const cancelCall = async () => {
+        if (!consultationId) return
+
+        try {
+            await supabase
+                .from('consultations')
+                .update({ status: 'canceled' })
+                .eq('id', consultationId)
+
+            setCallModalOpen(false)
+            setConsultationId(null)
+        } catch (err) {
+            console.error(err)
+        }
+    }
 
     const { status, label } = getOracleStatus(oracle.is_online, oracle.schedules || [])
     const isZeroFee = oracle.initial_fee_credits === 0
@@ -106,13 +230,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
 
                 {/* Info Tags */}
-                <div className="flex items-center space-x-3">
+                <div className="flex flex-col items-center space-y-1">
                     <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                        <DollarSign size={12} className="mr-1 text-neon-cyan/50" />
-                        {oracle.is_ai || oracle.oracle_type === 'ai'
-                            ? `${oracle.price_per_message || 10} | PERGUNTA`
-                            : `${oracle.credits_per_minute} | MINUTO`}
+                        <Video size={12} className="mr-1 text-neon-cyan/50" />
+                        {oracle.credits_per_minute} | MINUTO (VÍDEO)
                     </div>
+                    {oracle.price_per_message && (
+                        <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                            <MessageSquare size={12} className="mr-1 text-neon-purple/50" />
+                            {oracle.price_per_message} | PERGUNTA (CHAT)
+                        </div>
+                    )}
                 </div>
 
                 <p className="text-slate-400 text-sm line-clamp-2 min-h-[40px] px-2 leading-relaxed">
@@ -122,7 +250,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 {/* Feature Icons */}
                 <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
                     <div className="flex flex-col items-center space-y-1">
-                        <MessageSquare size={16} className={status === 'online' ? 'text-neon-purple/60' : ''} />
+                        <MessageSquare size={16} className={status === 'online' || oracle.allows_text ? 'text-neon-purple/60' : ''} />
                         <span className="text-[8px] uppercase font-black tracking-tighter">Chat</span>
                     </div>
                     {oracle.oracle_type === 'human' && (
@@ -134,6 +262,14 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
 
                 <div className="mt-2 flex gap-2 w-full">
+                    {/* Rating Stars - New Feature */}
+                    <div className="absolute top-4 right-16 z-20" onClick={(e) => { e.stopPropagation(); /* Open Testimonial Modal Logic Here */ }}>
+                        <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
+                            <Star size={10} className="text-neon-gold fill-neon-gold" />
+                            <span className="text-[10px] font-bold text-white ml-1">{oracle.rating?.toFixed(1) || '5.0'}</span>
+                        </div>
+                    </div>
+
                     {status === 'online' ? (
                         oracle.oracle_type === 'human' ? (
                             <>
@@ -141,15 +277,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                     variant="green"
                                     fullWidth
                                     size="sm"
+                                    disabled={!oracle.allows_video}
                                     onClick={(e) => {
                                         e.stopPropagation()
-                                        // Specific logic for video if distinct from chat Page
-                                        // For now, redirect to consultation page where both options might be available or passed as query param?
-                                        // Assuming consultation page handles verify
-                                        // To facilitate specific action, maybe pass query param ?type=video
                                         if (!isAuthenticated) return handleStartConsultation(e)
-                                        router.push(`/app/consulta/${oracle.id}?type=video`)
+                                        // Specific logic for video
+                                        if (oracle.allows_video) {
+                                            startCallFlow()
+                                        }
                                     }}
+                                    loading={isChecking}
+                                    className={!oracle.allows_video ? 'opacity-50 cursor-not-allowed grayscale' : ''}
                                 >
                                     <Video size={16} className="mr-1" />
                                     Vídeo
@@ -158,40 +296,89 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                     variant="purple"
                                     fullWidth
                                     size="sm"
+                                    disabled={!oracle.allows_text}
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
-                                        router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                        if (oracle.allows_text) {
+                                            router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                        }
                                     }}
                                 >
                                     <MessageSquare size={16} className="mr-1" />
-                                    Enviar Pergunta
+                                    {oracle.allows_text ? 'Chat' : 'Indisp.'}
                                 </NeonButton>
                             </>
                         ) : (
+
                             <NeonButton
                                 variant="purple"
                                 fullWidth
                                 size="md"
-                                onClick={handleStartConsultation}
+                                onClick={handleViewProfile}
                             >
                                 <Sparkles size={16} className="mr-2" />
-                                Enviar Pergunta
+                                Mais Informações
                             </NeonButton>
                         )
                     ) : (
-                        <NeonButton
-                            variant="gold"
-                            fullWidth
-                            size="md"
-                            onClick={handleStartConsultation}
-                        >
-                            {status === 'horario' ? 'Entrar na Fila' : 'Deixar Mensagem'}
-                        </NeonButton>
+                        // Offline State - Still show buttons but Video Disabled
+                        oracle.oracle_type === 'human' ? (
+                            <>
+                                <NeonButton
+                                    variant="green"
+                                    fullWidth
+                                    size="sm"
+                                    disabled={true} // Always disabled when offline
+                                    className="opacity-50 cursor-not-allowed grayscale"
+                                >
+                                    <Video size={16} className="mr-1" />
+                                    Vídeo
+                                </NeonButton>
+                                <NeonButton
+                                    variant="gold"
+                                    fullWidth
+                                    size="sm"
+                                    disabled={!oracle.allows_text}
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (!isAuthenticated) return handleStartConsultation(e)
+                                        // Allow sending message even if offline (async response)
+                                        router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                    }}
+                                >
+                                    <MessageSquare size={16} className="mr-1" />
+                                    Deixar Msg
+                                </NeonButton>
+                            </>
+                        ) : (
+                            <NeonButton
+                                variant="gold"
+                                fullWidth
+                                size="md"
+                                onClick={handleViewProfile}
+                            >
+                                Mais Informações
+                            </NeonButton>
+                        )
                     )}
                 </div>
             </div>
+
+            <ClientCallModal
+                isOpen={callModalOpen}
+                oracleName={oracle.full_name}
+                avatarUrl={oracle.avatar_url || ''}
+                onCancel={cancelCall}
+            />
+
+            <ClientQueueModal
+                isOpen={queueModalOpen}
+                oracleName={oracle.full_name}
+                queuePosition={queuePosition}
+                onConfirm={createConsultation}
+                onCancel={() => setQueueModalOpen(false)}
+            />
         </GlassCard>
     )
 }
-import toast from 'react-hot-toast'

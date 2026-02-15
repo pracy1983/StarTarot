@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
-import { Ticket, Percent, Users, Calendar, Trash2, Plus, Info, RefreshCcw } from 'lucide-react'
+import { Ticket, Percent, Users, Calendar, Trash2, Plus, Info, RefreshCcw, DollarSign } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -17,9 +17,12 @@ export default function OracleCouponsPage() {
     const [creating, setCreating] = useState(false)
     const [newCoupon, setNewCoupon] = useState({
         code: '',
-        discount_percent: 10,
+        discount_type: 'percent', // 'percent', 'fixed_value', 'consultation_credit'
+        discount_value: 0,
+        min_purchase_value: 0,
         max_uses: 50,
-        expires_at: ''
+        expires_at: '',
+        target_type: 'consultation' // 'package', 'consultation'
     })
 
     useEffect(() => {
@@ -52,13 +55,13 @@ export default function OracleCouponsPage() {
         setCreating(true)
 
         try {
-            if (!newCoupon.code || newCoupon.discount_percent <= 0) {
-                toast.error('Preencha o código e desconto')
+            if (!newCoupon.code || newCoupon.discount_value <= 0) {
+                toast.error('Preencha o código e o valor do desconto')
                 return
             }
 
-            if (newCoupon.discount_percent > 30) {
-                toast.error('Oraculistas podem dar no máximo 30% de desconto.')
+            if (newCoupon.discount_type === 'percent' && newCoupon.discount_value > 30) {
+                toast.error('Desconto máximo permitido: 30%')
                 return
             }
 
@@ -66,7 +69,10 @@ export default function OracleCouponsPage() {
                 .from('coupons')
                 .insert({
                     code: newCoupon.code.toUpperCase(),
-                    discount_percent: newCoupon.discount_percent,
+                    discount_type: newCoupon.discount_type,
+                    discount_value: newCoupon.discount_value,
+                    min_purchase_value: newCoupon.min_purchase_value || 0,
+                    target_type: newCoupon.target_type,
                     max_uses: newCoupon.max_uses || null,
                     expires_at: newCoupon.expires_at || null,
                     owner_id: profile!.id
@@ -75,7 +81,16 @@ export default function OracleCouponsPage() {
             if (error) throw error
 
             toast.success('Cupom criado com sucesso!')
-            setNewCoupon({ code: '', discount_percent: 10, max_uses: 50, expires_at: '' })
+            toast.success('Cupom criado com sucesso!')
+            setNewCoupon({
+                code: '',
+                discount_type: 'percent',
+                discount_value: 0,
+                min_purchase_value: 0,
+                max_uses: 50,
+                expires_at: '',
+                target_type: 'consultation'
+            })
             fetchCoupons()
         } catch (err: any) {
             console.error('Error creating coupon:', err)
@@ -158,17 +173,46 @@ export default function OracleCouponsPage() {
                                 </div>
                             </div>
 
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Tipo de Cupom</label>
+                                    <select
+                                        value={newCoupon.target_type}
+                                        onChange={e => setNewCoupon({ ...newCoupon, target_type: e.target.value })}
+                                        className="w-full bg-deep-space border border-white/10 rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-neon-purple/50"
+                                    >
+                                        <option value="consultation">Desconto em Consulta</option>
+                                        <option value="package">Desconto em Créditos</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Tipo de Desconto</label>
+                                    <select
+                                        value={newCoupon.discount_type}
+                                        onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
+                                        className="w-full bg-deep-space border border-white/10 rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-neon-purple/50"
+                                    >
+                                        <option value="percent">Porcentagem (%)</option>
+                                        <option value="fixed_value">Valor Fixo (Consultas)</option>
+                                    </select>
+                                </div>
+                            </div>
+
                             <div>
-                                <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Desconto (%)</label>
+                                <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">
+                                    {newCoupon.discount_type === 'percent' ? 'Porcentagem de Desconto' : 'Valor do Desconto (Créditos)'}
+                                </label>
                                 <GlowInput
                                     type="number"
-                                    value={newCoupon.discount_percent}
-                                    onChange={e => setNewCoupon({ ...newCoupon, discount_percent: parseInt(e.target.value) })}
+                                    value={newCoupon.discount_value}
+                                    onChange={e => setNewCoupon({ ...newCoupon, discount_value: parseFloat(e.target.value) })}
                                     min={1}
-                                    max={30}
-                                    icon={<Percent size={16} />}
+                                    max={newCoupon.discount_type === 'percent' ? 30 : 1000}
+                                    icon={newCoupon.discount_type === 'percent' ? <Percent size={16} /> : <DollarSign size={16} />}
                                 />
-                                <p className="text-[10px] text-slate-500 mt-1 ml-1">Máximo permitido para Oraculistas: 30%</p>
+                                {newCoupon.discount_type === 'percent' && (
+                                    <p className="text-[10px] text-slate-500 mt-1 ml-1">Máximo: 30%</p>
+                                )}
                             </div>
 
                             <div>
@@ -237,7 +281,7 @@ export default function OracleCouponsPage() {
                                     <div key={coupon.id} className="bg-white/5 border border-white/10 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4 hover:border-neon-purple/30 transition-colors group">
                                         <div className="flex items-center gap-4 w-full sm:w-auto">
                                             <div className="w-12 h-12 rounded-full bg-neon-purple/10 text-neon-purple flex items-center justify-center font-bold text-lg border border-neon-purple/20">
-                                                {coupon.discount_percent}%
+                                                {coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
                                             </div>
                                             <div className="text-left">
                                                 <div className="flex items-center gap-2">
@@ -246,6 +290,9 @@ export default function OracleCouponsPage() {
                                                 </div>
                                                 <div className="flex items-center text-xs text-slate-400 gap-3 mt-1">
                                                     <span className="flex items-center"><Users size={12} className="mr-1" /> {coupon.used_count} / {coupon.max_uses || '∞'} usos</span>
+                                                    <span className="flex items-center text-neon-cyan uppercase font-bold text-[10px] border border-neon-cyan/20 px-1.5 rounded">
+                                                        {coupon.target_type === 'package' ? 'Créditos' : 'Consulta'}
+                                                    </span>
                                                     {coupon.expires_at && (
                                                         <span className="flex items-center"><Calendar size={12} className="mr-1" /> Expira em: {format(new Date(coupon.expires_at), 'dd/MM/yyyy')}</span>
                                                     )}
