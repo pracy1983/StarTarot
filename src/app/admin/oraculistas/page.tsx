@@ -198,6 +198,37 @@ export default function AdminOraculistasPage() {
                                                 </>
                                             )}
 
+                                            <button
+                                                onClick={() => {
+                                                    const isSuspended = !!o.suspended_until
+                                                    const newDate = isSuspended ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 ano de suspensão
+                                                    const action = isSuspended ? 'reativar' : 'suspender'
+
+                                                    if (!confirm(`Deseja realmente ${action} ${o.full_name}?`)) return
+
+                                                    supabase
+                                                        .from('profiles')
+                                                        .update({ suspended_until: newDate })
+                                                        .eq('id', o.id)
+                                                        .then(({ error }) => {
+                                                            if (error) {
+                                                                toast.error('Erro ao atualizar status')
+                                                            } else {
+                                                                setOraculistas(prev => prev.map(p =>
+                                                                    p.id === o.id ? { ...p, suspended_until: newDate } : p
+                                                                ))
+                                                                toast.success(`Oraculista ${isSuspended ? 'reativado' : 'suspenso'}!`)
+                                                            }
+                                                        })
+                                                }}
+                                                className={`p-2 rounded-lg transition-colors ${o.suspended_until
+                                                    ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10'
+                                                    : 'text-red-400 hover:text-red-300 hover:bg-red-400/10'}`}
+                                                title={o.suspended_until ? "Reativar" : "Suspender"}
+                                            >
+                                                {o.suspended_until ? <Check size={16} /> : <X size={16} />}
+                                            </button>
+
                                             <Link
                                                 href={`/admin/oraculistas/editar/${o.id}`}
                                                 className="p-2 text-slate-400 hover:text-neon-cyan transition-colors rounded-lg hover:bg-white/5"

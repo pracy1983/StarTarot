@@ -25,6 +25,8 @@ export default function MarketplacePage() {
                 .eq('role', 'oracle')
                 .eq('application_status', 'approved')
                 .order('is_online', { ascending: false })
+            // Suspensão é tratada no client-side filter por enquanto, ou em view SQL
+            // Mas vamos filtrar aqui o básico se possível, mas como é coluna nova pode ser null
 
             if (pError) throw pError
 
@@ -48,7 +50,16 @@ export default function MarketplacePage() {
         }
     }
 
-    const filteredOracles = oracles.filter(o => {
+    const [page, setPage] = useState(1)
+    const oraclesPerPage = 6
+
+    // Filtrar suspensos
+    const availableOracles = oracles.filter(o => {
+        if (!o.suspended_until) return true
+        return new Date(o.suspended_until) < new Date()
+    })
+
+    const filteredOracles = availableOracles.filter(o => {
         const matchesSearch = o.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.specialty.toLowerCase().includes(searchTerm.toLowerCase())
 
@@ -58,6 +69,10 @@ export default function MarketplacePage() {
         if (filter === 'ia') return matchesSearch && o.is_ai // Apenas para debug ou se você decidir mostrar
         return matchesSearch
     })
+
+    // Paginação
+    const totalPages = Math.ceil(filteredOracles.length / oraclesPerPage)
+    const paginatedOracles = filteredOracles.slice((page - 1) * oraclesPerPage, page * oraclesPerPage)
 
     return (
         <div className="space-y-10">
@@ -105,7 +120,7 @@ export default function MarketplacePage() {
                     ].map((item) => (
                         <button
                             key={item.id}
-                            onClick={() => setFilter(item.id)}
+                            onClick={() => { setFilter(item.id); setPage(1) }}
                             className={`flex items-center space-x-2 px-5 py-2 rounded-full border transition-all whitespace-nowrap ${filter === item.id
                                 ? 'bg-neon-purple text-white border-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.3)]'
                                 : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
@@ -123,21 +138,21 @@ export default function MarketplacePage() {
                         type="text"
                         placeholder="Filtrar guias..."
                         value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
                         className="w-full bg-white/5 border border-white/10 rounded-2xl py-2.5 pl-12 pr-4 text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
                     />
                 </div>
             </section>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 pb-10">
                 {loading ? (
-                    Array.from({ length: 8 }).map((_, i) => (
+                    Array.from({ length: 3 }).map((_, i) => (
                         <div key={i} className="glass-card h-80 animate-pulse bg-white/5 border-white/5" />
                     ))
-                ) : filteredOracles.length > 0 ? (
-                    <AnimatePresence>
-                        {filteredOracles.map((oracle, idx) => (
+                ) : paginatedOracles.length > 0 ? (
+                    <AnimatePresence mode='wait'>
+                        {paginatedOracles.map((oracle, idx) => (
                             <motion.div
                                 key={oracle.id}
                                 initial={{ opacity: 0, scale: 0.9 }}
@@ -159,6 +174,29 @@ export default function MarketplacePage() {
                     </div>
                 )}
             </div>
+
+            {/* Pagination Controls */}
+            {!loading && totalPages > 1 && (
+                <div className="flex justify-center items-center space-x-4 pb-20">
+                    <button
+                        onClick={() => setPage(p => Math.max(1, p - 1))}
+                        disabled={page === 1}
+                        className={`px-4 py-2 rounded-xl border border-white/10 text-sm font-bold transition-all ${page === 1 ? 'opacity-50 cursor-not-allowed text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                    >
+                        Anterior
+                    </button>
+                    <span className="text-slate-400 text-sm font-mono">
+                        Página {page} de {totalPages}
+                    </span>
+                    <button
+                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                        disabled={page === totalPages}
+                        className={`px-4 py-2 rounded-xl border border-white/10 text-sm font-bold transition-all ${page === totalPages ? 'opacity-50 cursor-not-allowed text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                    >
+                        Próxima
+                    </button>
+                </div>
+            )}
         </div>
     )
 }

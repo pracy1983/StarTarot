@@ -100,17 +100,68 @@ export default function OracleProfilePage() {
                     <GlassCard className="text-center p-8 border-white/5">
                         <div className="relative inline-block mb-4">
                             <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-neon-purple to-neon-gold p-1">
-                                <div className="w-full h-full rounded-full bg-deep-space overflow-hidden">
+                                <div className="w-full h-full rounded-full bg-deep-space overflow-hidden relative group">
                                     <img
                                         src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${profile?.full_name}&size=128&background=0a0a1a&color=a855f7`}
                                         alt="Avatar"
-                                        className="w-full h-full object-cover"
+                                        className="w-full h-full object-cover transition-opacity group-hover:opacity-75"
                                     />
+                                    {saving && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                                            <div className="w-6 h-6 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <button className="absolute bottom-0 right-0 p-2 bg-neon-purple text-white rounded-full shadow-lg hover:scale-110 transition-transform">
+                            <label className="absolute bottom-0 right-0 p-2 bg-neon-purple text-white rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer">
                                 <Camera size={16} />
-                            </button>
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={async (e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+
+                                        if (file.size > 2 * 1024 * 1024) {
+                                            toast.error('Imagem muito grande (máx 2MB)')
+                                            return
+                                        }
+
+                                        setSaving(true)
+                                        try {
+                                            const fileExt = file.name.split('.').pop()
+                                            const fileName = `${profile?.id}-${Math.random()}.${fileExt}`
+                                            const filePath = `avatars/${fileName}`
+
+                                            const { error: uploadError } = await supabase.storage
+                                                .from('avatars')
+                                                .upload(filePath, file)
+
+                                            if (uploadError) throw uploadError
+
+                                            const { data: { publicUrl } } = supabase.storage
+                                                .from('avatars')
+                                                .getPublicUrl(filePath)
+
+                                            const { error: updateError } = await supabase
+                                                .from('profiles')
+                                                .update({ avatar_url: publicUrl })
+                                                .eq('id', profile!.id)
+
+                                            if (updateError) throw updateError
+
+                                            setProfile({ ...profile!, avatar_url: publicUrl })
+                                            toast.success('Foto atualizada!')
+                                        } catch (error: any) {
+                                            console.error('Error uploading avatar:', error)
+                                            toast.error('Erro no upload: ' + error.message)
+                                        } finally {
+                                            setSaving(false)
+                                        }
+                                    }}
+                                />
+                            </label>
                         </div>
                         <h2 className="text-xl font-bold text-white">{profile?.full_name}</h2>
                         <div className="mt-2 inline-flex items-center px-3 py-1 rounded-full bg-white/5 border border-white/10 text-xs font-bold text-neon-gold uppercase tracking-wider">
