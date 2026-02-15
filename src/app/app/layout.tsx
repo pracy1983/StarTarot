@@ -12,7 +12,8 @@ import {
     Sparkles,
     Search,
     LayoutDashboard,
-    Radio
+    Radio,
+    Ticket
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { motion } from 'framer-motion'
@@ -58,7 +59,8 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const oracleNav = [
         { label: 'Dashboard', icon: <LayoutDashboard size={22} />, href: '/app/dashboard' },
         { label: 'Sala de Atendimento', icon: <Radio size={22} />, href: '/app/dashboard/sala' },
-        { label: 'Mensagens', icon: <Inbox size={22} />, href: '/app/mensagens' },
+        { label: 'Meus Cupons', icon: <Ticket size={22} />, href: '/app/dashboard/cupons' },
+        { label: 'Mensagens', icon: <Inbox size={22} />, href: '/app/mensagens?view=oracle' },
         { label: 'Meu Perfil Profissional', icon: <User size={22} />, href: '/app/dashboard/perfil' },
     ]
 

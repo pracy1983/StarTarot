@@ -40,6 +40,8 @@ interface Profile {
   country?: string | null
   price_brl_per_minute?: number
   credits_per_minute?: number
+  initial_fee_brl?: number
+  initial_fee_credits?: number
   metadata?: any
 }
 

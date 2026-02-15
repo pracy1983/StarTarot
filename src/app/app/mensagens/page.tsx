@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Inbox, Mail, MailOpen, ExternalLink, Sparkles, Trash2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
@@ -12,6 +12,10 @@ import toast from 'react-hot-toast'
 export default function InboxPage() {
     const { profile } = useAuthStore()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const view = searchParams.get('view')
+    const isOracleView = view === 'oracle'
+
     const [messages, setMessages] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
@@ -40,13 +44,13 @@ export default function InboxPage() {
                 supabase.removeChannel(channel)
             }
         }
-    }, [profile?.id])
+    }, [profile?.id, isOracleView])
 
     const fetchMessages = async () => {
         if (!profile?.id) return
 
         try {
-            // 1. Buscar notificações da inbox
+            // 1. Buscar notificações da inbox (estas são sempre pro usuário logado, independente de ser oracle ou cliente, pois as mensagens são dirigidas ao recipient_id)
             const { data: inboxData, error: iError } = await supabase
                 .from('inbox_messages')
                 .select('*')
@@ -57,12 +61,18 @@ export default function InboxPage() {
             if (iError) console.error('Error fetching inbox:', iError)
 
             // 2. Buscar consultas (não ocultas da inbox)
-            const { data: consultationsData, error: cError } = await supabase
-                .from('consultations')
-                .select('*, oracle:profiles!oracle_id(full_name)')
-                .eq('client_id', profile.id)
+            // Se for oracle view, buscamos onde eu sou o oracle. Se for cliente, onde sou o cliente.
+            let query = supabase.from('consultations')
+                .select('*, oracle:profiles!oracle_id(full_name), client:profiles!client_id(full_name)')
                 .eq('hidden_inbox', false)
-                .order('created_at', { ascending: false })
+
+            if (isOracleView) {
+                query = query.eq('oracle_id', profile.id)
+            } else {
+                query = query.eq('client_id', profile.id)
+            }
+
+            const { data: consultationsData, error: cError } = await query.order('created_at', { ascending: false })
 
             if (cError) console.error('Error fetching consultations:', cError)
 
@@ -73,8 +83,12 @@ export default function InboxPage() {
                 .filter(c => !inboxIds.has(c.id) && c.status === 'answered')
                 .map(c => ({
                     id: `cons-${c.id}`,
-                    title: `✨ Resposta de ${c.oracle?.full_name || 'Oraculista'}`,
-                    content: `Sua consulta foi respondida. Clique para ver.`,
+                    title: isOracleView
+                        ? `✅ Você respondeu a ${c.client?.full_name || 'um cliente'}`
+                        : `✨ Resposta de ${c.oracle?.full_name || 'Oraculista'}`,
+                    content: isOracleView
+                        ? `Atendimento concluído. Clique para revisar.`
+                        : `Sua consulta foi respondida. Clique para ver.`,
                     created_at: c.answered_at || c.created_at,
                     is_read: false,
                     metadata: { type: 'consultation_answered', consultation_id: c.id }
@@ -84,10 +98,14 @@ export default function InboxPage() {
                 .filter(c => c.status !== 'answered')
                 .map(c => ({
                     id: `pend-${c.id}`,
-                    title: `🔮 Consulta em processamento...`,
-                    content: `Sua consulta com ${c.oracle?.full_name || 'Oraculista'} está sendo preparada.`,
+                    title: isOracleView
+                        ? `🔮 Nova consulta pendente!`
+                        : `🔮 Consulta em processamento...`,
+                    content: isOracleView
+                        ? `${c.client?.full_name || 'Um cliente'} enviou uma pergunta. Responda agora!`
+                        : `Aguardando resposta do oraculista. Quando sua resposta chegar, te avisaremos no whatsapp!`,
                     created_at: c.created_at,
-                    is_read: true,
+                    is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"
                     metadata: { type: 'consultation_pending', consultation_id: c.id }
                 }))
 
@@ -163,14 +181,16 @@ export default function InboxPage() {
     return (
         <div className="max-w-4xl mx-auto space-y-8">
             <div className="flex items-center justify-between">
-                <div>
+                <div className="flex items-center space-x-3">
                     <h2 className="text-2xl font-bold font-raleway flex items-center">
                         <Inbox size={24} className="mr-3 text-neon-purple" />
                         Caixa de <span className="neon-text-purple ml-2">Entrada</span>
                     </h2>
-                    <p className="text-slate-400 text-sm mt-1">
-                        {messages.filter(m => !m.is_read).length} mensagem(ns) não lida(s)
-                    </p>
+                    {messages.filter(m => !m.is_read).length > 0 && (
+                        <div className="bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">
+                            {messages.filter(m => !m.is_read).length}
+                        </div>
+                    )}
                 </div>
             </div>
 

@@ -10,7 +10,8 @@ import {
     LogOut,
     Sparkles,
     LayoutDashboard,
-    Wallet
+    Wallet,
+    Ticket
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
@@ -46,6 +47,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         { label: 'Membros', icon: <Users size={20} />, href: '/admin/membros' },
         { label: 'Créditos', icon: <Wallet size={20} />, href: '/admin/creditos' },
         { label: 'Consultas', icon: <MessageSquare size={20} />, href: '/admin/consultas' },
+        { label: 'Cupons', icon: <Ticket size={20} />, href: '/admin/cupons' },
         { label: 'Finanças', icon: <BarChart3 size={20} />, href: '/admin/financeiro' },
         { label: 'Configurações', icon: <Settings size={20} />, href: '/admin/config' },
     ]

@@ -26,7 +26,7 @@ export const asaasService = {
         }
     },
 
-    async createPayment(customerId: string, value: number, description: string, externalReference: string) {
+    async createPayment(customerId: string, value: number, description: string, externalReference: string, billingType: 'PIX' | 'BOLETO' | 'CREDIT_CARD' = 'PIX') {
         try {
             const response = await fetch(`${ASAAS_API_URL}/payments`, {
                 method: 'POST',
@@ -36,7 +36,7 @@ export const asaasService = {
                 },
                 body: JSON.stringify({
                     customer: customerId,
-                    billingType: 'PIX',
+                    billingType,
                     value,
                     dueDate: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString().split('T')[0], // 24h expiration
                     description,

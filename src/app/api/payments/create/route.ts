@@ -9,7 +9,7 @@ export async function POST(req: Request) {
     const supabase = createRouteHandlerClient({ cookies })
 
     try {
-        const { packageId, cpfCnpj } = await req.json()
+        const { packageId, cpfCnpj, billingType = 'PIX', couponCode } = await req.json()
         const { data: { session } } = await supabase.auth.getSession()
 
         if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
@@ -23,7 +23,37 @@ export async function POST(req: Request) {
 
         if (pkgError || !pkg) return NextResponse.json({ error: 'Pacote não encontrado' }, { status: 404 })
 
-        // 2. Buscar ou criar cliente no Asaas (simplificado para MVP: criamos sempre ou usamos metadata se existir)
+        // 1.5 Validar Cupom
+        let finalPrice = pkg.price_brl
+        let discountAmount = 0
+        let couponId = null
+        let couponData = null
+
+        if (couponCode) {
+            const { data: coupon, error: couponError } = await supabaseAdmin
+                .from('coupons')
+                .select('*')
+                .eq('code', couponCode.toUpperCase())
+                .eq('active', true)
+                .single()
+
+            if (coupon && !couponError) {
+                // Verificar validade e uso
+                const now = new Date()
+                const expiresAt = coupon.expires_at ? new Date(coupon.expires_at) : null
+                const maxUses = coupon.max_uses || Infinity
+
+                if ((!expiresAt || expiresAt > now) && (coupon.used_count < maxUses)) {
+                    couponId = coupon.id
+                    couponData = coupon
+                    const discount = Math.round((pkg.price_brl * (coupon.discount_percent / 100)) * 100) / 100
+                    discountAmount = discount
+                    finalPrice = Math.max(0, pkg.price_brl - discount)
+                }
+            }
+        }
+
+        // 2. Buscar ou criar cliente no Asaas
         const { data: profile } = await supabase
             .from('profiles')
             .select('*')
@@ -40,7 +70,6 @@ export async function POST(req: Request) {
             )
             asaasCustomerId = customer.id
 
-            // Salvar no perfil
             await supabaseAdmin
                 .from('profiles')
                 .update({
@@ -52,13 +81,17 @@ export async function POST(req: Request) {
         // 3. Criar pagamento no Asaas
         const payment = await asaasService.createPayment(
             asaasCustomerId,
-            pkg.price_brl,
-            `Compra de ${pkg.coins_amount + (pkg.bonus_amount || 0)} Lumina Coins`,
-            `pkg_${pkg.id}_u_${session.user.id}_${Date.now()}`
+            finalPrice,
+            `Compra de ${pkg.coins_amount + (pkg.bonus_amount || 0)} Lumina Coins${couponCode ? ` (Cupom: ${couponCode})` : ''}`,
+            `pkg_${pkg.id}_u_${session.user.id}_${Date.now()}`,
+            billingType
         )
 
-        // 4. Buscar Pix QR Code
-        const pixData = await asaasService.getPixQrCode(payment.id)
+        // 4. Buscar Pix QR Code APENAS se for PIX
+        let pixData = null
+        if (billingType === 'PIX') {
+            pixData = await asaasService.getPixQrCode(payment.id)
+        }
 
         // 5. Registrar transação pendente no banco
         await supabaseAdmin
@@ -66,22 +99,30 @@ export async function POST(req: Request) {
             .insert({
                 user_id: session.user.id,
                 amount: pkg.coins_amount + (pkg.bonus_amount || 0),
-                money_amount: pkg.price_brl,
+                money_amount: finalPrice,
                 type: 'credit_purchase',
                 status: 'pending',
                 asaas_payment_id: payment.id,
                 metadata: {
                     package_id: pkg.id,
                     external_reference: payment.externalReference,
-                    bonus_amount: pkg.bonus_amount
+                    bonus_amount: pkg.bonus_amount,
+                    original_price: pkg.price_brl,
+                    discount_amount: discountAmount,
+                    coupon_id: couponId,
+                    billing_type: billingType
                 }
             })
 
+        // Atualizar contagem de uso do cupom (opcional: fazer só no webhook de confirmação para garantir que pagou)
+        // Por enquanto não incrementamos aqui, deixamos para o webhook confirmar.
+
         return NextResponse.json({
             paymentId: payment.id,
-            encodedImage: pixData.encodedImage,
-            payload: pixData.payload,
-            expirationDate: payment.dueDate
+            encodedImage: pixData?.encodedImage,
+            payload: pixData?.payload,
+            expirationDate: payment.dueDate,
+            invoiceUrl: payment.invoiceUrl || payment.bankSlipUrl // Retorna URL para pagamento (Boleto/Cartão)
         })
 
     } catch (error: any) {

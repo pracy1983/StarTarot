@@ -107,7 +107,8 @@ export default function NewConsultationPage() {
         }
 
         const pricePerQuestion = oracle?.price_per_message || 10
-        const totalCost = validQuestions.length * pricePerQuestion
+        const initialFee = oracle?.initial_fee_credits || 0
+        const totalCost = (validQuestions.length * pricePerQuestion) + initialFee
 
         if (walletBalance < totalCost) {
             toast.error(`Créditos insuficientes. Você precisa de ${totalCost} CR.`)
@@ -226,6 +227,7 @@ export default function NewConsultationPage() {
     }
 
     const pricePerQuestion = oracle?.price_per_message || 10
+    const initialFee = oracle?.initial_fee_credits || 0
 
     return (
         <div className="max-w-3xl mx-auto space-y-8">
@@ -264,6 +266,11 @@ export default function NewConsultationPage() {
                     <div className="text-right">
                         <p className="text-xs text-slate-500">Valor por pergunta</p>
                         <p className="text-lg font-bold text-neon-gold">{pricePerQuestion} CR</p>
+                        {initialFee > 0 && (
+                            <p className="text-[10px] text-slate-400 mt-1">
+                                + {initialFee} CR taxa inicial
+                            </p>
+                        )}
                     </div>
                 </div>
             </GlassCard>
@@ -339,6 +346,13 @@ export default function NewConsultationPage() {
                         pricePerQuestion={pricePerQuestion}
                     />
 
+                    {initialFee > 0 && (
+                        <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
+                            <span>Taxa de Abertura (Fixa):</span>
+                            <span>{initialFee} CR</span>
+                        </div>
+                    )}
+
                     {/* Info de como funciona */}
                     <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
                         <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
@@ -358,11 +372,15 @@ export default function NewConsultationPage() {
                             fullWidth
                             onClick={handleSubmit}
                             loading={submitting}
-                            disabled={questions.filter(q => q.trim()).length === 0}
+                            disabled={questions.filter(q => q.trim()).length === 0 || submitting}
                             className="text-base font-bold py-4 gap-3"
                         >
-                            <Send size={20} />
-                            <span>Enviar Consulta</span>
+                            <div className="flex flex-col items-center leading-none">
+                                <span className="flex items-center gap-2"><Send size={20} /> Enviar Consulta</span>
+                                <span className="text-[10px] opacity-80 font-normal mt-1">
+                                    Total: {(questions.filter(q => q.trim()).length * pricePerQuestion) + initialFee} CR
+                                </span>
+                            </div>
                         </NeonButton>
                     </div>
                 </div>

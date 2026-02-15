@@ -240,9 +240,6 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
-            <button onClick={() => openAuth('oracle', true)} className="text-xs font-bold text-slate-400 hover:text-neon-gold transition-all uppercase tracking-widest flex items-center">
-              <Sparkles size={14} className="mr-2" /> Seja um Oraculista
-            </button>
             {isAuthenticated ? (
               <NeonButton variant="purple" size="sm" onClick={() => router.push('/app')}>
                 <LayoutDashboard size={16} className="mr-2" /> Meu Portal
@@ -391,7 +388,13 @@ export default function LandingPage() {
       </main>
 
       {/* Footer Minimalist */}
-      <footer className="py-12 px-6 border-t border-white/5 mt-24 text-center">
+      <footer className="py-12 px-6 border-t border-white/5 mt-24 text-center space-y-6">
+        <button
+          onClick={() => openAuth('oracle', true)}
+          className="text-sm font-bold text-slate-400 hover:text-neon-purple transition-colors uppercase tracking-widest flex items-center justify-center mx-auto group"
+        >
+          <Sparkles size={16} className="mr-2 group-hover:text-neon-gold transition-colors" /> Seja um oraculista da StarTarot
+        </button>
         <p className="text-slate-500 text-xs uppercase tracking-[0.2em] font-bold">
           © 2026 StarTarot Portal - Todos os direitos reservados
         </p>

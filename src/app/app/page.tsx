@@ -22,9 +22,9 @@ export default function MarketplacePage() {
             const { data: profiles, error: pError } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('role', 'oracle')
+                .in('role', ['oracle', 'owner'])
                 .eq('application_status', 'approved')
-                .order('is_online', { ascending: false })
+                .eq('application_status', 'approved')
             // Suspensão é tratada no client-side filter por enquanto, ou em view SQL
             // Mas vamos filtrar aqui o básico se possível, mas como é coluna nova pode ser null
 
@@ -42,7 +42,19 @@ export default function MarketplacePage() {
                 schedules: schedules?.filter(s => s.oracle_id === p.id) || []
             }))
 
-            setOracles(oraclesWithSchedules)
+            // 4. Lógica de Ordenação e Randomização
+            const zeroFee = oraclesWithSchedules.filter(o => o.initial_fee_credits === 0)
+            const others = oraclesWithSchedules.filter(o => o.initial_fee_credits !== 0)
+
+            const shuffle = (array: any[]) => array.sort(() => Math.random() - 0.5)
+
+            // Embaralha dentro dos grupos
+            const sortedOracles = [
+                ...shuffle(zeroFee),
+                ...shuffle(others)
+            ]
+
+            setOracles(sortedOracles)
         } catch (err) {
             console.error('Erro ao buscar oraculistas:', err)
         } finally {

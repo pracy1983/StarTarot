@@ -1,9 +1,10 @@
+
 'use client'
 
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Wallet, Sparkles, CreditCard, CheckCircle2, QrCode, Copy, Clock, AlertCircle } from 'lucide-react'
+import { Wallet, Sparkles, CreditCard, CheckCircle2, QrCode, Copy, Clock, AlertCircle, Ticket, Barcode } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -17,12 +18,16 @@ export default function WalletPage() {
     const [selectedPackage, setSelectedPackage] = useState<any>(null)
     const [step, setStep] = useState<'selection' | 'checkout' | 'pix'>('selection')
     const [cpf, setCpf] = useState('')
+    const [couponCode, setCouponCode] = useState('')
+    const [billingType, setBillingType] = useState<'PIX' | 'BOLETO' | 'CREDIT_CARD'>('PIX')
     const [pixData, setPixData] = useState<any>(null)
     const [isProcessing, setIsProcessing] = useState(false)
+    const [transactions, setTransactions] = useState<any[]>([])
 
     useEffect(() => {
         if (profile?.id) {
             fetchWalletData()
+            fetchTransactions()
         }
     }, [profile?.id])
 
@@ -50,6 +55,16 @@ export default function WalletPage() {
         }
     }
 
+    const fetchTransactions = async () => {
+        const { data } = await supabase
+            .from('transactions')
+            .select('*')
+            .eq('user_id', profile!.id)
+            .order('created_at', { ascending: false })
+            .limit(5)
+        setTransactions(data || [])
+    }
+
     const handleStartPurchase = (pkg: any) => {
         setSelectedPackage(pkg)
         setStep('checkout')
@@ -68,16 +83,28 @@ export default function WalletPage() {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     packageId: selectedPackage.id,
-                    cpfCnpj: cpf.replace(/\D/g, '')
+                    cpfCnpj: cpf.replace(/\D/g, ''),
+                    billingType,
+                    couponCode: couponCode || undefined
                 })
             })
 
             const data = await res.json()
             if (!res.ok) throw new Error(data.error)
 
-            setPixData(data)
-            setStep('pix')
-            toast.success('PIX gerado com sucesso!')
+            if (billingType === 'PIX') {
+                setPixData(data)
+                setStep('pix')
+                toast.success('PIX gerado com sucesso!')
+            } else {
+                // Redirecionar para invoice (Boleto ou Cartão)
+                if (data.invoiceUrl) {
+                    window.location.href = data.invoiceUrl
+                } else {
+                    toast.success('Pagamento criado. Verifique seu email.')
+                    setStep('selection')
+                }
+            }
         } catch (err: any) {
             toast.error(err.message || 'Erro ao processar pagamento')
         } finally {
@@ -146,8 +173,9 @@ export default function WalletPage() {
                                 </div>
 
                                 <h3 className="text-white font-bold mb-1">{pkg.name}</h3>
-                                <div className="text-3xl font-black text-white mb-2">
-                                    {pkg.coins_amount + (pkg.bonus_amount || 0)}
+                                <div className="text-3xl font-black text-white mb-2 flex items-baseline justify-center">
+                                    {pkg.coins_amount}
+                                    {pkg.bonus_amount > 0 && <span className="text-lg text-green-400 ml-1">+{pkg.bonus_amount}</span>}
                                     <span className="text-xs text-slate-500 ml-1 font-normal uppercase">Coins</span>
                                 </div>
 
@@ -185,17 +213,40 @@ export default function WalletPage() {
                                 </div>
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-slate-400">Total em Moedas:</span>
-                                    <span className="text-neon-purple font-black">{selectedPackage.coins_amount + selectedPackage.bonus_amount} Coins</span>
+                                    <div className="text-right">
+                                        <span className="text-neon-purple font-black block">{selectedPackage.coins_amount + selectedPackage.bonus_amount} Coins</span>
+                                        {selectedPackage.bonus_amount > 0 && <span className="text-[10px] text-green-400">({selectedPackage.coins_amount} + {selectedPackage.bonus_amount} Bônus)</span>}
+                                    </div>
                                 </div>
-                                <div className="flex justify-between items-center pt-4 border-t border-white/5">
+                                <div className="flex justify-between items-center pt-4 border-t border-white/5 mt-4">
                                     <span className="text-slate-400 font-bold">Valor a Pagar:</span>
                                     <span className="text-2xl font-black text-white">R$ {selectedPackage.price_brl.toFixed(2)}</span>
                                 </div>
                             </div>
 
-                            <div className="space-y-4">
+                            <div className="space-y-6">
+                                {/* Cupom */}
                                 <div>
-                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-2 block">Seu CPF (necessário para o PIX)</label>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-2 flex items-center">
+                                        <Ticket size={14} className="mr-2" /> Possui um Cupom?
+                                    </label>
+                                    <div className="relative">
+                                        <input
+                                            type="text"
+                                            placeholder="Código do Cupom"
+                                            value={couponCode}
+                                            onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-gold/50 placeholder-slate-600"
+                                        />
+                                        <div className="absolute right-3 top-1/2 -translate-y-1/2 text-[10px] text-slate-500">
+                                            Será aplicado no checkout
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* CPF */}
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-2 block">Seu CPF (obrigatório)</label>
                                     <input
                                         type="text"
                                         placeholder="000.000.000-00"
@@ -204,6 +255,35 @@ export default function WalletPage() {
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50"
                                     />
                                 </div>
+
+                                {/* Payment Method */}
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-2 block">Forma de Pagamento</label>
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <button
+                                            onClick={() => setBillingType('PIX')}
+                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${billingType === 'PIX' ? 'bg-neon-purple/20 border-neon-purple text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                            <QrCode size={20} className="mb-2" />
+                                            <span className="text-xs font-bold">PIX</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setBillingType('CREDIT_CARD')}
+                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${billingType === 'CREDIT_CARD' ? 'bg-neon-purple/20 border-neon-purple text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                            <CreditCard size={20} className="mb-2" />
+                                            <span className="text-xs font-bold">Cartão</span>
+                                        </button>
+                                        <button
+                                            onClick={() => setBillingType('BOLETO')}
+                                            className={`p-3 rounded-xl border flex flex-col items-center justify-center transition-all ${billingType === 'BOLETO' ? 'bg-neon-purple/20 border-neon-purple text-white' : 'bg-white/5 border-white/10 text-slate-400 hover:bg-white/10'}`}
+                                        >
+                                            <Barcode size={20} className="mb-2" />
+                                            <span className="text-xs font-bold">Boleto</span>
+                                        </button>
+                                    </div>
+                                </div>
+
                                 <NeonButton
                                     variant="purple"
                                     fullWidth
@@ -211,10 +291,10 @@ export default function WalletPage() {
                                     onClick={handleCreatePayment}
                                     loading={isProcessing}
                                 >
-                                    Gerar Pagamento PIX
+                                    {billingType === 'PIX' ? 'Gerar PIX' : 'Ir para Pagamento'}
                                 </NeonButton>
                                 <p className="text-[10px] text-center text-slate-600">
-                                    Ao clicar em pagar, você será direcionado para o pagamento seguro via PIX.
+                                    Ambiente seguro via Asaas. Seus dados estão protegidos.
                                 </p>
                             </div>
                         </GlassCard>
@@ -270,18 +350,24 @@ export default function WalletPage() {
             <GlassCard className="border-white/5" hover={false}>
                 <h3 className="text-lg font-bold text-white mb-6">Histórico Recente</h3>
                 <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center text-green-500">
-                                <CheckCircle2 size={18} />
+                    {transactions.length > 0 ? transactions.map((t, i) => (
+                        <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
+                            <div className="flex items-center space-x-3">
+                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                    {t.amount > 0 ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                                </div>
+                                <div>
+                                    <p className="text-sm font-bold text-white">{t.metadata?.description || 'Transação'}</p>
+                                    <p className="text-xs text-slate-500">{new Date(t.created_at).toLocaleDateString()}</p>
+                                </div>
                             </div>
-                            <div>
-                                <p className="text-sm font-bold text-white">Recarga Inicial</p>
-                                <p className="text-xs text-slate-500">Saldo inicial do sistema</p>
-                            </div>
+                            <span className={`font-bold ${t.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                {t.amount > 0 ? '+' : ''}{t.amount} Coins
+                            </span>
                         </div>
-                        <span className="text-green-500 font-bold">+0 Coins</span>
-                    </div>
+                    )) : (
+                        <p className="text-slate-500 text-sm">Nenhuma transação recente.</p>
+                    )}
                 </div>
             </GlassCard>
         </div>

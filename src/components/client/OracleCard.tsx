@@ -2,7 +2,7 @@ import React from 'react'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, MessageSquare, Video, Clock, Calendar } from 'lucide-react'
+import { Sparkles, MessageSquare, Video, DollarSign, Calendar } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
@@ -20,6 +20,7 @@ interface OracleCardProps {
         is_ai?: boolean
         oracle_type: 'human' | 'ai'
         schedules?: any[]
+        initial_fee_credits?: number
     }
 }
 
@@ -29,6 +30,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     const { isAuthenticated } = useAuthStore()
 
     const { status, label } = getOracleStatus(oracle.is_online, oracle.schedules || [])
+    const isZeroFee = oracle.initial_fee_credits === 0
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -62,13 +64,20 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             glowColor={status === 'online' ? 'purple' : (status === 'horario' ? 'gold' : 'none')}
             onClick={handleViewProfile}
         >
+            {/* Zero Fee Badge */}
+            {isZeroFee && (
+                <div className="absolute top-4 left-4 z-20 px-2 py-0.5 bg-neon-gold text-deep-space text-[9px] font-black uppercase tracking-wider rounded shadow-lg animate-pulse">
+                    ZERO TARIFA
+                </div>
+            )}
+
             {/* Status Badge */}
             <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
-                    status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
-                        'bg-slate-800/50 text-slate-500 border-white/5'
+                status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
+                    'bg-slate-800/50 text-slate-500 border-white/5'
                 }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-400 animate-pulse' :
-                        status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
+                    status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
                     }`} />
                 <span>{label}</span>
             </div>
@@ -76,7 +85,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             <div className="flex flex-col items-center text-center space-y-4 pt-4">
                 {/* Avatar */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-purple' : status === 'horario' ? 'bg-neon-gold' : 'bg-slate-500'
+                    <div className={`absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : status === 'horario' ? 'bg-neon-gold' : 'bg-slate-500'
                         }`} />
                     <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10">
                         <img
@@ -99,19 +108,11 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 {/* Info Tags */}
                 <div className="flex items-center space-x-3">
                     <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                        <Clock size={12} className="mr-1 text-neon-purple/50" />
+                        <DollarSign size={12} className="mr-1 text-neon-cyan/50" />
                         {oracle.is_ai || oracle.oracle_type === 'ai'
-                            ? `${oracle.price_per_message || 10} CR`
-                            : `${oracle.credits_per_minute} CR/MIN`}
+                            ? `${oracle.price_per_message || 10} | PERGUNTA`
+                            : `${oracle.credits_per_minute} | MINUTO`}
                     </div>
-                    {oracle.is_ai && (
-                        <>
-                            <div className="w-1 h-1 rounded-full bg-white/20" />
-                            <div className="flex items-center text-neon-cyan text-[10px] font-bold">
-                                <Sparkles size={12} className="mr-1" /> IA
-                            </div>
-                        </>
-                    )}
                 </div>
 
                 <p className="text-slate-400 text-sm line-clamp-2 min-h-[40px] px-2 leading-relaxed">
@@ -132,15 +133,63 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     )}
                 </div>
 
-                <NeonButton
-                    variant={status === 'online' ? 'purple' : 'gold'}
-                    fullWidth
-                    size="md"
-                    className="mt-2"
-                    onClick={handleStartConsultation}
-                >
-                    {status === 'online' ? 'Iniciar Consulta' : (status === 'horario' ? 'Entrar na Fila' : 'Deixar Mensagem')}
-                </NeonButton>
+                <div className="mt-2 flex gap-2 w-full">
+                    {status === 'online' ? (
+                        oracle.oracle_type === 'human' ? (
+                            <>
+                                <NeonButton
+                                    variant="green"
+                                    fullWidth
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        // Specific logic for video if distinct from chat Page
+                                        // For now, redirect to consultation page where both options might be available or passed as query param?
+                                        // Assuming consultation page handles verify
+                                        // To facilitate specific action, maybe pass query param ?type=video
+                                        if (!isAuthenticated) return handleStartConsultation(e)
+                                        router.push(`/app/consulta/${oracle.id}?type=video`)
+                                    }}
+                                >
+                                    <Video size={16} className="mr-1" />
+                                    Vídeo
+                                </NeonButton>
+                                <NeonButton
+                                    variant="purple"
+                                    fullWidth
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (!isAuthenticated) return handleStartConsultation(e)
+                                        router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                    }}
+                                >
+                                    <MessageSquare size={16} className="mr-1" />
+                                    Enviar Pergunta
+                                </NeonButton>
+                            </>
+                        ) : (
+                            <NeonButton
+                                variant="purple"
+                                fullWidth
+                                size="md"
+                                onClick={handleStartConsultation}
+                            >
+                                <Sparkles size={16} className="mr-2" />
+                                Enviar Pergunta
+                            </NeonButton>
+                        )
+                    ) : (
+                        <NeonButton
+                            variant="gold"
+                            fullWidth
+                            size="md"
+                            onClick={handleStartConsultation}
+                        >
+                            {status === 'horario' ? 'Entrar na Fila' : 'Deixar Mensagem'}
+                        </NeonButton>
+                    )}
+                </div>
             </div>
         </GlassCard>
     )

@@ -6,7 +6,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Video, Power, Loader2, PhoneIncoming } from 'lucide-react'
+import { Video, Power, Loader2, PhoneIncoming, AlertTriangle } from 'lucide-react'
 import toast from 'react-hot-toast'
 
 export default function ServiceRoomPage() {
@@ -94,20 +94,33 @@ export default function ServiceRoomPage() {
                     {/* Incoming Call Placeholder (Hidden usually) */}
                     {incomingCall && (
                         <div className="w-full bg-black/40 border border-green-500/50 rounded-xl p-6 animate-bounce">
-                            <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-4">
-                                    <div className="p-3 bg-green-500/20 rounded-full text-green-400">
-                                        <PhoneIncoming size={24} />
+                            <div className="flex flex-col gap-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-center space-x-4">
+                                        <div className="p-3 bg-green-500/20 rounded-full text-green-400">
+                                            <PhoneIncoming size={24} />
+                                        </div>
+                                        <div className="text-left">
+                                            <h3 className="text-white font-bold">Chamada de {incomingCall.client_name}</h3>
+                                            <p className="text-sm text-green-400">Recebendo chamada de vídeo...</p>
+                                        </div>
                                     </div>
-                                    <div className="text-left">
-                                        <h3 className="text-white font-bold">Chamada de {incomingCall.client_name}</h3>
-                                        <p className="text-sm text-green-400">Recebendo chamada de vídeo...</p>
+                                    <div className="flex space-x-3">
+                                        <NeonButton variant="green" size="sm">Aceitar</NeonButton>
+                                        <NeonButton variant="red" size="sm" onClick={() => setIncomingCall(null)}>Recusar</NeonButton>
                                     </div>
                                 </div>
-                                <div className="flex space-x-3">
-                                    <NeonButton variant="green" size="sm">Aceitar</NeonButton>
-                                    <NeonButton variant="red" size="sm" onClick={() => setIncomingCall(null)}>Recusar</NeonButton>
-                                </div>
+                                {incomingCall.is_using_bonus && (
+                                    <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3 flex items-start gap-3 text-left">
+                                        <div className="p-1 bg-yellow-500/20 rounded text-yellow-500 mt-0.5">
+                                            <AlertTriangle size={14} />
+                                        </div>
+                                        <div>
+                                            <p className="text-sm font-bold text-yellow-200">Atenção: Cliente utilizando Bônus</p>
+                                            <p className="text-xs text-yellow-500/80">Esta chamada está sendo paga com créditos promocionais/gratuitos verifique as regras da plataforma.</p>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

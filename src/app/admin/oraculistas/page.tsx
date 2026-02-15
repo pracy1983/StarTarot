@@ -7,6 +7,7 @@ import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
+import { getOracleStatus } from '@/lib/status'
 
 const StatusBadge = ({ status }: { status?: string }) => {
     switch (status) {
@@ -170,12 +171,28 @@ export default function AdminOraculistasPage() {
                                         <StatusBadge status={o.application_status} />
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center space-x-1.5">
-                                            <div className={`w-1.5 h-1.5 rounded-full ${o.is_online ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
-                                            <span className={`text-xs ${o.is_online ? 'text-green-500' : 'text-slate-500'}`}>
-                                                {o.is_online ? 'Online' : 'Offline'}
-                                            </span>
-                                        </div>
+                                        {(() => {
+                                            const { status } = getOracleStatus(o.is_online, o.schedules || [])
+                                            const isVideoOnline = o.is_online && !o.is_ai // AI typically no video unless specified
+                                            const isMessageOnline = status !== 'offline' // AI typically always accepts messages or follows schedule? User said "se tiver dentro do horario". Assuming `getOracleStatus` covers schedule. If AI has no schedule, `getOracleStatus` returns offline if `isOnline` is false. If AI is 24/7, it should have a 24/7 schedule or we force it. Let's assume `status !== 'offline'` covers it. BUT for AI, if no schedule, maybe online? Let's stick to `status !== 'offline'` for now as safe bet.
+
+                                            return (
+                                                <div className="flex flex-col space-y-1.5">
+                                                    <div className="flex items-center space-x-1.5">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${isVideoOnline ? 'bg-green-500 animate-pulse' : 'bg-slate-600'}`} />
+                                                        <span className={`text-[10px] font-medium ${isVideoOnline ? 'text-green-500' : 'text-slate-500'}`}>
+                                                            Vídeo: {isVideoOnline ? 'Online' : 'Offline'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex items-center space-x-1.5">
+                                                        <div className={`w-1.5 h-1.5 rounded-full ${isMessageOnline ? 'bg-neon-purple animate-pulse' : 'bg-slate-600'}`} />
+                                                        <span className={`text-[10px] font-medium ${isMessageOnline ? 'text-neon-purple' : 'text-slate-500'}`}>
+                                                            Mensagens: {isMessageOnline ? 'Online' : 'Offline'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )
+                                        })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end space-x-2">

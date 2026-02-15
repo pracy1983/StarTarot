@@ -92,6 +92,8 @@ export async function POST(req: Request) {
             ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
             
             Importante: Responda de forma mística, profunda, mas clara. O usuário pagou créditos por esta mensagem, então garanta uma resposta valiosa e completa. Mantenha coerência com o histórico da conversa.
+            
+            REGRA ABSOLUTA DE FORMATAÇÃO: NUNCA use negrito (**texto**), itálico (*texto*) ou emojis. Responda APENAS com texto simples.
         `.trim()
 
         // 7. Chamada para DeepSeek API

@@ -5,15 +5,25 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import Cropper from 'react-easy-crop'
+import { motion, AnimatePresence } from 'framer-motion'
 
 export default function OracleProfilePage() {
     const { profile, setProfile } = useAuthStore()
     const router = useRouter()
     const [saving, setSaving] = useState(false)
+
+    // Avatar Crop States
+    const [imageSource, setImageSource] = useState<string | null>(null)
+    const [crop, setCrop] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+    const [showCropModal, setShowCropModal] = useState(false)
+
     const [formData, setFormData] = useState({
         full_name: '',
         phone: '',
@@ -21,6 +31,7 @@ export default function OracleProfilePage() {
         specialty: '',
         personality: '',
         price_brl_per_minute: 5.00,
+        initial_fee_brl: 0.00,
         requires_birthdate: false,
         requires_birthtime: false
     })
@@ -39,15 +50,16 @@ export default function OracleProfilePage() {
                 specialty: profile.specialty || '',
                 personality: profile.personality || '',
                 price_brl_per_minute: profile.price_brl_per_minute || 5.00,
+                initial_fee_brl: profile.initial_fee_brl || 0.00,
                 requires_birthdate: profile.requires_birthdate || false,
                 requires_birthtime: profile.requires_birthtime || false
             })
         }
     }, [profile])
 
-    const handlePriceChange = (value: string) => {
+    const handlePriceChange = (field: 'price_brl_per_minute' | 'initial_fee_brl', value: string) => {
         const val = parseFloat(value) || 0
-        setFormData(prev => ({ ...prev, price_brl_per_minute: val }))
+        setFormData(prev => ({ ...prev, [field]: val }))
     }
 
     const handleSave = async (e: React.FormEvent) => {
@@ -55,26 +67,109 @@ export default function OracleProfilePage() {
         setSaving(true)
 
         try {
-            // No banco guardamos o preco_brl_per_minute e atualizamos credits_per_minute (coins)
+            // Conversão de R$ para Coins (Moedas)
             const credits_per_minute = Math.round(formData.price_brl_per_minute * 10)
+            const initial_fee_credits = Math.round(formData.initial_fee_brl * 10)
 
             const { error } = await supabase
                 .from('profiles')
                 .update({
                     ...formData,
-                    credits_per_minute
+                    credits_per_minute,
+                    initial_fee_credits
                 })
                 .eq('id', profile!.id)
 
             if (error) throw error
 
-            setProfile({ ...profile!, ...formData, credits_per_minute })
+            setProfile({
+                ...profile!,
+                ...formData,
+                credits_per_minute,
+                initial_fee_credits
+            })
             toast.success('Perfil de oraculista atualizado!')
         } catch (err: any) {
             console.error('Error updating profile:', err)
             toast.error('Erro ao salvar: ' + err.message)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels)
+    }
+
+    const createImage = (url: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+            const image = new Image()
+            image.addEventListener('load', () => resolve(image))
+            image.addEventListener('error', (error) => reject(error))
+            image.setAttribute('crossOrigin', 'anonymous')
+            image.src = url
+        })
+
+    const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob | null> => {
+        const image = await createImage(imageSrc)
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) return null
+
+        canvas.width = pixelCrop.width
+        canvas.height = pixelCrop.height
+
+        ctx.drawImage(
+            image,
+            pixelCrop.x,
+            pixelCrop.y,
+            pixelCrop.width,
+            pixelCrop.height,
+            0,
+            0,
+            pixelCrop.width,
+            pixelCrop.height
+        )
+
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob)
+            }, 'image/jpeg')
+        })
+    }
+
+    const handleUploadAvatar = async (fileBlob: Blob) => {
+        setSaving(true)
+        try {
+            const fileName = `${profile?.id}-${Math.random()}.jpg`
+            const filePath = `avatars/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, fileBlob)
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath)
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl })
+                .eq('id', profile!.id)
+
+            if (updateError) throw updateError
+
+            setProfile({ ...profile!, avatar_url: publicUrl })
+            toast.success('Foto atualizada!')
+        } catch (error: any) {
+            console.error('Error uploading avatar:', error)
+            toast.error('Erro no upload: ' + error.message)
+        } finally {
+            setSaving(false)
+            setShowCropModal(false)
         }
     }
 
@@ -119,46 +214,19 @@ export default function OracleProfilePage() {
                                     type="file"
                                     accept="image/*"
                                     className="hidden"
-                                    onChange={async (e) => {
+                                    onChange={(e) => {
                                         const file = e.target.files?.[0]
                                         if (!file) return
-
-                                        if (file.size > 2 * 1024 * 1024) {
-                                            toast.error('Imagem muito grande (máx 2MB)')
+                                        if (file.size > 5 * 1024 * 1024) {
+                                            toast.error('Imagem muito grande (máx 5MB)')
                                             return
                                         }
-
-                                        setSaving(true)
-                                        try {
-                                            const fileExt = file.name.split('.').pop()
-                                            const fileName = `${profile?.id}-${Math.random()}.${fileExt}`
-                                            const filePath = `avatars/${fileName}`
-
-                                            const { error: uploadError } = await supabase.storage
-                                                .from('avatars')
-                                                .upload(filePath, file)
-
-                                            if (uploadError) throw uploadError
-
-                                            const { data: { publicUrl } } = supabase.storage
-                                                .from('avatars')
-                                                .getPublicUrl(filePath)
-
-                                            const { error: updateError } = await supabase
-                                                .from('profiles')
-                                                .update({ avatar_url: publicUrl })
-                                                .eq('id', profile!.id)
-
-                                            if (updateError) throw updateError
-
-                                            setProfile({ ...profile!, avatar_url: publicUrl })
-                                            toast.success('Foto atualizada!')
-                                        } catch (error: any) {
-                                            console.error('Error uploading avatar:', error)
-                                            toast.error('Erro no upload: ' + error.message)
-                                        } finally {
-                                            setSaving(false)
-                                        }
+                                        const reader = new FileReader()
+                                        reader.addEventListener('load', () => {
+                                            setImageSource(reader.result?.toString() || null)
+                                            setShowCropModal(true)
+                                        })
+                                        reader.readAsDataURL(file)
                                     }}
                                 />
                             </label>
@@ -187,7 +255,7 @@ export default function OracleProfilePage() {
                                         type="number"
                                         step="0.10"
                                         value={formData.price_brl_per_minute}
-                                        onChange={(e) => handlePriceChange(e.target.value)}
+                                        onChange={(e) => handlePriceChange('price_brl_per_minute', e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-gold/50"
                                     />
                                 </div>
@@ -203,6 +271,50 @@ export default function OracleProfilePage() {
                                 </div>
                                 <p className="text-[9px] text-slate-600 mt-2">
                                     * O sistema converte automaticamente R$ 1,00 para 10 Moedas.
+                                </p>
+                            </div>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard className="border-white/5" glowColor="gold">
+                        <div className="flex items-center space-x-2 text-neon-gold mb-4">
+                            <Star size={18} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Taxa de Abertura</h3>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div className="space-y-1.5">
+                                <label className="text-xs font-medium text-slate-500 ml-1 italic">
+                                    Quanto custa para abrir o chat com você?
+                                </label>
+                                <div className="relative">
+                                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
+                                    <input
+                                        type="number"
+                                        step="0.10"
+                                        value={formData.initial_fee_brl}
+                                        onChange={(e) => handlePriceChange('initial_fee_brl', e.target.value)}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-gold/50"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="p-4 bg-neon-gold/5 rounded-xl border border-neon-gold/20">
+                                <div className="flex items-center justify-between">
+                                    <div className="flex items-end space-x-2">
+                                        <p className="text-2xl font-black text-white">
+                                            {Math.round(formData.initial_fee_brl * 10)}
+                                        </p>
+                                        <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Coins fixos</p>
+                                    </div>
+                                    {formData.initial_fee_brl === 0 && (
+                                        <div className="px-2 py-1 bg-neon-gold text-deep-space text-[10px] font-black rounded animate-pulse">
+                                            DESTAQUE ZERO TARIFA
+                                        </div>
+                                    )}
+                                </div>
+                                <p className="text-[9px] text-slate-600 mt-2 italic">
+                                    * Cobrado apenas no 1º minuto. Livre após o 2º min até o fim da consulta.
                                 </p>
                             </div>
                         </div>
@@ -322,6 +434,83 @@ export default function OracleProfilePage() {
                     </GlassCard>
                 </div>
             </div>
+            {/* Avatar Crop Modal */}
+            <AnimatePresence>
+                {showCropModal && imageSource && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-deep-space border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <h3 className="text-xl font-bold text-white flex items-center">
+                                    <Scissors size={20} className="mr-3 text-neon-purple" />
+                                    Ajustar Foto de Perfil
+                                </h3>
+                                <button onClick={() => setShowCropModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="relative h-[400px] w-full bg-black/40">
+                                <Cropper
+                                    image={imageSource}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    onCropChange={setCrop}
+                                    onCropComplete={onCropComplete}
+                                    onZoomChange={setZoom}
+                                />
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
+                                        <span>Zoom</span>
+                                        <span>{Math.round(zoom * 100)}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        value={zoom}
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        className="w-full h-1.5 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-purple"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <NeonButton
+                                        variant="white"
+                                        fullWidth
+                                        onClick={() => setShowCropModal(false)}
+                                    >
+                                        Cancelar
+                                    </NeonButton>
+                                    <NeonButton
+                                        variant="purple"
+                                        fullWidth
+                                        loading={saving}
+                                        onClick={async () => {
+                                            if (!imageSource || !croppedAreaPixels) return
+                                            const croppedImage = await getCroppedImg(imageSource, croppedAreaPixels)
+                                            if (croppedImage) {
+                                                await handleUploadAvatar(croppedImage)
+                                            }
+                                        }}
+                                    >
+                                        Salvar Recorte
+                                    </NeonButton>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }
