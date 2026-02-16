@@ -129,11 +129,11 @@ export const useAuthStore = create<AuthState>((set) => ({
           .from('profiles')
           .select('*')
           .eq('id', data.user.id)
-          .single()
+          .maybeSingle()
 
         if (pError) {
           console.error('Erro ao buscar perfil após login:', pError)
-          throw new Error('Perfil não encontrado no banco de dados.')
+          throw new Error('Erro técnico ao buscar perfil.')
         }
 
         if (profile) {
