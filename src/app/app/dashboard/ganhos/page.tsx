@@ -35,20 +35,25 @@ export default function OracleGanhosPage() {
 
             if (error) throw error
 
-            const total = transactions?.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
+            const confirmedTransactions = transactions?.filter(t => t.status === 'confirmed') || []
+            const pendingTransactions = transactions?.filter(t => t.status === 'pending') || []
+
+            const total = confirmedTransactions.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
 
             const firstDayOfMonth = new Date()
             firstDayOfMonth.setDate(1)
             firstDayOfMonth.setHours(0, 0, 0, 0)
 
-            const monthly = transactions
+            const monthly = confirmedTransactions
                 ?.filter(t => new Date(t.created_at) >= firstDayOfMonth)
                 .reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
+
+            const pending = pendingTransactions.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
 
             setStats({
                 totalEarned: total,
                 monthlyEarned: monthly,
-                pendingPayout: total // Simplified for now
+                pendingPayout: pending
             })
             setHistory(transactions || [])
         } catch (err) {

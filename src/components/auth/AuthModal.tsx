@@ -70,10 +70,10 @@ export const AuthModal = () => {
                     const currentType = isOracle ? 'Oraculista' : 'Membro'
 
                     if ((registrationRole === 'oracle' && isOracle) || (registrationRole === 'client' && !isOracle)) {
-                        setError(`Este ${foundUser.email === email.trim().toLowerCase() ? 'e-mail' : 'telefone'} já está cadastrado como ${currentType}. Por favor, faça login.`)
+                        setError(`Este ${foundUser.email === email.trim().toLowerCase() ? 'e-mail' : 'telefone'} já está cadastrado como ${currentType}. Por favor, faça login para acessar seu portal.`)
                     } else {
                         setUpgradeMode(true)
-                        setError(`Você já possui uma conta de ${currentType}. Deseja também ser um ${targetType}? Basta fazer login com sua senha atual para ativar esta nova função em sua conta!`)
+                        setError(`Você já possui um cadastro como ${currentType === 'Oraculista' ? 'oraculista' : 'cliente'}. Deseja se tornar ${targetType.toLowerCase()} ou apenas logar como ${currentType === 'Oraculista' ? 'oraculista' : 'cliente'}?`)
                     }
                     setFormLoading(false)
                     return

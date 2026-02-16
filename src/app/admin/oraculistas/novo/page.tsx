@@ -53,7 +53,8 @@ export default function NewOraclePage() {
             const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
             const { data, error } = await supabase.from('specialties').insert({
                 name: newCategoryName,
-                slug
+                slug,
+                active: true
             }).select().single()
 
             if (error) throw error

@@ -263,7 +263,7 @@ export default function LandingPage() {
         )}
 
         {/* Oracle Registration Section */}
-        {!isAuthenticated && (
+        {(!isAuthenticated || (profile?.role !== 'oracle' && profile?.role !== 'owner')) && (
           <section className="mt-32 pb-20">
             <GlassCard className="p-12 border-white/5 relative overflow-hidden" hover={false}>
               <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/10 blur-[100px] -z-10" />

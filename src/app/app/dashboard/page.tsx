@@ -18,6 +18,7 @@ import {
     Radio
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
+import { motion } from 'framer-motion'
 import toast from 'react-hot-toast'
 
 export default function OracleDashboard() {
@@ -31,11 +32,26 @@ export default function OracleDashboard() {
     })
     const [loading, setLoading] = useState(true)
 
+    const [pendingConsultations, setPendingConsultations] = useState<any[]>([])
+
     useEffect(() => {
         if (profile?.id) {
             fetchStats()
+            fetchPendingConsultations()
         }
     }, [profile?.id])
+
+    const fetchPendingConsultations = async () => {
+        if (!profile?.id) return
+        const { data } = await supabase
+            .from('consultations')
+            .select('*, client:profiles!client_id(full_name, avatar_url)')
+            .eq('oracle_id', profile.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false })
+
+        if (data) setPendingConsultations(data)
+    }
 
     const fetchStats = async () => {
         try {
@@ -48,7 +64,7 @@ export default function OracleDashboard() {
 
             if (eError) console.warn('Earnings fetch issue (likely migration pending):', eError)
 
-            const total = earnings?.reduce((sum, t) => sum + Number(t.amount), 0) || 0
+            const total = earnings?.reduce((sum: number, t: any) => sum + Number(t.amount), 0) || 0
 
             // 2. Consultas concluídas
             const { count: completed, error: cError } = await supabase
@@ -68,7 +84,7 @@ export default function OracleDashboard() {
             if (rError) console.warn('Ratings fetch issue (likely migration pending):', rError)
 
             const avg = ratings && ratings.length > 0
-                ? ratings.reduce((sum, r) => sum + r.stars, 0) / ratings.length
+                ? ratings.reduce((sum: number, r: any) => sum + r.stars, 0) / ratings.length
                 : 0
 
             setStats({
@@ -113,6 +129,31 @@ export default function OracleDashboard() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
+            {/* Alert for Pending Consultations */}
+            {pendingConsultations.length > 0 && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-neon-purple/20 border border-neon-purple/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                >
+                    <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-neon-purple rounded-xl text-white animate-bounce">
+                            <MessageSquare size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">Você tem {pendingConsultations.length} mensagem{pendingConsultations.length > 1 ? 's' : ''} pendente{pendingConsultations.length > 1 ? 's' : ''}!</h3>
+                            <p className="text-sm text-slate-300">Responda para liberar seus créditos e guiar seus consulentes.</p>
+                        </div>
+                    </div>
+                    <NeonButton
+                        variant="purple"
+                        onClick={() => router.push('/app/mensagens?view=oracle')}
+                    >
+                        Ver Mensagens
+                    </NeonButton>
+                </motion.div>
+            )}
+
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Painel do <span className="neon-text-purple">Oraculista</span></h1>

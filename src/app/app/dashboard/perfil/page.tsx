@@ -36,12 +36,18 @@ export default function OracleProfilePage() {
         phone: '',
         bio: '',
         specialty: '',
+        custom_specialty: '',
         personality: '',
         price_brl_per_minute: 5.00,
         initial_fee_brl: 0.00,
         price_per_message: 10,
         requires_birthdate: false,
         requires_birthtime: false
+    })
+
+    const [priceInputs, setPriceInputs] = useState({
+        price_brl_per_minute: '5.00',
+        initial_fee_brl: '0.00'
     })
 
     useEffect(() => {
@@ -64,7 +70,8 @@ export default function OracleProfilePage() {
             const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
             const { data, error } = await supabase.from('specialties').insert({
                 name: newCategoryName,
-                slug
+                slug,
+                active: true
             }).select().single()
 
             if (error) throw error
@@ -88,6 +95,7 @@ export default function OracleProfilePage() {
                 phone: profile.phone || '',
                 bio: profile.bio || '',
                 specialty: profile.specialty || '',
+                custom_specialty: '',
                 personality: profile.personality || '',
                 price_brl_per_minute: profile.price_brl_per_minute || 5.00,
                 initial_fee_brl: profile.initial_fee_brl || 0.00,
@@ -95,11 +103,16 @@ export default function OracleProfilePage() {
                 requires_birthdate: profile.requires_birthdate || false,
                 requires_birthtime: profile.requires_birthtime || false
             })
+            setPriceInputs({
+                price_brl_per_minute: (profile.price_brl_per_minute || 5.00).toString(),
+                initial_fee_brl: (profile.initial_fee_brl || 0.00).toString()
+            })
         }
     }, [profile])
 
     const handlePriceChange = (field: 'price_brl_per_minute' | 'initial_fee_brl', value: string) => {
-        const val = parseFloat(value) || 0
+        setPriceInputs(prev => ({ ...prev, [field]: value }))
+        const val = parseFloat(value.replace(',', '.')) || 0
         setFormData(prev => ({ ...prev, [field]: val }))
     }
 
@@ -119,7 +132,7 @@ export default function OracleProfilePage() {
                     name_fantasy: formData.name_fantasy,
                     phone: formData.phone,
                     bio: formData.bio,
-                    specialty: formData.specialty,
+                    specialty: formData.specialty === 'Outros' ? formData.custom_specialty : formData.specialty,
                     personality: formData.personality,
                     price_brl_per_minute: formData.price_brl_per_minute,
                     initial_fee_brl: formData.initial_fee_brl,
@@ -319,9 +332,8 @@ export default function OracleProfilePage() {
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
                                     <input
-                                        type="number"
-                                        step="0.10"
-                                        value={formData.price_brl_per_minute}
+                                        type="text"
+                                        value={priceInputs.price_brl_per_minute}
                                         onChange={(e) => handlePriceChange('price_brl_per_minute', e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-gold/50"
                                     />
@@ -357,9 +369,8 @@ export default function OracleProfilePage() {
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
                                     <input
-                                        type="number"
-                                        step="0.10"
-                                        value={formData.initial_fee_brl}
+                                        type="text"
+                                        value={priceInputs.initial_fee_brl}
                                         onChange={(e) => handlePriceChange('initial_fee_brl', e.target.value)}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white font-bold outline-none focus:border-neon-gold/50"
                                     />
@@ -509,8 +520,8 @@ export default function OracleProfilePage() {
                                         <GlowInput
                                             label="Qual Especialidade?"
                                             placeholder="Ex: Baralho Cigano, Reiki..."
-                                            value={formData.specialty === 'Outros' ? '' : formData.specialty}
-                                            onChange={e => setFormData({ ...formData, specialty: e.target.value })}
+                                            value={formData.custom_specialty}
+                                            onChange={e => setFormData({ ...formData, custom_specialty: e.target.value })}
                                             required
                                         />
                                     </motion.div>
@@ -714,7 +725,7 @@ export default function OracleProfilePage() {
                                     </div>
                                     <h2 className="text-2xl font-bold text-white">Tem certeza absoluta?</h2>
                                     <p className="text-slate-400 leading-relaxed">
-                                        Esta ação é irreversível. Seu perfil de oraculista será removido e seus <span className="text-white font-bold">créditos disponíveis</span> não serão reembolsados.
+                                        Esta ação é irreversível. Seu perfil de oraculista será removido e <span className="text-white font-bold">Ao deletar a conta seus créditos não serão devolvidos, tem certeza?</span>
                                     </p>
 
                                     <div className="flex flex-col gap-3 pt-6">

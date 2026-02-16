@@ -14,7 +14,7 @@ export function OracleStatusToggle({ isOnline, onToggle, applicationStatus }: Or
         <button
             onClick={isApproved ? onToggle : undefined}
             disabled={!isApproved}
-            title={!isApproved ? 'Sua conta ainda está em análise. Você poderá ficar online assim que for aprovado.' : (isOnline ? 'Ficar Offline' : 'Ficar Online')}
+            title={!isApproved ? 'Aguardando aprovação de cadastro' : (isOnline ? 'Ficar Offline' : 'Ficar Online')}
             className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border transition-all ${!isApproved ? 'opacity-50 cursor-not-allowed bg-slate-800 text-slate-500 border-white/5' :
                 isOnline
                     ? 'bg-green-500/20 text-green-400 border-green-500/50 shadow-[0_0_15px_rgba(74,222,128,0.2)]'

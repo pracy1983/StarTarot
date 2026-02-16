@@ -54,21 +54,23 @@ export async function POST(req: Request) {
             throw new Error('Erro ao processar pagamento de créditos')
         }
 
-        // 4. Adicionar créditos ao oraculista
-        const { data: oracleWallet } = await supabaseAdmin
-            .from('wallets')
-            .select('balance')
-            .eq('user_id', oracle.id)
-            .maybeSingle()
-
-        if (oracleWallet) {
-            await supabaseAdmin
+        // 4. Se for IA, Adicionar créditos ao oraculista imediatamente. Se for Humano, NÃO ADICIONAR AINDA.
+        if (oracle.is_ai) {
+            const { data: oracleWallet } = await supabaseAdmin
                 .from('wallets')
-                .update({
-                    balance: (oracleWallet.balance || 0) + consultation.total_credits,
-                    updated_at: new Date().toISOString()
-                })
+                .select('balance')
                 .eq('user_id', oracle.id)
+                .maybeSingle()
+
+            if (oracleWallet) {
+                await supabaseAdmin
+                    .from('wallets')
+                    .update({
+                        balance: (oracleWallet.balance || 0) + consultation.total_credits,
+                        updated_at: new Date().toISOString()
+                    })
+                    .eq('user_id', oracle.id)
+            }
         }
 
         // 5. Buscar perguntas
@@ -82,13 +84,47 @@ export async function POST(req: Request) {
             throw new Error('Nenhuma pergunta encontrada')
         }
 
-        // 6. Atualizar status para processing
-        await supabaseAdmin
-            .from('consultations')
-            .update({ status: 'processing' })
-            .eq('id', consultationId)
+        // 6. Se for Humano, apenas mudar status para 'pending' (que já deve estar) 
+        // ou 'waiting_answer' e notificar o oráculo.
+        if (!oracle.is_ai) {
+            await supabaseAdmin
+                .from('consultations')
+                .update({ status: 'pending' })
+                .eq('id', consultationId)
 
-        // 7. Processar cada pergunta com DeepSeek
+            // Criar notificação para o Oraculista
+            await supabaseAdmin.from('inbox_messages').insert({
+                recipient_id: oracle.id,
+                sender_id: consultation.client_id,
+                title: '📧 Nova Consulta Pendente',
+                content: `Você recebeu uma nova consulta de ${client.full_name}. Responda para receber seus créditos.`,
+                metadata: { consultation_id: consultationId, type: 'new_pending_consultation' }
+            })
+
+            // Registrar transações (Cliente confirmada, Oráculo pendente)
+            await supabaseAdmin.from('transactions').insert([
+                {
+                    user_id: consultation.client_id,
+                    type: 'consultation_charge',
+                    amount: consultation.total_credits,
+                    status: 'confirmed',
+                    description: `Consulta com ${oracle.full_name}`,
+                    metadata: { consultation_id: consultationId, oracle_id: oracle.id }
+                },
+                {
+                    user_id: oracle.id,
+                    type: 'earnings',
+                    amount: consultation.total_credits,
+                    status: 'pending',
+                    description: `Pendente: Consulta de ${client.full_name}`,
+                    metadata: { consultation_id: consultationId, client_id: consultation.client_id }
+                }
+            ])
+
+            return NextResponse.json({ success: true, message: 'Consulta humana encaminhada' })
+        }
+
+        // 7. Processar cada pergunta com DeepSeek (Apenas para IA)
         const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
         if (!apiKey) {
             throw new Error('DEEPSEEK_API_KEY não configurada')
@@ -185,7 +221,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             }
         }
 
-        // 8. Atualizar status para answered
+        // 8. Atualizar status para answered (IA)
         await supabaseAdmin
             .from('consultations')
             .update({
@@ -222,23 +258,27 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             console.error('WhatsApp notification error:', whatsappError)
         }
 
-        // 11. Registrar transações
+        // 11. Registrar transações (Confirmadas - IA)
         await supabaseAdmin.from('transactions').insert([
             {
                 user_id: consultation.client_id,
                 type: 'consultation_charge',
                 amount: consultation.total_credits,
                 status: 'confirmed',
+                description: `Consulta com ${oracle.full_name}`,
                 metadata: { consultation_id: consultationId, oracle_id: oracle.id }
             },
             {
                 user_id: oracle.id,
-                type: 'earnings', // Usar o novo tipo corrigido na migração 016
+                type: 'earnings',
                 amount: consultation.total_credits,
                 status: 'confirmed',
+                description: `Ganhos: Consulta de ${client.full_name}`,
                 metadata: { consultation_id: consultationId, client_id: consultation.client_id }
             }
         ])
+
+        return NextResponse.json({ success: true })
 
         return NextResponse.json({ success: true })
     } catch (error: any) {

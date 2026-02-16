@@ -137,8 +137,12 @@ export default function InboxPage() {
                     setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m))
                 }
             }
-            if (message.metadata?.type === 'consultation_answered') {
-                router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+            if (message.metadata?.type === 'consultation_answered' || message.metadata?.type === 'consultation_pending') {
+                if (isOracleView && message.metadata?.type === 'consultation_pending') {
+                    router.push(`/app/dashboard/consulta/${message.metadata.consultation_id}`)
+                } else if (message.metadata?.type === 'consultation_answered') {
+                    router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+                }
             }
         }
     }

@@ -140,7 +140,8 @@ export default function AdminOraculistasPage() {
             const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
             const { error } = await supabase.from('specialties').insert({
                 name: newCategoryName,
-                slug
+                slug,
+                active: true
             })
 
             if (error) throw error

@@ -279,7 +279,7 @@ export default function PerfilPage() {
                                     </div>
                                     <h2 className="text-2xl font-bold text-white">Tem certeza absoluta?</h2>
                                     <p className="text-slate-400 leading-relaxed">
-                                        Esta ação é irreversível. Seus <span className="text-white font-bold">créditos disponíveis</span> não serão reembolsados e seu histórico será apagado.
+                                        Esta ação é irreversível. <span className="text-white font-bold">Ao deletar a conta seus créditos não serão devolvidos, tem certeza?</span> Todos os seus dados e histórico serão apagados permanentemente.
                                     </p>
 
                                     <div className="flex flex-col gap-3 pt-6">

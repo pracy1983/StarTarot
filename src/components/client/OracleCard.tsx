@@ -239,7 +239,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 {/* Info Tags */}
                 <div className="flex flex-col items-center space-y-1">
-                    {oracle.allows_video && oracle.oracle_type === 'human' && (
+                    {oracle.allows_video && !oracle.is_ai && (
                         <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                             <Video size={12} className="mr-1 text-neon-cyan/50" />
                             {oracle.credits_per_minute} | MINUTO (VÍDEO)
@@ -258,7 +258,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </p>
 
                 {/* Feature Icons */}
-                {(oracle.allows_text || (oracle.oracle_type === 'human' && oracle.allows_video)) && (
+                {(oracle.allows_text || (!oracle.is_ai && oracle.allows_video)) && (
                     <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
                         {oracle.allows_text && (
                             <div className="flex flex-col items-center space-y-1">
@@ -266,7 +266,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                 <span className="text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
                             </div>
                         )}
-                        {oracle.oracle_type === 'human' && oracle.allows_video && (
+                        {!oracle.is_ai && oracle.allows_video && (
                             <div className="flex flex-col items-center space-y-1">
                                 <Video size={16} className={status === 'online' ? 'text-neon-cyan/60' : ''} />
                                 <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
@@ -277,7 +277,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 <div className="mt-2 flex gap-2 w-full">
                     {status === 'online' ? (
-                        oracle.oracle_type === 'human' ? (
+                        !oracle.is_ai ? (
                             <>
                                 <>
                                     {oracle.allows_video && (
@@ -326,7 +326,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                         )
                     ) : (
                         // Offline State - Still show buttons but Video Disabled
-                        oracle.oracle_type === 'human' ? (
+                        !oracle.is_ai ? (
                             <>
                                 <>
                                     {oracle.allows_video && (
