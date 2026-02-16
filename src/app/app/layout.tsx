@@ -170,7 +170,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     {/* Global Oracle Status Toggle */}
                     {(profile?.role === 'oracle' || (profile?.role === 'owner' && isOracleView)) && (
                         <div className="flex items-center">
-                            <OracleStatusToggle isOnline={isOnline} onToggle={toggleOnline} />
+                            <OracleStatusToggle
+                                isOnline={isOnline}
+                                onToggle={toggleOnline}
+                                applicationStatus={profile?.application_status}
+                            />
                         </div>
                     )}
 
@@ -178,9 +182,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
                             {isOracleView ? 'Ganhos' : 'Saldo'}
                         </span>
+                        <p className="text-xs text-neon-gold font-bold">{profile?.credits || 0} Créditos</p>
                         <span className="text-neon-gold font-bold flex items-center leading-none">
                             <Sparkles size={12} className="mr-1" />
-                            {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">CR</span>
+                            {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">Créditos</span>
                         </span>
                     </div>
 
@@ -194,6 +199,26 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </button>
                 </div>
             </header>
+            {/* Welcome Banner */}
+            <div className={`px-4 md:px-8 pt-6 pb-2`}>
+                <div className={`relative overflow-hidden rounded-2xl p-6 border border-white/10 bg-gradient-to-r ${isOracleView ? 'from-neon-purple/20' : 'from-neon-cyan/20'} to-transparent backdrop-blur-md`}>
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div>
+                            <h2 className="text-xl md:text-2xl font-black text-white flex items-center">
+                                <Sparkles className={`mr-3 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={24} />
+                                Bem-vinde, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
+                                    {(isOracleView ? profile?.name_fantasy : null) || profile?.full_name?.split(' ')[0] || 'Viajante'}
+                                </span>!
+                            </h2>
+                            <p className="text-sm text-slate-400 mt-1 font-medium">
+                                {isOracleView ? 'Seu santuário de luz está pronto para guiar almas.' : 'O cosmos preparou revelações especiais para você hoje.'}
+                            </p>
+                        </div>
+                    </div>
+                    {/* Abstract background element */}
+                    <div className={`absolute top-0 right-0 w-64 h-full bg-gradient-to-l ${isOracleView ? 'from-neon-purple/10' : 'from-neon-cyan/10'} to-transparent`} />
+                </div>
+            </div>
 
             <div className="flex flex-1 relative">
                 {/* Desktop Sidebar */}

@@ -32,6 +32,10 @@ export default function AdminOraculistasPage() {
     const [isAddingCategory, setIsAddingCategory] = useState(false)
     const [newCategoryName, setNewCategoryName] = useState('')
     const [loadingCategory, setLoadingCategory] = useState(false)
+    const [activeTab, setActiveTab] = useState<'approved' | 'pending'>('approved')
+    const [rejectionModal, setRejectionModal] = useState<{ open: boolean, id: string | null, name: string }>({ open: false, id: null, name: '' })
+    const [rejectionMessage, setRejectionMessage] = useState('')
+    const [isProcessingStatus, setIsProcessingStatus] = useState(false)
 
     useEffect(() => {
         fetchOracles()
@@ -93,7 +97,8 @@ export default function AdminOraculistasPage() {
         }
     }
 
-    const handleStatusChange = async (id: string, newStatus: string) => {
+    const handleStatusChange = async (id: string, newStatus: string, message?: string) => {
+        setIsProcessingStatus(true)
         try {
             const { error } = await supabase
                 .from('profiles')
@@ -102,14 +107,29 @@ export default function AdminOraculistasPage() {
 
             if (error) throw error
 
+            // If rejected, send a system message
+            if (newStatus === 'rejected' && message) {
+                await supabase.from('notifications').insert({
+                    user_id: id,
+                    title: 'Sua solicitação de oraculista foi revisada',
+                    content: message,
+                    type: 'system',
+                    role: 'client'
+                })
+            }
+
             setOraculistas(prev => prev.map(o =>
                 o.id === id ? { ...o, application_status: newStatus } : o
             ))
 
             toast.success(`Status atualizado para: ${newStatus === 'approved' ? 'Aprovado' : 'Rejeitado'}`)
+            setRejectionModal({ open: false, id: null, name: '' })
+            setRejectionMessage('')
         } catch (err: any) {
             console.error('Erro ao atualizar status:', err)
             toast.error('Erro ao atualizar status')
+        } finally {
+            setIsProcessingStatus(false)
         }
     }
 
@@ -134,10 +154,15 @@ export default function AdminOraculistasPage() {
         }
     }
 
-    const filteredOracles = oraculistas.filter(o =>
-        o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+    const filteredOracles = oraculistas.filter(o => {
+        const matchesSearch = o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
+
+        if (activeTab === 'pending') {
+            return matchesSearch && o.application_status === 'pending'
+        }
+        return matchesSearch && (o.application_status === 'approved' || !o.application_status || o.application_status === 'none')
+    })
 
     return (
         <div className="p-8 space-y-8">
@@ -211,7 +236,26 @@ export default function AdminOraculistasPage() {
                 )}
             </AnimatePresence>
 
-            <div className="flex flex-col md:flex-row gap-4 mb-6">
+            <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4">
+                    <button
+                        onClick={() => setActiveTab('approved')}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'approved' ? 'bg-neon-purple text-white' : 'text-slate-500 hover:text-white'}`}
+                    >
+                        Ativos/Aprovados
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('pending')}
+                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space' : 'text-slate-500 hover:text-white'}`}
+                    >
+                        Pendentes
+                        {oraculistas.filter(o => o.application_status === 'pending').length > 0 && (
+                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-pulse">
+                                {oraculistas.filter(o => o.application_status === 'pending').length}
+                            </span>
+                        )}
+                    </button>
+                </div>
                 <div className="relative flex-1 group">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-purple transition-colors" size={18} />
                     <input
@@ -304,24 +348,30 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4 text-right">
                                         <div className="flex items-center justify-end space-x-2">
-                                            {o.application_status === 'pending' && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleStatusChange(o.id, 'approved')}
-                                                        className="p-2 text-green-400 hover:text-green-300 hover:bg-green-400/10 rounded-lg transition-colors"
-                                                        title="Aprovar"
-                                                    >
-                                                        <Check size={16} />
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleStatusChange(o.id, 'rejected')}
-                                                        className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
-                                                        title="Rejeitar"
-                                                    >
-                                                        <X size={16} />
-                                                    </button>
-                                                </>
-                                            )}
+                                            <>
+                                                <Link
+                                                    href={`/app/oraculo/${o.id}`}
+                                                    target="_blank"
+                                                    className="p-2 text-neon-cyan hover:text-cyan-300 hover:bg-neon-cyan/10 rounded-lg transition-colors"
+                                                    title="Visualizar Perfil"
+                                                >
+                                                    <Search size={16} />
+                                                </Link>
+                                                <button
+                                                    onClick={() => handleStatusChange(o.id, 'approved')}
+                                                    className="p-2 text-green-400 hover:text-green-300 hover:bg-green-400/10 rounded-lg transition-colors"
+                                                    title="Aprovar"
+                                                >
+                                                    <Check size={16} />
+                                                </button>
+                                                <button
+                                                    onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
+                                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
+                                                    title="Rejeitar"
+                                                >
+                                                    <X size={16} />
+                                                </button>
+                                            </>
 
                                             <button
                                                 onClick={() => {
@@ -375,6 +425,50 @@ export default function AdminOraculistasPage() {
                     </table>
                 )}
             </GlassCard>
+
+            {/* Rejection Modal */}
+            <AnimatePresence>
+                {rejectionModal.open && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full max-w-md"
+                        >
+                            <GlassCard className="border-red-500/30" hover={false}>
+                                <div className="space-y-4">
+                                    <h3 className="text-xl font-bold text-white">Rejeitar Inscrição</h3>
+                                    <p className="text-sm text-slate-400">Informe ao candidato <span className="text-white font-bold">{rejectionModal.name}</span> o motivo da rejeição. Ele receberá esta mensagem no sistema.</p>
+
+                                    <textarea
+                                        value={rejectionMessage}
+                                        onChange={(e) => setRejectionMessage(e.target.value)}
+                                        placeholder="Ex: Seu perfil ainda não atende aos requisitos mínimos de experiência..."
+                                        className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:border-red-500/50 outline-none transition-all resize-none text-sm"
+                                    />
+
+                                    <div className="flex gap-3 pt-2">
+                                        <button
+                                            onClick={() => setRejectionModal({ open: false, id: null, name: '' })}
+                                            className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-slate-400 font-bold hover:bg-white/5 transition-all"
+                                        >
+                                            Cancelar
+                                        </button>
+                                        <button
+                                            onClick={() => handleStatusChange(rejectionModal.id!, 'rejected', rejectionMessage)}
+                                            disabled={isProcessingStatus || !rejectionMessage.trim()}
+                                            className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all disabled:opacity-50"
+                                        >
+                                            {isProcessingStatus ? 'Processando...' : 'Confirmar Rejeição'}
+                                        </button>
+                                    </div>
+                                </div>
+                            </GlassCard>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

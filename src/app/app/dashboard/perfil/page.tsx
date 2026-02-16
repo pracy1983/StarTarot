@@ -32,6 +32,7 @@ export default function OracleProfilePage() {
 
     const [formData, setFormData] = useState({
         full_name: '',
+        name_fantasy: '',
         phone: '',
         bio: '',
         specialty: '',
@@ -83,6 +84,7 @@ export default function OracleProfilePage() {
         if (profile) {
             setFormData({
                 full_name: profile.full_name || '',
+                name_fantasy: profile.name_fantasy || '',
                 phone: profile.phone || '',
                 bio: profile.bio || '',
                 specialty: profile.specialty || '',
@@ -106,7 +108,7 @@ export default function OracleProfilePage() {
         setSaving(true)
 
         try {
-            // Conversão de R$ para Coins (Moedas)
+            // Conversão de R$ para Créditos
             const credits_per_minute = Math.round(formData.price_brl_per_minute * 10)
             const initial_fee_credits = Math.round(formData.initial_fee_brl * 10)
 
@@ -114,6 +116,7 @@ export default function OracleProfilePage() {
                 .from('profiles')
                 .update({
                     full_name: formData.full_name,
+                    name_fantasy: formData.name_fantasy,
                     phone: formData.phone,
                     bio: formData.bio,
                     specialty: formData.specialty,
@@ -331,10 +334,10 @@ export default function OracleProfilePage() {
                                     <p className="text-2xl font-black text-white">
                                         {Math.round(formData.price_brl_per_minute * 10)}
                                     </p>
-                                    <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Coins / minuto</p>
+                                    <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Créditos / minuto</p>
                                 </div>
                                 <p className="text-[9px] text-slate-600 mt-2">
-                                    * O sistema converte automaticamente R$ 1,00 para 10 Moedas.
+                                    * O sistema converte automaticamente R$ 1,00 para 10 Créditos.
                                 </p>
                             </div>
                         </div>
@@ -369,7 +372,7 @@ export default function OracleProfilePage() {
                                         <p className="text-2xl font-black text-white">
                                             {Math.round(formData.initial_fee_brl * 10)}
                                         </p>
-                                        <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Coins fixos</p>
+                                        <p className="text-xs text-neon-gold font-bold pb-1 uppercase">Créditos fixos</p>
                                     </div>
                                     {formData.initial_fee_brl === 0 && (
                                         <div className="px-2 py-1 bg-neon-gold text-deep-space text-[10px] font-black rounded animate-pulse">
@@ -378,7 +381,7 @@ export default function OracleProfilePage() {
                                     )}
                                 </div>
                                 <p className="text-[9px] text-slate-400 mt-2 italic">
-                                    * Cobrado apenas no 1º minuto. Livre após o 2º min até o fim da consulta.
+                                    * Tarifa inicial cobre o primeiro minuto. Cobrança por minuto começa no 61º segundo.
                                 </p>
                             </div>
                         </div>
@@ -406,7 +409,7 @@ export default function OracleProfilePage() {
                                 </div>
                             </div>
                             <p className="text-[9px] text-slate-400 italic">
-                                * Este valor é em Créditos (Coins) diretamente.
+                                * Este valor é em Créditos diretamente.
                             </p>
                         </div>
                     </GlassCard>
@@ -462,10 +465,17 @@ export default function OracleProfilePage() {
                         <form onSubmit={handleSave} className="space-y-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 <GlowInput
-                                    label="Nome de Exibição"
+                                    label="Nome Completo (Interno)"
                                     icon={<User size={18} />}
                                     value={formData.full_name}
                                     onChange={e => setFormData({ ...formData, full_name: e.target.value })}
+                                />
+                                <GlowInput
+                                    label="Nome Fantasia (Público)"
+                                    icon={<Sparkles size={18} />}
+                                    placeholder="Como os clientes verão você"
+                                    value={formData.name_fantasy}
+                                    onChange={e => setFormData({ ...formData, name_fantasy: e.target.value })}
                                 />
                                 <div className="space-y-1.5">
                                     <div className="flex items-center justify-between mb-1">

@@ -7,6 +7,7 @@ interface Profile {
   id: string
   email: string
   full_name: string | null
+  name_fantasy: string | null
   avatar_url: string | null
   role: UserRole
   is_ai: boolean

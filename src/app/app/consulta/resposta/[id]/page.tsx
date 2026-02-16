@@ -339,7 +339,7 @@ export default function ConsultationResponsePage() {
                                     </span>
                                     <div className="text-center">
                                         <p className="text-[10px] font-bold text-white uppercase truncate w-full px-1">{gift.name}</p>
-                                        <p className="text-xs text-neon-gold font-bold">{gift.credits} CR</p>
+                                        <p className="text-xs text-neon-gold font-bold">{gift.credits} Créditos</p>
                                     </div>
                                     {isSendingGift === gift.id && (
                                         <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
@@ -368,7 +368,7 @@ export default function ConsultationResponsePage() {
                                 O que achou do atendimento?
                             </h3>
                             <p className="text-slate-400 text-sm">
-                                Ganhe até <span className="text-neon-gold font-bold">20 CR</span> avaliando agora!
+                                Ganhe até <span className="text-neon-gold font-bold">20 Créditos</span> avaliando agora!
                             </p>
                         </div>
 
@@ -404,10 +404,10 @@ export default function ConsultationResponsePage() {
 
                             <div className="flex flex-wrap justify-center gap-4 text-xs">
                                 <div className={`flex items-center ${stars > 0 ? 'text-green-400' : 'text-slate-500'}`}>
-                                    <Award size={14} className="mr-1" /> +5 CR pela nota
+                                    <Award size={14} className="mr-1" /> +5 Créditos pela nota
                                 </div>
                                 <div className={`flex items-center ${testimonial.trim().split(/\s+/).filter(Boolean).length >= MIN_WORDS_FOR_REWARD ? 'text-green-400' : 'text-slate-500'}`}>
-                                    <Award size={14} className="mr-1" /> +15 CR pelo depoimento (&gt;10 palavras)
+                                    <Award size={14} className="mr-1" /> +15 Créditos pelo depoimento (&gt;10 palavras)
                                 </div>
                             </div>
 

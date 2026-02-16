@@ -207,7 +207,7 @@ export default function WalletPage() {
             <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Minha <span className="neon-text-purple">Carteira</span></h1>
-                    <p className="text-slate-400">Adquira Lumina Coins para suas consultas místicas.</p>
+                    <p className="text-slate-400">Adquira Créditos para suas consultas místicas.</p>
                 </div>
 
                 <GlassCard className="border-neon-purple/20 bg-neon-purple/5 px-8 py-4" hover={false}>
@@ -217,7 +217,7 @@ export default function WalletPage() {
                         </div>
                         <div>
                             <p className="text-xs text-slate-500 uppercase font-bold tracking-widest">Saldo Atual</p>
-                            <p className="text-2xl font-black text-white">{balance} <span className="text-sm text-neon-purple font-normal">Coins</span></p>
+                            <p className="text-2xl font-black text-white">{balance} <span className="text-sm text-neon-purple font-normal">Créditos</span></p>
                         </div>
                     </div>
                 </GlassCard>
@@ -242,7 +242,7 @@ export default function WalletPage() {
                     <div className="text-right pr-2">
                         <span className="block text-xs text-slate-500 font-bold uppercase">Você Recebe</span>
                         <span className="text-neon-cyan font-black">
-                            {customAmount ? Math.floor(parseFloat(customAmount) / COIN_PRICE) : 0} Coins
+                            {customAmount ? Math.floor(parseFloat(customAmount) / COIN_PRICE) : 0} Créditos
                         </span>
                     </div>
                     <div className="flex flex-col items-center">
@@ -282,7 +282,7 @@ export default function WalletPage() {
                                 <div className="text-3xl font-black text-white mb-2 flex items-baseline justify-center">
                                     {pkg.coins_amount}
                                     {pkg.bonus_amount > 0 && <span className="text-lg text-green-400 ml-1">+{pkg.bonus_amount}</span>}
-                                    <span className="text-xs text-slate-500 ml-1 font-normal uppercase">Coins</span>
+                                    <span className="text-xs text-slate-500 ml-1 font-normal uppercase">Créditos</span>
                                 </div>
 
                                 {pkg.bonus_amount > 0 && (
@@ -320,7 +320,7 @@ export default function WalletPage() {
                                 <div className="flex justify-between items-center mb-2">
                                     <span className="text-slate-400">Total em Moedas:</span>
                                     <div className="text-right">
-                                        <span className="text-neon-purple font-black block">{selectedPackage.coins_amount + selectedPackage.bonus_amount} Coins</span>
+                                        <span className="text-neon-purple font-black block">{selectedPackage.coins_amount + selectedPackage.bonus_amount} Créditos</span>
                                         {selectedPackage.bonus_amount > 0 && <span className="text-[10px] text-green-400">({selectedPackage.coins_amount} + {selectedPackage.bonus_amount} Bônus)</span>}
                                     </div>
                                 </div>
@@ -538,7 +538,7 @@ export default function WalletPage() {
                                 </div>
                             </div>
                             <span className={`font-bold ${t.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {t.amount > 0 ? '+' : ''}{t.amount} Coins
+                                {t.amount > 0 ? '+' : ''}{t.amount} Créditos
                             </span>
                         </div>
                     )) : (

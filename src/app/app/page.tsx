@@ -13,7 +13,7 @@ export default function MarketplacePage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [specialtyFilter, setSpecialtyFilter] = useState('all')
     const [filterVideo, setFilterVideo] = useState(false)
-    const [filterChat, setFilterChat] = useState(false)
+    const [filterMessage, setFilterMessage] = useState(false)
 
     // Derived from DB or Static
     const specialties = ['Tarot', 'Astrologia', 'Búzios', 'Numerologia', 'Reiki', 'Vidência']
@@ -93,10 +93,10 @@ export default function MarketplacePage() {
         let matchesVideo = true
         if (filterVideo) matchesVideo = !!o.allows_video
 
-        let matchesChat = true
-        if (filterChat) matchesChat = !!o.allows_text
+        let matchesMessage = true
+        if (filterMessage) matchesMessage = !!o.allows_text
 
-        return matchesSearch && matchesStatus && matchesSpecialty && matchesVideo && matchesChat
+        return matchesSearch && matchesStatus && matchesSpecialty && matchesVideo && matchesMessage
     })
 
     // Paginação
@@ -203,11 +203,11 @@ export default function MarketplacePage() {
                         </label>
 
                         <label className="flex items-center space-x-2 cursor-pointer group">
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterChat ? 'bg-neon-purple border-neon-purple text-white' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {filterChat && <Sparkles size={12} />}
-                                <input type="checkbox" checked={filterChat} onChange={e => setFilterChat(e.target.checked)} className="hidden" />
+                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterMessage ? 'bg-neon-purple border-neon-purple text-white' : 'border-white/20 group-hover:border-white/40'}`}>
+                                {filterMessage && <Sparkles size={12} />}
+                                <input type="checkbox" checked={filterMessage} onChange={e => setFilterMessage(e.target.checked)} className="hidden" />
                             </div>
-                            <span className={`text-sm ${filterChat ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Mensagem</span>
+                            <span className={`text-sm ${filterMessage ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Mensagem</span>
                         </label>
                     </div>
                 </div>

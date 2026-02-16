@@ -160,7 +160,7 @@ export default function OracleDashboard() {
                         <Wallet size={20} className="mr-2" />
                         <span className="text-sm font-bold uppercase tracking-wider">Ganhos Totais</span>
                     </div>
-                    <p className="text-3xl font-bold text-white tracking-tight">{stats.totalEarnings} <span className="text-sm text-slate-500 font-normal">CR</span></p>
+                    <p className="text-3xl font-bold text-white tracking-tight">{stats.totalEarnings} <span className="text-sm text-slate-500 font-normal">Créditos</span></p>
                 </GlassCard>
 
                 <GlassCard className="border-white/5">
@@ -230,14 +230,14 @@ export default function OracleDashboard() {
                                     <p className="text-sm font-bold text-white">Tarifa por Minuto</p>
                                     <p className="text-xs text-slate-500">Valor para Video Chamadas</p>
                                 </div>
-                                <span className="text-neon-cyan font-bold">{profile?.credits_per_minute || 0} CR</span>
+                                <span className="text-neon-cyan font-bold">{profile?.credits_per_minute || 0} Créditos</span>
                             </div>
                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
                                 <div>
                                     <p className="text-sm font-bold text-white">Tarifa Inicial</p>
                                     <p className="text-xs text-slate-500">Taxa para abrir mensagem</p>
                                 </div>
-                                <span className="text-neon-gold font-bold">{profile?.initial_fee_credits || 0} CR</span>
+                                <span className="text-neon-gold font-bold">{profile?.initial_fee_credits || 0} Créditos</span>
                             </div>
                             <NeonButton
                                 variant="purple"
