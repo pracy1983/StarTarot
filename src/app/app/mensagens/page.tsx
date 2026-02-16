@@ -228,7 +228,7 @@ export default function InboxPage() {
                                 >
                                     {/* Unread Indicator Glow */}
                                     {!msg.is_read && (
-                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.5)]" />
                                     )}
 
                                     <div className="relative pl-3">
