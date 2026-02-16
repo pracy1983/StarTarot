@@ -44,6 +44,7 @@ export default function VideoConsultationPage() {
     const [currentCost, setCurrentCost] = useState(0)
     const billingInterval = useRef<NodeJS.Timeout | null>(null)
     const clientRef = useRef<IAgoraRTCClient | null>(null)
+    const hasChargedInitialFee = useRef(false)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -90,6 +91,14 @@ export default function VideoConsultationPage() {
             await client.subscribe(user, mediaType)
             if (mediaType === 'video') {
                 setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user])
+
+                // CLIENT SIDE: Charge initial fee when oracle first connects (Stabilized)
+                if (profile?.role === 'client' && !hasChargedInitialFee.current) {
+                    if (oracle?.initial_fee_credits > 0) {
+                        await processInitialFee()
+                    }
+                    hasChargedInitialFee.current = true
+                }
             }
             if (mediaType === 'audio') {
                 user.audioTrack?.play()
@@ -133,12 +142,8 @@ export default function VideoConsultationPage() {
             setJoined(true)
             videoTrack.play('local-player')
 
-            // 4. Start Billing for Clients
+            // 4. Start Billing for Clients - WAIT FOR ORACLE TO CHARGE INITIAL FEE
             if (profile?.role === 'client') {
-                // Cobrar taxa inicial se houver
-                if (oracle?.initial_fee_credits > 0) {
-                    await processInitialFee()
-                }
                 startBilling()
             }
         } catch (err) {

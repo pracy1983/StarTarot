@@ -67,9 +67,9 @@ export default function HistoricoPage() {
                                     <div>
                                         <div className="flex items-center gap-2">
                                             <h3 className="font-bold text-white">{atendimento.oracle?.full_name}</h3>
-                                            {atendimento.type === 'video' && (
-                                                <span className="text-[10px] bg-neon-cyan/20 text-neon-cyan px-1.5 py-0.5 rounded border border-neon-cyan/30 uppercase font-black">Vídeo</span>
-                                            )}
+                                            <span className={`text-[10px] px-1.5 py-0.5 rounded border uppercase font-black ${atendimento.type === 'video' ? 'bg-neon-cyan/20 text-neon-cyan border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border-neon-purple/30'}`}>
+                                                {atendimento.type === 'video' ? 'Vídeo' : 'Mensagem'}
+                                            </span>
                                         </div>
                                         <p className="text-xs text-slate-500">{atendimento.oracle?.specialty}</p>
                                     </div>
@@ -112,7 +112,7 @@ export default function HistoricoPage() {
                                         onClick={() => window.location.href = `/app/consulta/resposta/${atendimento.id}`}
                                         className="px-6 py-2 rounded-xl bg-neon-purple/20 border border-neon-purple/30 text-xs font-bold text-neon-purple hover:bg-neon-purple/30 transition-all flex-1 md:flex-none"
                                     >
-                                        Ver Resposta
+                                        Mais Informações
                                     </button>
                                 </div>
                             </div>

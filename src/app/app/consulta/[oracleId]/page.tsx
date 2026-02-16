@@ -5,7 +5,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { QuestionInput, SubjectInfo } from '@/components/consultation/QuestionInput'
-import { ArrowLeft, Send, AlertCircle, Clock, Save, User, Calendar, MapPin, Video } from 'lucide-react'
+import { ArrowLeft, Send, AlertCircle, Clock, Save, User, Calendar, MapPin, Video, MessageSquare, Info } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -546,6 +546,15 @@ export default function NewConsultationPage() {
                             )}
                         </div>
 
+                        {((isVideo && !oracle?.allows_video) || (!isVideo && !oracle?.allows_text)) && (
+                            <div className="flex items-center space-x-3 p-4 bg-red-500/10 border border-red-500/20 rounded-xl animate-pulse">
+                                <AlertCircle size={20} className="text-red-400 flex-shrink-0" />
+                                <p className="text-xs text-red-400 font-bold uppercase tracking-wider">
+                                    Este oráculo não está aceitando consultas por {isVideo ? 'Vídeo' : 'Mensagem'} no momento.
+                                </p>
+                            </div>
+                        )}
+
                         {isVideo && initialFee > 0 && (
                             <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
                                 <span>Taxa de Abertura (Fixa):</span>
@@ -574,7 +583,7 @@ export default function NewConsultationPage() {
                                 fullWidth
                                 onClick={handleSubmit}
                                 loading={submitting}
-                                disabled={(!isVideo && questions.filter(q => q.trim()).length === 0) || submitting}
+                                disabled={((isVideo && !oracle?.allows_video) || (!isVideo && !oracle?.allows_text)) || (!isVideo && questions.filter(q => q.trim()).length === 0) || submitting}
                                 className="text-base font-bold py-4 gap-3"
                             >
                                 <div className="flex flex-col items-center leading-none">

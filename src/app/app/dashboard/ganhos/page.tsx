@@ -32,7 +32,7 @@ export default function OracleGanhosPage() {
                 .from('transactions')
                 .select('*')
                 .eq('user_id', profile!.id)
-                .in('type', ['earnings', 'gift_received']) // Include gifts if they generate earnings
+                .in('type', ['earnings', 'gift_receive']) // Include gifts if they generate earnings
                 .order('created_at', { ascending: false })
 
             if (error) throw error
@@ -98,7 +98,7 @@ export default function OracleGanhosPage() {
                         <Wallet size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Ganho</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.totalEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">CR</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.totalEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
                 </GlassCard>
 
                 <GlassCard glowColor="cyan" className="border-white/5">
@@ -106,7 +106,7 @@ export default function OracleGanhosPage() {
                         <TrendingUp size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Este Mês</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.monthlyEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">CR</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.monthlyEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
                 </GlassCard>
 
                 <GlassCard glowColor="gold" className="border-white/5">
@@ -114,7 +114,7 @@ export default function OracleGanhosPage() {
                         <Sparkles size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Pendente Payout</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.pendingPayout.toLocaleString()} <span className="text-sm font-normal text-slate-500">CR</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.pendingPayout.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
                 </GlassCard>
             </div>
 

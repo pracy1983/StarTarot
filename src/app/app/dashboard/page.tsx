@@ -101,7 +101,7 @@ export default function OracleDashboard() {
     }
 
     const toggleStatus = async (type: 'video' | 'message') => {
-        const field = type === 'video' ? 'video_enabled' : 'message_enabled'
+        const field = type === 'video' ? 'allows_video' : 'allows_text'
         const newValue = !profile![field as keyof typeof profile]
 
         try {
@@ -163,7 +163,7 @@ export default function OracleDashboard() {
                 <div className="flex flex-wrap bg-white/5 border border-white/10 rounded-2xl p-2 gap-2">
                     <button
                         onClick={() => toggleStatus('message')}
-                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.message_enabled
+                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_text
                             ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
                             : 'text-slate-500 hover:text-white'
                             }`}
@@ -174,7 +174,7 @@ export default function OracleDashboard() {
 
                     <button
                         onClick={() => toggleStatus('video')}
-                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.video_enabled
+                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_video
                             ? 'bg-neon-cyan text-deep-space font-bold shadow-[0_0_15px_rgba(34,211,238,0.3)]'
                             : 'text-slate-500 hover:text-white'
                             }`}
@@ -184,7 +184,7 @@ export default function OracleDashboard() {
                     </button>
 
                     {/* Botão de Status Online/Offline - AGORA NO HEADER GLOBAL */}
-                    {profile?.video_enabled && (
+                    {profile?.allows_video && (
                         <div className="pl-2 border-l border-white/10 ml-2 flex items-center">
                             <span className={`text-xs font-bold ${profile?.is_online ? 'text-green-400' : 'text-slate-500'}`}>
                                 {profile?.is_online ? 'ONLINE GLOBALMENTE' : 'OFFLINE'}
@@ -234,7 +234,7 @@ export default function OracleDashboard() {
                 <div className="lg:col-span-2 space-y-8">
 
                     {/* Call to Action for Video */}
-                    {profile?.video_enabled && !profile?.is_online && (
+                    {profile?.allows_video && !profile?.is_online && (
                         <div className="bg-gradient-to-r from-neon-cyan/10 to-transparent p-6 rounded-2xl border border-neon-cyan/20 flex items-center justify-between">
                             <div className="flex items-center space-x-4">
                                 <div className="p-3 bg-neon-cyan/20 rounded-full text-neon-cyan animate-pulse">

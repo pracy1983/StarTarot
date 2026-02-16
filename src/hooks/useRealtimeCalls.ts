@@ -143,7 +143,10 @@ export function useRealtimeCalls() {
         try {
             const { error } = await supabase
                 .from('consultations')
-                .update({ status: 'active', started_at: new Date().toISOString() })
+                .update({
+                    status: 'active',
+                    started_at: new Date().toISOString()
+                })
                 .eq('id', incomingCall.id)
 
             if (error) throw error
@@ -164,10 +167,13 @@ export function useRealtimeCalls() {
         try {
             await supabase
                 .from('consultations')
-                .update({ status: 'canceled', ended_at: new Date().toISOString() })
+                .update({
+                    status: 'canceled',
+                    ended_at: new Date().toISOString()
+                })
                 .eq('id', incomingCall.id)
         } catch (err) {
-            console.error(err)
+            console.error('Error rejecting call:', err)
         }
     }
 
