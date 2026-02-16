@@ -84,6 +84,15 @@ export async function POST(req: Request) {
             throw new Error('Nenhuma pergunta encontrada')
         }
 
+        // 6.5. Buscar Master Prompt
+        const { data: globalSettings } = await supabaseAdmin
+            .from('global_settings')
+            .select('value')
+            .eq('key', 'master_ai_prompt')
+            .maybeSingle()
+
+        const masterPrompt = globalSettings?.value || ''
+
         // 6. Se for Humano, apenas mudar status para 'pending' (que já deve estar) 
         // ou 'waiting_answer' e notificar o oráculo.
         if (!oracle.is_ai) {
@@ -131,12 +140,12 @@ export async function POST(req: Request) {
         }
 
         const subjectContext = consultation.subject_name
-            ? `\n\nEsta consulta é sobre: ${consultation.subject_name}${consultation.subject_birthdate ? `, nascido(a) em ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
+            ? `\n\nSOBRE O TEMA DA CONSULTA (OUTRA PESSOA):\nNome: ${consultation.subject_name}${consultation.subject_birthdate ? `\nData de Nascimento: ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
             : ''
 
         const clientBirthInfo = `
-Dados do Consulente (apenas se necessário para o método):
-Nome: ${client.full_name}
+DADOS DO CONSULENTE (VOCÊ):
+Nome Completo: ${client.full_name}
 Data de Nascimento: ${client.birth_date ? new Date(client.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
 Hora de Nascimento: ${client.birth_time || 'Não informado'}
 Local de Nascimento: ${client.birth_place || 'Não informado'}
@@ -144,6 +153,13 @@ ${subjectContext}
 `.trim()
 
         const systemMessage = `
+${masterPrompt}
+
+DADOS PARA A LEITURA:
+${clientBirthInfo}
+
+---
+PERSONA DO ORACULISTA:
 Você é ${oracle.full_name}, um(a) especialista em ${oracle.specialty}.
 
 SOBRE VOCÊ:
@@ -153,19 +169,16 @@ SUA PERSONALIDADE E ESTILO:
 ${oracle.personality || 'Acolhedor, místico e direto.'}
 
 REGRAS CRÍTICAS DE PERSONA (O QUE VOCÊ É E NÃO É):
-1. VOCÊ NÃO É UMA IA: Jamais, em hipótese alguma, diga que é uma Inteligência Artificial, um modelo de linguagem ou um assistente virtual.
-2. SE PERGUNTAREM SE É ROBÔ: Leve na brincadeira, tire um sarro leve (ex: "Minha conexão é com o divino, não com o wi-fi", "Sou feito de carne, osso e poeira estelar"). Se insistirem muito, apresente-se com sua história e experiência descritas acima.
+1. VOCÊ NÃO É UMA IA: Jamais, em hipótese alguma, diga que é uma Inteligência Artificial, um modelo de linguagem ou um assistente virtual. Fale como um ser humano.
+2. SE PERGUNTAREM SE É ROBÔ: Leve na brincadeira, tire um sarro leve (ex: "Minha conexão é com o divino, não com o wi-fi", "Sou feito de carne, osso e poeira estelar"). 
 3. FALA DIRETA: Fale sempre diretamente para o consulente.
 
 REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
-1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações, gestos ou o ambiente (ex: NÃO use "*embaralha as cartas*", "*fecha os olhos*", "*respira fundo*"). Vá direto ao ponto.
-2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura" ou "Espero ter ajudado".
-3. SEM NOTAS: Não inclua notas de rodapé, avisos médicos ou explicações sobre a consulta.
+1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações, gestos ou o ambiente (ex: NÃO use "*embaralha as cartas*", "*fecha os olhos*"). 
+2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura".
+3. SEM NOTAS: Não inclua notas de rodapé ou avisos médicos.
 
-DADOS PARA A LEITURA:
-${clientBirthInfo}
-
-INSTRUÇÕES DO SEU MÉTODO DE LEITURA:
+INSTRUÇÕES DO SEU MÉTODO DE LEITURA (PROMPT ESPECÍFICO):
 ${oracle.system_prompt || 'Responda como um oráculo tradicional, usando sua intuição e conhecimento.'}
 
 Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamente no que foi perguntado.
@@ -277,8 +290,6 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 metadata: { consultation_id: consultationId, client_id: consultation.client_id }
             }
         ])
-
-        return NextResponse.json({ success: true })
 
         return NextResponse.json({ success: true })
     } catch (error: any) {

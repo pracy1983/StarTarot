@@ -1,12 +1,64 @@
 'use client'
 
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Settings, Brain, Shield, Database, Sparkles, MessageSquare } from 'lucide-react'
+import { Settings, Brain, Shield, Database, Sparkles, MessageSquare, Save } from 'lucide-react'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
+import { supabase } from '@/lib/supabase'
+import toast from 'react-hot-toast'
 
 export default function AdminConfigPage() {
+    const [masterPrompt, setMasterPrompt] = useState('')
+    const [loading, setLoading] = useState(true)
+    const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        fetchSettings()
+    }, [])
+
+    const fetchSettings = async () => {
+        try {
+            const { data, error } = await supabase
+                .from('global_settings')
+                .select('*')
+                .eq('key', 'master_ai_prompt')
+                .maybeSingle()
+
+            if (data) setMasterPrompt(data.value)
+        } catch (err) {
+            console.error('Error fetching settings:', err)
+        } finally {
+            setLoading(false)
+        }
+    }
+
+    const handleSavePrompt = async () => {
+        setSaving(true)
+        try {
+            const { error } = await supabase
+                .from('global_settings')
+                .upsert({
+                    key: 'master_ai_prompt',
+                    value: masterPrompt,
+                    updated_at: new Date().toISOString()
+                })
+
+            if (error) throw error
+            toast.success('Prompt Mestre atualizado com sucesso!')
+        } catch (err: any) {
+            toast.error('Erro ao salvar: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
+
+    if (loading) return (
+        <div className="p-8 flex items-center justify-center">
+            <div className="w-8 h-8 border-4 border-neon-purple border-t-transparent rounded-full animate-spin" />
+        </div>
+    )
+
     return (
         <div className="p-8 space-y-8">
             <div>
@@ -15,6 +67,37 @@ export default function AdminConfigPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                {/* Prompt Master IA */}
+                <GlassCard className="border-white/5 md:col-span-2 space-y-6" hover={false}>
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-3 text-neon-purple">
+                            <Brain size={20} />
+                            <h3 className="font-bold text-white uppercase tracking-wider text-sm">Prompt Master das IAs</h3>
+                        </div>
+                        <NeonButton
+                            variant="purple"
+                            size="sm"
+                            onClick={handleSavePrompt}
+                            loading={saving}
+                        >
+                            <Save size={16} className="mr-2" /> Salvar Prompt
+                        </NeonButton>
+                    </div>
+
+                    <div className="space-y-2">
+                        <p className="text-xs text-slate-400 italic">
+                            * Este prompt será enviado como prefixo em todas as consultas feitas por Oraculistas de IA.
+                            Use para definir regras globais de comportamento, tom de voz e restrições.
+                        </p>
+                        <textarea
+                            value={masterPrompt}
+                            onChange={(e) => setMasterPrompt(e.target.value)}
+                            className="w-full h-64 bg-white/5 border border-white/10 rounded-2xl p-6 text-sm text-slate-300 focus:border-neon-purple/50 outline-none transition-all font-mono leading-relaxed"
+                            placeholder="Ex: Você é um oráculo divinatório de alta precisão..."
+                        />
+                    </div>
+                </GlassCard>
+
                 {/* Configurações de API */}
                 <GlassCard className="border-white/5 space-y-6" hover={false}>
                     <div className="flex items-center space-x-3 text-neon-cyan mb-2">
@@ -32,8 +115,8 @@ export default function AdminConfigPage() {
                     <div className="space-y-2">
                         <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Modelo Global IA</p>
                         <select className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-neon-purple/50 outline-none transition-all">
-                            <option value="deepseek-chat">DeepSeek Chat (Reasoning)</option>
-                            <option value="deepseek-coder">DeepSeek Coder</option>
+                            <option value="deepseek-chat" className="bg-deep-space">DeepSeek Chat (Reasoning)</option>
+                            <option value="deepseek-coder" className="bg-deep-space">DeepSeek Coder</option>
                         </select>
                     </div>
 
@@ -69,20 +152,6 @@ export default function AdminConfigPage() {
                     </div>
 
                     <NeonButton variant="gold" size="sm">Atualizar Regras</NeonButton>
-                </GlassCard>
-
-                {/* Visual / SEO */}
-                <GlassCard className="border-white/5 md:col-span-2 space-y-6" hover={false}>
-                    <div className="flex items-center space-x-3 text-neon-purple mb-2">
-                        <Sparkles size={20} />
-                        <h3 className="font-bold text-white uppercase tracking-wider text-sm">Personalização Visual</h3>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <GlowInput label="Nome da Plataforma" defaultValue="Star Tarot" />
-                        <GlowInput label="Slogan Principal" defaultValue="O universo tem algo a lhe dizer." />
-                        <GlowInput label="URL da Logo" defaultValue="/logo.png" />
-                    </div>
                 </GlassCard>
             </div>
         </div>

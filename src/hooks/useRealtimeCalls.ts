@@ -20,14 +20,14 @@ export function useRealtimeCalls() {
 
     // Initial Status Fetch
     useEffect(() => {
-        if (profile?.id && profile.role === 'oracle') {
+        if (profile?.id && (profile.role === 'oracle' || profile.role === 'owner')) {
             setIsOnline(profile.is_online || false)
         }
     }, [profile])
 
     // Realtime Subscription
     useEffect(() => {
-        if (!profile?.id || profile.role !== 'oracle') return
+        if (!profile?.id || (profile.role !== 'oracle' && profile.role !== 'owner')) return
 
         // Check for existing pending calls on mount
         const checkPending = async () => {

@@ -182,7 +182,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
                             {isOracleView ? 'Ganhos' : 'Saldo'}
                         </span>
-                        <p className="text-xs text-neon-gold font-bold">{profile?.credits || 0} Créditos</p>
                         <span className="text-neon-gold font-bold flex items-center leading-none">
                             <Sparkles size={12} className="mr-1" />
                             {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">Créditos</span>
