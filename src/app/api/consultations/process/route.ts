@@ -200,6 +200,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
         `.trim()
 
         let hasError = false
+        const conversationHistory: any[] = []
 
         for (const question of questions) {
             try {
@@ -213,6 +214,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                         model: 'deepseek-chat',
                         messages: [
                             { role: 'system', content: systemMessage },
+                            ...conversationHistory,
                             { role: 'user', content: question.question_text }
                         ],
                         temperature: 0.7,
@@ -230,6 +232,10 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 const answer = aiData.choices[0].message.content
 
                 if (!answer) throw new Error('AI retornou resposta vazia')
+
+                // Alimentar o histórico para a próxima pergunta da mesma consulta
+                conversationHistory.push({ role: 'user', content: question.question_text })
+                conversationHistory.push({ role: 'assistant', content: answer })
 
                 // Salvar resposta usando Admin
                 const { error: updateError } = await supabaseAdmin

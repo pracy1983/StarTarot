@@ -374,6 +374,8 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 isOpen={callModalOpen}
                 oracleName={oracle.full_name}
                 avatarUrl={oracle.avatar_url || ''}
+                creditsPerMinute={oracle.credits_per_minute || 0}
+                initialFee={oracle.initial_fee_credits || 0}
                 onCancel={cancelCall}
             />
 
