@@ -214,19 +214,59 @@ export default function ServiceRoomPage() {
         }
     }
 
+    const [showSummary, setShowSummary] = useState(false)
+    const [summaryData, setSummaryData] = useState<any>(null)
+
     const endCall = async () => {
         if (!consultationId) return
 
         try {
-            await supabase
-                .from('consultations')
-                .update({ status: 'completed', ended_at: new Date().toISOString() })
-                .eq('id', consultationId)
+            // Calculate final credits based on real duration or just stop
+            // In a better system, the server handles recurring billing, 
+            // but here the client does it. We finalize duration.
+            const { error } = await supabase.rpc('finalize_video_consultation', {
+                p_consultation_id: consultationId,
+                p_duration_seconds: duration,
+                p_end_reason: 'oracle_ended'
+            })
 
+            if (error) throw error
+
+            setSummaryData({
+                duration: duration,
+                credits: consultation.total_credits // Or calculate accumulated credits
+            })
+
+            await leaveCall()
+            setShowSummary(true)
             toast.success('Consulta finalizada!')
+        } catch (err: any) {
+            toast.error('Erro ao finalizar: ' + err.message)
+        }
+    }
+
+    const handleNextPatient = async () => {
+        // Find next pending consultation for this oracle
+        const { data: next, error } = await supabase
+            .from('consultations')
+            .select('id, profiles:client_id(full_name)')
+            .eq('oracle_id', profile!.id)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: true })
+            .limit(1)
+            .single()
+
+        if (next) {
+            const nextClient = Array.isArray(next.profiles) ? next.profiles[0] : next.profiles
+            if (confirm(`Próximo cliente na fila: ${nextClient?.full_name}. Deseja atender agora?`)) {
+                router.push(`/app/dashboard/sala?consultationId=${next.id}`)
+                // Full reload or state reset might be needed
+                window.location.reload()
+            } else {
+                router.push('/app/dashboard')
+            }
+        } else {
             router.push('/app/dashboard')
-        } catch (err) {
-            toast.error('Erro ao finalizar')
         }
     }
 
@@ -238,6 +278,36 @@ export default function ServiceRoomPage() {
 
     return (
         <div className="min-h-[80vh] flex flex-col p-4 gap-4">
+            {/* Summary Modal */}
+            {showSummary && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-deep-space/90 backdrop-blur-md">
+                    <GlassCard className="max-w-md w-full p-8 text-center space-y-6 border-neon-purple/20">
+                        <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto">
+                            <VideoIcon size={40} className="text-neon-purple" />
+                        </div>
+                        <h2 className="text-2xl font-bold text-white">Consulta Finalizada</h2>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Duração</p>
+                                <p className="text-xl font-bold text-white">
+                                    {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
+                                </p>
+                            </div>
+                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos</p>
+                                <p className="text-xl font-bold text-neon-gold">{consultation?.total_credits || 0} CR</p>
+                            </div>
+                        </div>
+
+                        <div className="space-y-3 pt-4">
+                            <NeonButton variant="purple" fullWidth onClick={handleNextPatient}>
+                                {queueCount > 0 ? 'Atender Próximo da Fila' : 'Voltar ao Painel'}
+                            </NeonButton>
+                        </div>
+                    </GlassCard>
+                </div>
+            )}
+
             {/* Header */}
             <div className="flex items-center justify-between bg-black/20 p-4 rounded-xl border border-white/5">
                 <div className="flex items-center space-x-3">
@@ -253,7 +323,7 @@ export default function ServiceRoomPage() {
                                 <span className="relative inline-flex rounded-full h-2 w-2 bg-neon-gold"></span>
                             </span>
                             <span className="text-xs font-bold text-neon-gold text-nowrap">
-                                {queueCount} na fila {nextClientName && `(Próx: ${nextClientName})`}
+                                {queueCount} na fila {nextClientName && `(Próx: ${Array.isArray(nextClientName) ? nextClientName[0] : nextClientName})`}
                             </span>
                         </div>
                     )}
@@ -268,14 +338,14 @@ export default function ServiceRoomPage() {
             {/* Video Area */}
             <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-4">
                 {/* Client Video (Remote) */}
-                <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
+                <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group h-full">
                     <div id="remote-player" className="absolute inset-0 flex items-center justify-center">
                         {remoteUsers.length > 0 ? (
                             <RemotePlayer user={remoteUsers[0]} />
                         ) : (
                             <div className="text-center">
                                 <div className="w-24 h-24 rounded-full bg-slate-800 mx-auto mb-4 border-2 border-neon-cyan/30 overflow-hidden">
-                                    <img src={consultation?.users?.avatar_url || ''} className="w-full h-full object-cover" />
+                                    <img src={consultation?.users?.avatar_url || ''} className="w-full h-full object-cover" alt="Client" />
                                 </div>
                                 <h2 className="text-xl font-bold text-white">{consultation?.users?.full_name}</h2>
                                 <p className="text-slate-500 italic mt-2">Aguardando cliente...</p>
@@ -285,10 +355,10 @@ export default function ServiceRoomPage() {
                 </div>
 
                 {/* Oracle Video (Local) */}
-                <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group">
+                <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group h-full">
                     <div id="local-player" className="absolute inset-0 flex items-center justify-center">
                         {!joined && (
-                            <div className="text-center space-y-4">
+                            <div className="text-center space-y-4 z-10">
                                 <div className="p-4 bg-neon-cyan/10 rounded-full text-neon-cyan inline-block">
                                     <VideoIcon size={32} />
                                 </div>
@@ -305,8 +375,8 @@ export default function ServiceRoomPage() {
                     </div>
                 </div>
 
-                {/* Controls - Floating for Desktop */}
-                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity z-20">
+                {/* Controls - Floating */}
+                <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-md px-6 py-3 rounded-full border border-white/10 z-20">
                     <button
                         onClick={toggleAudio}
                         className={`p-3 rounded-full transition-all ${audioEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}
@@ -321,7 +391,7 @@ export default function ServiceRoomPage() {
                     </button>
                     <button
                         onClick={endCall}
-                        className="p-3 rounded-full bg-red-500 hover:bg-red-600 text-white transition-colors px-6 font-bold flex items-center"
+                        className="p-3 rounded-full bg-red-600 hover:bg-red-700 text-white transition-all px-6 font-bold flex items-center shadow-lg transform active:scale-95"
                     >
                         <PhoneOff size={20} className="mr-2" />
                         Encerrar
@@ -331,3 +401,4 @@ export default function ServiceRoomPage() {
         </div>
     )
 }
+

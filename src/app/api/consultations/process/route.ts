@@ -73,15 +73,20 @@ export async function POST(req: Request) {
             }
         }
 
-        // 5. Buscar perguntas
-        const { data: questions } = await supabaseAdmin
-            .from('consultation_questions')
-            .select('*')
-            .eq('consultation_id', consultationId)
-            .order('question_order', { ascending: true })
+        // 5. Buscar perguntas (Se não for vídeo)
+        let questions: any[] = []
+        if (consultation.type !== 'video') {
+            const { data: qData } = await supabaseAdmin
+                .from('consultation_questions')
+                .select('*')
+                .eq('consultation_id', consultationId)
+                .order('question_order', { ascending: true })
 
-        if (!questions || questions.length === 0) {
-            throw new Error('Nenhuma pergunta encontrada')
+            questions = qData || []
+
+            if (questions.length === 0) {
+                throw new Error('Nenhuma pergunta encontrada')
+            }
         }
 
         // 6.5. Buscar Master Prompt

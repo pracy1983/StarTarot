@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { History, Calendar, Clock, CreditCard, Inbox } from 'lucide-react'
+import { History, Calendar, Clock, CreditCard, Inbox, Video } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 
@@ -62,15 +62,20 @@ export default function HistoricoPage() {
                             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                                 <div className="flex items-center space-x-4">
                                     <div className="p-3 rounded-2xl bg-neon-purple/10 text-neon-purple">
-                                        <History size={24} />
+                                        {atendimento.type === 'video' ? <Video size={24} /> : <History size={24} />}
                                     </div>
                                     <div>
-                                        <h3 className="font-bold text-white">{atendimento.oracle?.full_name}</h3>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="font-bold text-white">{atendimento.oracle?.full_name}</h3>
+                                            {atendimento.type === 'video' && (
+                                                <span className="text-[10px] bg-neon-cyan/20 text-neon-cyan px-1.5 py-0.5 rounded border border-neon-cyan/30 uppercase font-black">Vídeo</span>
+                                            )}
+                                        </div>
                                         <p className="text-xs text-slate-500">{atendimento.oracle?.specialty}</p>
                                     </div>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-8 text-center md:text-left">
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8 text-center md:text-left flex-1">
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Data</p>
                                         <p className="text-sm font-medium text-white flex items-center justify-center md:justify-start text-xs">
@@ -80,11 +85,20 @@ export default function HistoricoPage() {
                                     </div>
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Status</p>
-                                        <p className="text-sm font-medium text-white flex items-center justify-center md:justify-start">
-                                            <Clock size={14} className="mr-2 text-slate-400" />
-                                            {atendimento.status === 'answered' ? 'Concluída' : 'Em processamento'}
+                                        <p className={`text-sm font-bold flex items-center justify-center md:justify-start ${atendimento.status === 'answered' || atendimento.status === 'completed' ? 'text-green-400' : 'text-neon-gold animate-pulse'}`}>
+                                            <Clock size={14} className="mr-2 opacity-70" />
+                                            {atendimento.status === 'answered' || atendimento.status === 'completed' ? 'Concluída' : 'Em processamento'}
                                         </p>
                                     </div>
+                                    {atendimento.type === 'video' && (
+                                        <div>
+                                            <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Duração</p>
+                                            <p className="text-sm font-medium text-white flex items-center justify-center md:justify-start">
+                                                <Clock size={14} className="mr-2 text-slate-400" />
+                                                {atendimento.duration_seconds ? `${Math.floor(atendimento.duration_seconds / 60)}: ${(atendimento.duration_seconds % 60).toString().padStart(2, '0')}` : '--:--'}
+                                            </p>
+                                        </div>
+                                    )}
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Investimento</p>
                                         <p className="text-sm font-bold text-neon-gold flex items-center justify-center md:justify-start">
@@ -93,9 +107,14 @@ export default function HistoricoPage() {
                                     </div>
                                 </div>
 
-                                <button className="px-6 py-2 rounded-xl bg-white/5 border border-white/10 text-xs font-bold text-white hover:bg-white/10 transition-all">
-                                    Detalhes
-                                </button>
+                                <div className="flex gap-2">
+                                    <button
+                                        onClick={() => window.location.href = `/app/consulta/resposta/${atendimento.id}`}
+                                        className="px-6 py-2 rounded-xl bg-neon-purple/20 border border-neon-purple/30 text-xs font-bold text-neon-purple hover:bg-neon-purple/30 transition-all flex-1 md:flex-none"
+                                    >
+                                        Ver Resposta
+                                    </button>
+                                </div>
                             </div>
                         </GlassCard>
                     ))}

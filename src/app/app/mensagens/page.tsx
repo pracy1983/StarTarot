@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Inbox, Mail, MailOpen, ExternalLink, Sparkles, Trash2 } from 'lucide-react'
+import { Inbox, Mail, MailOpen, ExternalLink, Sparkles, Trash2, User } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -50,7 +50,7 @@ export default function InboxPage() {
         if (!profile?.id) return
 
         try {
-            // 1. Buscar notificações da inbox (estas são sempre pro usuário logado, independente de ser oracle ou cliente, pois as mensagens são dirigidas ao recipient_id)
+            // 1. Buscar notificações da inbox
             const { data: inboxData, error: iError } = await supabase
                 .from('inbox_messages')
                 .select('*')
@@ -61,9 +61,8 @@ export default function InboxPage() {
             if (iError) console.error('Error fetching inbox:', iError)
 
             // 2. Buscar consultas (não ocultas da inbox)
-            // Se for oracle view, buscamos onde eu sou o oracle. Se for cliente, onde sou o cliente.
             let query = supabase.from('consultations')
-                .select('*, oracle:profiles!oracle_id(full_name), client:profiles!client_id(full_name)')
+                .select('*, oracle:profiles!oracle_id(full_name, avatar_url, username), client:profiles!client_id(full_name, avatar_url, username)')
                 .eq('hidden_inbox', false)
 
             if (isOracleView) {
@@ -95,7 +94,7 @@ export default function InboxPage() {
                 }))
 
             const pendingConsultations = (consultationsData || [])
-                .filter(c => c.status !== 'answered')
+                .filter(c => c.status !== 'answered' && c.status !== 'canceled' && c.status !== 'rejected')
                 .map(c => ({
                     id: `pend-${c.id}`,
                     title: isOracleView
@@ -103,10 +102,14 @@ export default function InboxPage() {
                         : `🔮 Consulta em processamento...`,
                     content: isOracleView
                         ? `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`
-                        : `Aguardando resposta do oraculista. Quando sua resposta chegar, te avisaremos no whatsapp!`,
+                        : `Aguardando resposta de ${c.oracle?.full_name || 'Oraculista'}.`,
                     created_at: c.created_at,
                     is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"
-                    metadata: { type: 'consultation_pending', consultation_id: c.id }
+                    metadata: {
+                        type: 'consultation_pending',
+                        consultation_id: c.id,
+                        oracle_data: c.oracle // Passando dados do oraculo para renderizar avatar
+                    }
                 }))
 
             const allMessages = [
@@ -215,11 +218,18 @@ export default function InboxPage() {
                                 transition={{ delay: idx * 0.05 }}
                             >
                                 <GlassCard
-                                    className={`border-white/5 cursor-pointer group transition-all ${!msg.is_read ? 'bg-neon-purple/5 border-neon-purple/20' : ''
+                                    className={`border-white/5 cursor-pointer group transition-all relative overflow-hidden ${!msg.is_read
+                                        ? 'bg-red-500/10 border-red-500/30' // Red for unread
+                                        : 'hover:bg-white/5'
                                         }`}
                                     onClick={() => handleMessageClick(msg)}
                                 >
-                                    <div className="relative">
+                                    {/* Unread Indicator Glow */}
+                                    {!msg.is_read && (
+                                        <div className="absolute left-0 top-0 bottom-0 w-1 bg-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]" />
+                                    )}
+
+                                    <div className="relative pl-3">
                                         <button
                                             onClick={(e) => handleDelete(e, msg)}
                                             className="absolute -top-2 -right-2 p-2 rounded-full bg-deep-space border border-white/5 text-slate-500 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity z-10"
@@ -229,21 +239,34 @@ export default function InboxPage() {
                                         </button>
 
                                         <div className="flex items-start space-x-4">
+                                            {/* Avatar Section */}
                                             <div className="flex-shrink-0">
                                                 {msg.metadata?.type === 'consultation_pending' ? (
-                                                    <Sparkles size={24} className="text-neon-cyan animate-pulse" />
+                                                    <div className="relative">
+                                                        <div className="w-12 h-12 rounded-full border border-neon-purple/30 p-0.5">
+                                                            <img
+                                                                src={msg.metadata.oracle_data?.avatar_url || `https://ui-avatars.com/api/?name=${msg.metadata.oracle_data?.full_name || 'O'}&background=0a0a1a&color=a855f7`}
+                                                                alt="Oracle"
+                                                                className="w-full h-full rounded-full object-cover"
+                                                            />
+                                                        </div>
+                                                        <div className="absolute -bottom-1 -right-1 bg-deep-space rounded-full p-1 border border-white/10">
+                                                            <Sparkles size={12} className="text-neon-cyan animate-pulse" />
+                                                        </div>
+                                                    </div>
                                                 ) : msg.is_read ? (
-                                                    <MailOpen size={24} className="text-slate-500" />
+                                                    <MailOpen size={24} className="text-slate-500 mt-2" />
                                                 ) : (
-                                                    <Mail size={24} className="text-neon-purple" />
+                                                    <Mail size={24} className="text-red-400 mt-2 animate-bounce" />
                                                 )}
                                             </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between mb-2">
-                                                    <h3 className={`font-bold ${msg.is_read ? 'text-slate-300' : 'text-white'}`}>
+
+                                            <div className="flex-1 min-w-0 pt-1">
+                                                <div className="flex items-center justify-between mb-1">
+                                                    <h3 className={`font-bold text-base ${!msg.is_read ? 'text-white' : 'text-slate-300'}`}>
                                                         {msg.title}
                                                     </h3>
-                                                    <span className="text-xs text-slate-500">
+                                                    <span className={`text-xs ${!msg.is_read ? 'text-red-400 font-bold' : 'text-slate-500'}`}>
                                                         {new Date(msg.created_at).toLocaleDateString('pt-BR', {
                                                             day: '2-digit',
                                                             month: 'short',
@@ -252,21 +275,40 @@ export default function InboxPage() {
                                                         })}
                                                     </span>
                                                 </div>
-                                                <p className={`text-sm ${msg.is_read ? 'text-slate-500' : 'text-slate-300'} line-clamp-2`}>
+
+                                                {/* Content */}
+                                                <p className={`text-sm ${!msg.is_read ? 'text-slate-200' : 'text-slate-400'} line-clamp-2`}>
                                                     {msg.content}
                                                 </p>
+
+                                                {/* Extra Actions / Info */}
+                                                {msg.metadata?.type === 'consultation_pending' && !isOracleView && (
+                                                    <div className="flex items-center mt-3 gap-3">
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation()
+                                                                router.push(`/app/consulta/${msg.metadata.oracle_data?.username || msg.metadata.oracle_data?.id}`) // Fallback if username missing
+                                                            }}
+                                                            className="text-xs flex items-center text-neon-purple hover:text-white transition-colors bg-neon-purple/10 px-3 py-1.5 rounded-lg border border-neon-purple/20 hover:bg-neon-purple/20"
+                                                        >
+                                                            <User size={12} className="mr-1.5" />
+                                                            Ver Perfil
+                                                        </button>
+                                                        {msg.metadata.oracle_data?.full_name && (
+                                                            <span className="text-xs text-slate-500">
+                                                                Oraculista: <strong className="text-slate-300">{msg.metadata.oracle_data.full_name}</strong>
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
                                                 {msg.metadata?.type === 'consultation_answered' && (
-                                                    <div className="flex items-center mt-3 text-xs text-neon-cyan font-medium">
-                                                        <ExternalLink size={14} className="mr-1" />
+                                                    <div className="flex items-center mt-3 text-xs text-neon-cyan font-medium bg-neon-cyan/5 w-fit px-3 py-1.5 rounded-lg border border-neon-cyan/10">
+                                                        <ExternalLink size={14} className="mr-1.5" />
                                                         Clique para ver as respostas
                                                     </div>
                                                 )}
                                             </div>
-                                            {!msg.is_read && (
-                                                <div className="flex-shrink-0">
-                                                    <div className="w-2 h-2 rounded-full bg-neon-purple shadow-[0_0_10px_rgba(168,85,247,0.6)]" />
-                                                </div>
-                                            )}
                                         </div>
                                     </div>
                                 </GlassCard>

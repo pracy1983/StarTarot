@@ -209,6 +209,11 @@ export default function VideoConsultationPage() {
         }
     }
 
+    const [showFeedback, setShowFeedback] = useState(false)
+    const [stars, setStars] = useState(0)
+    const [comment, setComment] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     const endCall = async () => {
         if (billingInterval.current) clearInterval(billingInterval.current)
 
@@ -222,7 +227,43 @@ export default function VideoConsultationPage() {
         }
 
         setJoined(false)
-        router.push(`/app/consulta/resposta/${id}`)
+
+        try {
+            await supabase.rpc('finalize_video_consultation', {
+                p_consultation_id: id,
+                p_duration_seconds: duration,
+                p_end_reason: 'client_ended'
+            })
+        } catch (err) {
+            console.error('Error finalizing call:', err)
+        }
+
+        setShowFeedback(true)
+    }
+
+    const handleFeedbackSubmit = async () => {
+        if (stars === 0) {
+            toast.error('Por favor, selecione uma nota.')
+            return
+        }
+
+        setIsSubmitting(true)
+        try {
+            const { error } = await supabase.rpc('submit_consultation_feedback', {
+                p_consultation_id: id,
+                p_stars: stars,
+                p_comment: comment
+            })
+
+            if (error) throw error
+
+            toast.success('Obrigado pelo seu feedback! ✨')
+            router.push(`/app/consulta/resposta/${id}`)
+        } catch (err: any) {
+            toast.error('Erro ao enviar feedback: ' + err.message)
+        } finally {
+            setIsSubmitting(false)
+        }
     }
 
     const toggleVideo = async () => {
@@ -243,6 +284,49 @@ export default function VideoConsultationPage() {
 
     return (
         <div className="fixed inset-0 bg-deep-space z-50 flex flex-col pt-20">
+            {/* Feedback Modal */}
+            {showFeedback && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <GlassCard className="max-w-md w-full p-8 space-y-6 border-neon-purple/20">
+                        <div className="text-center">
+                            <h2 className="text-2xl font-bold text-white mb-2">Como foi sua consulta?</h2>
+                            <p className="text-slate-400 text-sm">Sua avaliação ajuda outros consulentes e motiva o oraculista.</p>
+                        </div>
+
+                        <div className="flex justify-center gap-2 py-4">
+                            {[1, 2, 3, 4, 5].map((star) => (
+                                <button
+                                    key={star}
+                                    onClick={() => setStars(star)}
+                                    className={`p-2 transition-all ${stars >= star ? 'text-neon-gold scale-125' : 'text-slate-600 hover:text-neon-gold/50'}`}
+                                >
+                                    <StarIcon fill={stars >= star ? 'currentColor' : 'none'} size={32} />
+                                </button>
+                            ))}
+                        </div>
+
+                        <textarea
+                            value={comment}
+                            onChange={(e) => setComment(e.target.value)}
+                            placeholder="Escreva um breve comentário (opcional)..."
+                            className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-white placeholder-slate-500 focus:outline-none focus:border-neon-purple/50 min-h-[120px]"
+                        />
+
+                        <div className="flex gap-4">
+                            <button
+                                onClick={() => router.push(`/app/consulta/resposta/${id}`)}
+                                className="flex-1 py-3 text-slate-400 hover:text-white transition-colors"
+                            >
+                                Pular
+                            </button>
+                            <NeonButton variant="purple" fullWidth onClick={handleFeedbackSubmit} disabled={isSubmitting}>
+                                {isSubmitting ? 'Enviando...' : 'Enviar Avaliação'}
+                            </NeonButton>
+                        </div>
+                    </GlassCard>
+                </div>
+            )}
+
             {/* Header / Info */}
             <div className="container mx-auto px-4 py-4 flex items-center justify-between text-white z-10">
                 <div className="flex items-center space-x-4">
@@ -275,7 +359,7 @@ export default function VideoConsultationPage() {
             <div className="flex-1 relative container mx-auto px-4 flex items-center justify-center py-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full h-full max-h-[70vh]">
                     {/* Remote Player */}
-                    <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl overflow-hidden group">
+                    <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
                         <div id="remote-player" className="w-full h-full bg-slate-900 flex items-center justify-center">
                             {remoteUsers.length > 0 ? (
                                 <RemotePlayer user={remoteUsers[0]} />
@@ -338,6 +422,25 @@ export default function VideoConsultationPage() {
                 </div>
             </div>
         </div>
+    )
+}
+
+function StarIcon({ fill, size, ...props }: any) {
+    return (
+        <svg
+            {...props}
+            xmlns="http://www.w3.org/2000/svg"
+            width={size}
+            height={size}
+            viewBox="0 0 24 24"
+            fill={fill}
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+        >
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2" />
+        </svg>
     )
 }
 

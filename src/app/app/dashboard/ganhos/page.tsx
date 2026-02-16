@@ -26,29 +26,43 @@ export default function OracleGanhosPage() {
         setLoading(true)
         try {
             // Fetch all earnings transactions
+            // Note: We need to be careful with 'type'. It should be 'earnings' or similar.
+            // Also, we need to ensure we are not double counting if we have other types.
             const { data: transactions, error } = await supabase
                 .from('transactions')
                 .select('*')
                 .eq('user_id', profile!.id)
-                .eq('type', 'earnings')
+                .in('type', ['earnings', 'gift_received']) // Include gifts if they generate earnings
                 .order('created_at', { ascending: false })
 
             if (error) throw error
 
+            // Confirmed = Money in the wallet (or ready to be paid out if configured that way)
+            // Pending = Money waiting for consultation completion or admin approval
+
+            // Fix: Ensure we handle string/number conversion safely
+            const safeAmount = (amount: any) => Math.abs(Number(amount) || 0)
+
             const confirmedTransactions = transactions?.filter(t => t.status === 'confirmed') || []
             const pendingTransactions = transactions?.filter(t => t.status === 'pending') || []
 
-            const total = confirmedTransactions.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
+            // Total Earned: All time confirmed earnings
+            const total = confirmedTransactions.reduce((acc, t) => acc + safeAmount(t.amount), 0)
 
+            // Monthly Earned: Confirmed earnings this month
             const firstDayOfMonth = new Date()
             firstDayOfMonth.setDate(1)
             firstDayOfMonth.setHours(0, 0, 0, 0)
 
             const monthly = confirmedTransactions
                 ?.filter(t => new Date(t.created_at) >= firstDayOfMonth)
-                .reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
+                .reduce((acc, t) => acc + safeAmount(t.amount), 0) || 0
 
-            const pending = pendingTransactions.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
+            // Pending Payout: Transactions that are pending
+            // Note: If the user meant "Available for Payout", that would be the wallet balance.
+            // But "Pendente Payout" usually means "Money stuck in pending status".
+            // Let's assume the user wants to see what is yet to be confirmed.
+            const pending = pendingTransactions.reduce((acc, t) => acc + safeAmount(t.amount), 0)
 
             setStats({
                 totalEarned: total,

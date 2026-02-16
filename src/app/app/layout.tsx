@@ -194,11 +194,11 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </div>
 
                 <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Dropdown de Visões (Apenas para Oráculo ou Owner) */}
-                    {(profile?.role === 'owner' || profile?.role === 'oracle' || profile?.is_oracle || profile?.application_status === 'approved') && <RoleSwitcher />}
+                    {/* Dropdown de Visões (Apenas para Oráculo Aprovado ou Owner) */}
+                    {(profile?.role === 'owner' || (profile?.role === 'oracle' && profile?.application_status === 'approved')) && <RoleSwitcher />}
 
                     {/* Global Oracle Status Toggle */}
-                    {(profile?.role === 'oracle' || (profile?.role === 'owner' && isOracleView)) && (
+                    {((profile?.role === 'oracle' && profile?.application_status === 'approved') || (profile?.role === 'owner' && isOracleView)) && (
                         <div className="flex items-center">
                             <OracleStatusToggle
                                 isOnline={isOnline}

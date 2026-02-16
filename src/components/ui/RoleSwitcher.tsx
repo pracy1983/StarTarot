@@ -22,7 +22,8 @@ export function RoleSwitcher() {
     const availableViews = views.filter(v => {
         if (profile?.role === 'owner') return true // Owner vê tudo
         if (v.id === 'client') return true // Todos vêm visão cliente
-        if (v.id === 'oracle' && (profile?.role === 'oracle' || profile?.is_oracle)) return true
+        if (v.id === 'oracle' && (profile?.role === 'oracle' && profile?.application_status === 'approved')) return true
+        if (v.id === 'oracle' && profile?.is_oracle) return true // Legacy support if needed, but safe to keep strict
         return false
     })
 

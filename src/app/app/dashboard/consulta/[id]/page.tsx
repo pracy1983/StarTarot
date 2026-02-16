@@ -71,6 +71,40 @@ export default function OracleAnswerPage() {
         setAnswers(prev => ({ ...prev, [questionId]: value }))
     }
 
+    // Prevent accidental exit
+    useEffect(() => {
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (Object.values(answers).some(a => a.length > 0) && !sending) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+        return () => window.removeEventListener('beforeunload', handleBeforeUnload)
+    }, [answers, sending])
+
+    const handleRefuse = async () => {
+        if (!confirm('Tem certeza que deseja recusar esta consulta? O valor será estornado integralmente para o cliente e a consulta será cancelada.')) return
+
+        setSending(true)
+        try {
+            const res = await fetch('/api/consultations/reject', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ consultationId: id, reason: 'Oraculista optou por não atender' })
+            })
+
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao recusar')
+
+            toast.success('Consulta recusada e valor estornado.')
+            router.push('/app/dashboard')
+        } catch (err: any) {
+            toast.error(err.message)
+            setSending(false)
+        }
+    }
+
     const handleSubmit = async () => {
         if (questions.length === 0) {
             toast.error('Nenhuma pergunta encontrada para esta consulta.')
@@ -266,6 +300,16 @@ export default function OracleAnswerPage() {
                             <Send size={18} className="mr-2" />
                             Enviar Respostas e Receber Créditos
                         </NeonButton>
+                    </div>
+
+                    <div className="pt-8 border-t border-white/5 flex justify-center">
+                        <button
+                            onClick={handleRefuse}
+                            disabled={sending}
+                            className="text-xs text-red-500 hover:text-red-400 underline transition-colors opacity-70 hover:opacity-100"
+                        >
+                            Não posso atender esta consulta (Estornar Cliente)
+                        </button>
                     </div>
                 </div>
             </div>

@@ -92,6 +92,23 @@ export default function WalletPage() {
         setStep('checkout')
     }
 
+    const calculateBestCredits = (amount: number) => {
+        if (!amount) return 0
+
+        // Find the best package ratio (credits per BRL)
+        // We look for the most expensive package that is still <= amount, 
+        // effectively giving the "bulk discount" of that tier.
+        // If amount is higher than the biggest package, we use the biggest package's ratio.
+
+        const sortedPackages = [...packages].sort((a, b) => b.price_brl - a.price_brl)
+        const bestPackage = sortedPackages.find(p => p.price_brl <= amount) || sortedPackages[sortedPackages.length - 1] // Fallback to smallest if amount is tiny (though we have min check)
+
+        if (!bestPackage) return Math.floor(amount / COIN_PRICE) // Fallback to base price if no packages
+
+        const ratio = (bestPackage.coins_amount + bestPackage.bonus_amount) / bestPackage.price_brl
+        return Math.floor(amount * ratio)
+    }
+
     const handleCustomPurchase = () => {
         const amount = parseFloat(customAmount.replace(',', '.'))
         if (!amount || amount < 5) {
@@ -99,7 +116,8 @@ export default function WalletPage() {
             return
         }
 
-        const coins = Math.floor(amount / COIN_PRICE)
+        const coins = calculateBestCredits(amount)
+
         const customPkg = {
             id: 'custom',
             name: 'Recarga Personalizada',
@@ -242,7 +260,7 @@ export default function WalletPage() {
                     <div className="text-right pr-2">
                         <span className="block text-xs text-slate-500 font-bold uppercase">Você Recebe</span>
                         <span className="text-neon-cyan font-black">
-                            {customAmount ? Math.floor(parseFloat(customAmount) / COIN_PRICE) : 0} Créditos
+                            {customAmount ? calculateBestCredits(parseFloat(customAmount.replace(',', '.'))) : 0} Créditos
                         </span>
                     </div>
                     <div className="flex flex-col items-center">
