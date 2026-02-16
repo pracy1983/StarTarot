@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -348,76 +348,93 @@ export default function AdminOraculistasPage() {
                                         })()}
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end space-x-2">
-                                            <>
-                                                <Link
-                                                    href={`/app/oraculo/${o.id}`}
-                                                    target="_blank"
-                                                    className="p-2 text-neon-cyan hover:text-cyan-300 hover:bg-neon-cyan/10 rounded-lg transition-colors"
-                                                    title="Visualizar Perfil"
-                                                >
-                                                    <Search size={16} />
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleStatusChange(o.id, 'approved')}
-                                                    className="p-2 text-green-400 hover:text-green-300 hover:bg-green-400/10 rounded-lg transition-colors"
-                                                    title="Aprovar"
-                                                >
-                                                    <Check size={16} />
-                                                </button>
-                                                <button
-                                                    onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                    className="p-2 text-red-400 hover:text-red-300 hover:bg-red-400/10 rounded-lg transition-colors"
-                                                    title="Rejeitar"
-                                                >
-                                                    <X size={16} />
-                                                </button>
-                                            </>
-
-                                            <button
-                                                onClick={() => {
-                                                    const isSuspended = !!o.suspended_until
-                                                    const newDate = isSuspended ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString() // 1 ano de suspensão
-                                                    const action = isSuspended ? 'reativar' : 'suspender'
-
-                                                    if (!confirm(`Deseja realmente ${action} ${o.full_name}?`)) return
-
-                                                    supabase
-                                                        .from('profiles')
-                                                        .update({ suspended_until: newDate })
-                                                        .eq('id', o.id)
-                                                        .then(({ error }) => {
-                                                            if (error) {
-                                                                toast.error('Erro ao atualizar status')
-                                                            } else {
-                                                                setOraculistas(prev => prev.map(p =>
-                                                                    p.id === o.id ? { ...p, suspended_until: newDate } : p
-                                                                ))
-                                                                toast.success(`Oraculista ${isSuspended ? 'reativado' : 'suspenso'}!`)
-                                                            }
-                                                        })
-                                                }}
-                                                className={`p-2 rounded-lg transition-colors ${o.suspended_until
-                                                    ? 'text-yellow-400 hover:text-yellow-300 hover:bg-yellow-400/10'
-                                                    : 'text-red-400 hover:text-red-300 hover:bg-red-400/10'}`}
-                                                title={o.suspended_until ? "Reativar" : "Suspender"}
-                                            >
-                                                {o.suspended_until ? <Check size={16} /> : <X size={16} />}
-                                            </button>
-
+                                        <div className="flex items-center justify-end gap-2">
+                                            {/* Common Action: View Profile */}
                                             <Link
-                                                href={`/admin/oraculistas/editar/${o.id}`}
-                                                className="p-2 text-slate-400 hover:text-neon-cyan transition-colors rounded-lg hover:bg-white/5"
-                                                title="Editar oraculista"
+                                                href={`/app/oraculo/${o.id}`}
+                                                target="_blank"
+                                                className="flex items-center space-x-1 px-2 py-1.5 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
+                                                title="Visualizar Perfil Público"
                                             >
-                                                <Edit2 size={16} />
+                                                <Eye size={14} />
+                                                <span className="text-[10px] font-bold uppercase">Ver</span>
                                             </Link>
-                                            <button
-                                                onClick={() => handleDelete(o.id, o.full_name)}
-                                                className="p-2 text-slate-400 hover:text-red-400 transition-colors rounded-lg hover:bg-white/5"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
+
+                                            {/* Tab Specific Actions */}
+                                            {activeTab === 'pending' ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleStatusChange(o.id, 'approved')}
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
+                                                        title="Aprovar Cadastro"
+                                                    >
+                                                        <Check size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Aprovar</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-red-400 hover:bg-red-400/10 rounded-lg transition-all border border-transparent hover:border-red-400/30"
+                                                        title="Rejeitar Solicitação"
+                                                    >
+                                                        <X size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Rejeitar</span>
+                                                    </button>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Link
+                                                        href={`/admin/oraculistas/editar/${o.id}`}
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
+                                                        title="Editar dados e prompts"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Editar</span>
+                                                    </Link>
+
+                                                    <button
+                                                        onClick={() => {
+                                                            const isSuspended = !!o.suspended_until
+                                                            const newDate = isSuspended ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+                                                            const action = isSuspended ? 'reativar' : 'suspender'
+
+                                                            if (!confirm(`Deseja realmente ${action} ${o.full_name}?`)) return
+
+                                                            supabase
+                                                                .from('profiles')
+                                                                .update({ suspended_until: newDate })
+                                                                .eq('id', o.id)
+                                                                .then(({ error }) => {
+                                                                    if (error) {
+                                                                        toast.error('Erro ao atualizar status')
+                                                                    } else {
+                                                                        setOraculistas(prev => prev.map(p =>
+                                                                            p.id === o.id ? { ...p, suspended_until: newDate } : p
+                                                                        ))
+                                                                        toast.success(`Oraculista ${isSuspended ? 'reativado' : 'suspenso'}!`)
+                                                                    }
+                                                                })
+                                                        }}
+                                                        className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg transition-all border border-transparent ${o.suspended_until
+                                                            ? 'text-yellow-400 hover:bg-yellow-400/10 hover:border-yellow-400/30'
+                                                            : 'text-orange-400 hover:bg-orange-400/10 hover:border-orange-400/30'
+                                                            }`}
+                                                        title={o.suspended_until ? "Reativar Oraculista" : "Suspender Temporariamente"}
+                                                    >
+                                                        {o.suspended_until ? <Check size={14} /> : <Ban size={14} />}
+                                                        <span className="text-[10px] font-bold uppercase">
+                                                            {o.suspended_until ? 'Ativar' : 'Pausar'}
+                                                        </span>
+                                                    </button>
+
+                                                    <button
+                                                        onClick={() => handleDelete(o.id, o.full_name)}
+                                                        className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                        title="Remover permanentemente"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </>
+                                            )}
                                         </div>
                                     </td>
                                 </tr>
