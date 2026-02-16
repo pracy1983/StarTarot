@@ -28,17 +28,7 @@ const TEST_PHONE = '11986224808'
 
 export default function LandingPage() {
   const router = useRouter()
-  const { login, signUp, isAuthenticated, isLoading, checkAuth, profile, logout, showAuthModal, setShowAuthModal } = useAuthStore()
-
-  // UI States
-  // Placeholder isRegistering/registrationRole for openAuth compatibility if needed
-  // but we can just use setShowAuthModal(true)
-  const isRegistering = false
-  const setIsRegistering = (v: boolean) => { }
-  const registrationRole = 'client'
-  const setRegistrationRole = (v: any) => { }
-  const showOtpScreen = false
-  const setShowOtpScreen = (v: boolean) => { }
+  const { login, signUp, isAuthenticated, isLoading, checkAuth, profile, logout, showAuthModal, setShowAuthModal, setAuthMode, setRegistrationRole } = useAuthStore()
 
   // Marketplace States
   const [oracles, setOracles] = useState<any[]>([])
@@ -110,8 +100,8 @@ export default function LandingPage() {
     })
 
   const openAuth = (role: 'client' | 'oracle' = 'client', register: boolean = false) => {
-    // Note: The new AuthModal handles its own internal state for now. 
-    // We could pass these as props if we want to pre-select.
+    setRegistrationRole(role)
+    setAuthMode(register ? 'register' : 'login')
     setShowAuthModal(true)
   }
 
@@ -132,9 +122,8 @@ export default function LandingPage() {
 
           <div className="hidden md:flex items-center space-x-8">
             {!isAuthenticated && (
-              <button onClick={() => { setRegistrationRole('oracle'); setIsRegistering(true); setShowAuthModal(true); }} className="text-sm font-medium text-slate-400 hover:text-neon-cyan transition-colors">
-                Trabalhe Conosco
-              </button>
+              // Trabalhe Conosco removed as requested
+              <div />
             )}
             {isAuthenticated ? (
               <NeonButton variant="purple" size="sm" onClick={() => router.push('/app')}>
@@ -188,18 +177,7 @@ export default function LandingPage() {
             Conecte-se com os melhores oraculistas do Brasil em consultas em tempo real ou mensagens exclusivas.
           </motion.p>
 
-          {!isAuthenticated && (
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.2 }}
-              className="flex flex-col sm:flex-row items-center justify-center gap-4"
-            >
-              <NeonButton variant="purple" size="lg" className="min-w-[220px]" onClick={() => openAuth('client', true)}>
-                Iniciar Minha Jornada
-              </NeonButton>
-            </motion.div>
-          )}
+          {/* Iniciar Minha Jornada button removed as requested */}
         </header>
 
         {/* Marketplace Filter */}
@@ -295,7 +273,7 @@ export default function LandingPage() {
                     Transforme seu dom em uma fonte de renda. Atenda clientes de todo o país através de chat e vídeo com total segurança e suporte.
                   </p>
                   <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    <NeonButton variant="cyan" size="lg" onClick={() => { setRegistrationRole('oracle'); setIsRegistering(true); setShowAuthModal(true); }}>
+                    <NeonButton variant="cyan" size="lg" onClick={() => openAuth('oracle', true)}>
                       Cadastrar como Oraculista
                     </NeonButton>
                     <button className="text-sm font-bold text-slate-400 hover:text-white transition-colors px-6">

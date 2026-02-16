@@ -26,10 +26,10 @@ const TEST_PHONE = '11986224808'
 
 export const AuthModal = () => {
     const router = useRouter()
-    const { login, signUp, showAuthModal, setShowAuthModal } = useAuthStore()
+    const { login, signUp, showAuthModal, setShowAuthModal, authMode, setAuthMode, registrationRole, setRegistrationRole } = useAuthStore()
 
-    const [isRegistering, setIsRegistering] = useState(false)
-    const [registrationRole, setRegistrationRole] = useState<'client' | 'oracle'>('client')
+    const isRegistering = authMode === 'register'
+    const setIsRegistering = (val: boolean) => setAuthMode(val ? 'register' : 'login')
     const [showOtpScreen, setShowOtpScreen] = useState(false)
 
     // Form States

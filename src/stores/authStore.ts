@@ -60,6 +60,10 @@ interface AuthState {
   setProfile: (profile: Profile) => void
   showAuthModal: boolean
   setShowAuthModal: (show: boolean) => void
+  authMode: 'login' | 'register'
+  setAuthMode: (mode: 'login' | 'register') => void
+  registrationRole: UserRole
+  setRegistrationRole: (role: UserRole) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -271,5 +275,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     set({ profile })
   },
   showAuthModal: false,
-  setShowAuthModal: (show: boolean) => set({ showAuthModal: show })
+  setShowAuthModal: (show: boolean) => set({ showAuthModal: show }),
+  authMode: 'login',
+  setAuthMode: (mode: 'login' | 'register') => set({ authMode: mode }),
+  registrationRole: 'client',
+  setRegistrationRole: (role: UserRole) => set({ registrationRole: role })
 }))

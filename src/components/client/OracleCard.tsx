@@ -186,16 +186,16 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             glowColor={status === 'online' ? 'purple' : (status === 'horario' ? 'gold' : 'none')}
             onClick={handleViewProfile}
         >
-            {/* Zero Fee Badge */}
+            {/* Zero Fee Badge - Top Right */}
             {isZeroFee && (
                 <div className="absolute top-4 right-4 z-20 px-2 py-0.5 bg-neon-gold text-deep-space text-[9px] font-black uppercase tracking-wider rounded shadow-lg animate-pulse">
                     ZERO TARIFA INICIAL
                 </div>
             )}
 
-            {/* Rating Stars - Top Left (Only if rating exists) */}
+            {/* Rating Stars - Top Right (Below Zero Fee or Top) */}
             {oracle.rating ? (
-                <div className="absolute top-4 left-4 z-20 group/rating" title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
+                <div className={`absolute right-4 z-20 group/rating ${isZeroFee ? 'top-10' : 'top-4'}`} title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
                     <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
                         <Star size={10} className="text-neon-gold fill-neon-gold" />
                         <span className="text-[10px] font-bold text-white ml-1">{oracle.rating.toFixed(1)}</span>
@@ -203,17 +203,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
             ) : null}
 
-            {/* Status Badge */}
-            <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${isZeroFee ? 'mt-8' : ''} ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
-                status === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' :
-                    status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
-                        'bg-slate-800/50 text-slate-500 border-white/5'
+            {/* Status Badge - Top Left */}
+            <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
+                    status === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' :
+                        status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
+                            'bg-slate-800/50 text-slate-500 border-white/5'
                 }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-400 animate-pulse ring-2 ring-green-500/50' :
-                    status === 'offline' ? 'bg-red-500 animate-pulse ring-2 ring-red-500/50' :
-                        status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
+                        status === 'offline' ? 'bg-red-500 animate-pulse ring-2 ring-red-500/50' :
+                            status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
                     }`} />
-                <span>{label}</span>
+                <span>{status === 'online' ? 'ONLINE' : label}</span>
             </div>
 
             <div className="flex flex-col items-center text-center space-y-4 pt-4">
