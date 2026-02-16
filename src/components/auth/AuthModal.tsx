@@ -50,6 +50,8 @@ export const AuthModal = () => {
     const handleStartRegister = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
+        setUpgradeMode(false)
+        setExistingUser(null)
         setFormLoading(true)
 
         try {
@@ -65,18 +67,9 @@ export const AuthModal = () => {
 
                 if (foundUser) {
                     setExistingUser(foundUser)
-                    const isOracle = foundUser.role === 'oracle' || foundUser.is_oracle || foundUser.role === 'owner'
-                    const targetType = registrationRole === 'oracle' ? 'Oraculista' : 'Membro'
-                    const currentType = isOracle ? 'Oraculista' : 'Membro'
-
-                    if ((registrationRole === 'oracle' && isOracle) || (registrationRole === 'client' && !isOracle)) {
-                        setError(`Este ${foundUser.email === email.trim().toLowerCase() ? 'e-mail' : 'telefone'} já está cadastrado como ${currentType}. Por favor, faça login para acessar seu portal.`)
-                    } else {
-                        setUpgradeMode(true)
-                        setError(`Você já possui um cadastro como ${currentType === 'Oraculista' ? 'oraculista' : 'cliente'}. Deseja se tornar ${targetType.toLowerCase()} ou apenas logar como ${currentType === 'Oraculista' ? 'oraculista' : 'cliente'}?`)
-                    }
-                    setFormLoading(false)
-                    return
+                    setUpgradeMode(true)
+                    // Não retornamos erro, deixamos prosseguir para verificar o WhatsApp
+                    // O login será tentado no final ao invés do cadastro
                 }
             }
 
@@ -93,6 +86,8 @@ export const AuthModal = () => {
                 toast.success(`Código enviado para o WhatsApp ${fullPhone}`)
             } else {
                 setError('Erro ao enviar código para o WhatsApp. Verifique o número.')
+                // Em caso de erro no envio, podemos resetar o upgradeMode se necessário, 
+                // mas aqui paramos o fluxo de qualquer forma.
             }
         } catch (err) {
             console.error(err)
@@ -116,9 +111,23 @@ export const AuthModal = () => {
 
         try {
             const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
+
+            // Se já sabemos que é usuário existente, tentamos login direto
+            if (upgradeMode || existingUser) {
+                await performLogin(email, password, fullPhone)
+                return
+            }
+
+            // Tenta cadastro
             const result = await signUp(email, password, fullName, fullPhone, registrationRole)
             if (!result.success) {
-                setError(result.error || 'Erro ao criar conta')
+                // Se falhar por usuário já existente, tenta login
+                if (result.error?.includes('already registered') || result.error?.includes('já está cadastrado')) {
+                    await performLogin(email, password, fullPhone)
+                } else {
+                    setError(result.error || 'Erro ao criar conta')
+                    setFormLoading(false)
+                }
             } else {
                 const loginResult = await login(email, password)
                 if (loginResult.success) {
@@ -129,11 +138,36 @@ export const AuthModal = () => {
                     setError('Conta criada! Por favor, faça login.')
                     setIsRegistering(false)
                     setShowOtpScreen(false)
+                    setFormLoading(false)
                 }
             }
         } catch (err) {
             setError('Erro na finalização do cadastro')
-        } finally {
+            setFormLoading(false)
+        }
+    }
+
+    const performLogin = async (email: string, pass: string, phone: string) => {
+        const loginResult = await login(email, pass)
+        if (loginResult.success) {
+            // Atualiza role e telefone se necessário
+            const updates: any = { phone: phone } // Confirmamos o telefone via OTP
+
+            if (registrationRole === 'oracle') {
+                updates.is_oracle = true
+                updates.role = 'oracle' // Força role oracle se solicitado
+            }
+
+            await supabase
+                .from('profiles')
+                .update(updates)
+                .eq('email', email.trim().toLowerCase())
+
+            toast.success('Acesso recuperado e atualizado!')
+            setShowAuthModal(false)
+            router.push('/app')
+        } else {
+            setError('Conta já existente, mas a senha informada está incorreta.')
             setFormLoading(false)
         }
     }
