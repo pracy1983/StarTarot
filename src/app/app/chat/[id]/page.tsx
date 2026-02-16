@@ -242,12 +242,12 @@ export default function MessagingPage() {
                     <div className="hidden md:flex flex-col items-end">
                         <div className="flex items-center text-neon-gold text-xs font-bold uppercase tracking-wider">
                             <Sparkles size={14} className="mr-1.5" />
-                            {walletBalance} CR disponíveis
+                            {walletBalance} Créditos disponíveis
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
                             {oracle?.is_ai
-                                ? `${oracle?.price_per_message || 10} CR por mensagem`
-                                : `${oracle?.credits_per_minute} CR por minuto`
+                                ? `${oracle?.price_per_message || 10} Créditos por mensagem`
+                                : `${oracle?.credits_per_minute} Créditos por minuto`
                             }
                         </div>
                     </div>

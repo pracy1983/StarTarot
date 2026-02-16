@@ -77,7 +77,7 @@ export default function AdminDashboard() {
         { label: 'Total Oraculistas', value: stats.totalOracles.toString(), icon: <Users size={20} />, color: 'purple' },
         { label: 'Sessões Ativas', value: stats.activeSessions.toString(), icon: <MessageSquare size={20} />, color: 'cyan' },
         { label: 'IA Atendendo', value: stats.aiOracles.toString(), icon: <Brain size={20} />, color: 'gold' },
-        { label: 'Créditos Hoje', value: `${stats.totalCreditsConsumed} CR`, icon: <TrendingUp size={20} />, color: 'cyan' },
+        { label: 'Créditos Hoje', value: `${stats.totalCreditsConsumed} Créditos`, icon: <TrendingUp size={20} />, color: 'cyan' },
     ]
 
     return (

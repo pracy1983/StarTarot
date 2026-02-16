@@ -162,7 +162,7 @@ export default function AdminFinanceiroPage() {
                                         <div>
                                             <p className="text-sm font-bold text-white">{(tx.profiles as any)?.full_name || 'Cliente'}</p>
                                             <p className="text-xs text-slate-500">
-                                                {format(new Date(tx.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })} • {tx.amount} CR
+                                                {format(new Date(tx.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })} • {tx.amount} Créditos
                                             </p>
                                         </div>
                                     </div>
@@ -196,7 +196,7 @@ export default function AdminFinanceiroPage() {
                                         </span>
                                     </div>
                                     <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
-                                        {o.credits} CR • {o.isAi ? 'Margem 100% IA' : 'Pendente Payout'}
+                                        {o.credits} Créditos • {o.isAi ? 'Margem 100% IA' : 'Pendente Payout'}
                                     </span>
                                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                                         <div

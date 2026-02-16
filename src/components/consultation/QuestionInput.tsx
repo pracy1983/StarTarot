@@ -81,11 +81,11 @@ export const QuestionInput = ({ questions, onChange, pricePerQuestion }: Questio
                 <div className="flex items-center space-x-2 text-sm text-slate-300">
                     <Sparkles size={16} className="text-neon-gold" />
                     <span>
-                        {questions.length} {questions.length === 1 ? 'mensagem' : 'mensagens'} × {pricePerQuestion} CR
+                        {questions.length} {questions.length === 1 ? 'mensagem' : 'mensagens'} × {pricePerQuestion} Créditos
                     </span>
                 </div>
                 <div className="text-lg font-bold text-neon-gold">
-                    Total: {totalCredits} CR
+                    Total: {totalCredits} Créditos
                 </div>
             </div>
         </div>

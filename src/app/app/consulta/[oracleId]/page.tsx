@@ -215,7 +215,7 @@ export default function NewConsultationPage() {
         const totalCost = calculateTotal()
 
         if (walletBalance < totalCost) {
-            toast.error(`Créditos insuficientes. Você precisa de ${totalCost} CR.`)
+            toast.error(`Créditos insuficientes. Você precisa de ${totalCost} Créditos.`)
             router.push('/app/carteira')
             return
         }
@@ -358,7 +358,7 @@ export default function NewConsultationPage() {
                     Nova {isVideo ? 'Consulta por Vídeo' : 'Consulta por Mensagem'}
                 </h1>
                 <div className="text-sm font-bold text-neon-gold">
-                    Saldo: {walletBalance} CR
+                    Saldo: {walletBalance} Créditos
                 </div>
             </div>
 
@@ -387,11 +387,11 @@ export default function NewConsultationPage() {
                     <div className="text-right">
                         <p className="text-xs text-slate-500">{isVideo ? 'Valor por minuto' : 'Valor por mensagem'}</p>
                         <p className="text-lg font-bold text-neon-gold">
-                            {isVideo ? oracle.credits_per_minute : pricePerQuestion} CR
+                            {isVideo ? oracle.credits_per_minute : pricePerQuestion} Créditos
                         </p>
                         {initialFee > 0 && (
                             <p className="text-[10px] text-slate-400 mt-1">
-                                + {initialFee} CR taxa inicial
+                                + {initialFee} Créditos taxa inicial
                             </p>
                         )}
                     </div>
@@ -496,7 +496,7 @@ export default function NewConsultationPage() {
                         {appliedCoupon && (
                             <div className="flex justify-between items-center text-xs text-green-400 font-bold px-1 animate-fadeIn">
                                 <span>Cupom {appliedCoupon.code} aplicado!</span>
-                                <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} CR`}</span>
+                                <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} Créditos`}</span>
                             </div>
                         )}
                     </div>
@@ -504,7 +504,7 @@ export default function NewConsultationPage() {
                     {initialFee > 0 && (
                         <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
                             <span>Taxa de Abertura (Fixa):</span>
-                            <span>{initialFee} CR</span>
+                            <span>{initialFee} Créditos</span>
                         </div>
                     )}
 
@@ -538,7 +538,7 @@ export default function NewConsultationPage() {
                                     {isVideo ? 'Iniciar Chamada de Vídeo' : 'Enviar Consulta'}
                                 </span>
                                 <span className="text-[10px] opacity-80 font-normal mt-1">
-                                    {isVideo ? `Custo Inicial: ${calculateTotal()} CR` : `Total: ${calculateTotal()} CR`}
+                                    {isVideo ? `Custo Inicial: ${calculateTotal()} Créditos` : `Total: ${calculateTotal()} Créditos`}
                                 </span>
                             </div>
                         </NeonButton>

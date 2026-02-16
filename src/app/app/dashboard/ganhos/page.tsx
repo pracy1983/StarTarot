@@ -147,7 +147,7 @@ export default function OracleGanhosPage() {
                                             {isGift ? item.metadata?.gift_name : '-'}
                                         </td>
                                         <td className="py-4 text-right">
-                                            <span className="text-sm font-bold text-neon-gold">+{amount} CR</span>
+                                            <span className="text-sm font-bold text-neon-gold">+{amount} Créditos</span>
                                         </td>
                                     </tr>
                                 )

@@ -142,7 +142,7 @@ export default function AdminMembrosPage() {
                                     <td className="px-6 py-4">
                                         <div className="flex items-center text-neon-gold font-bold">
                                             <Wallet size={14} className="mr-2" />
-                                            {m.credits} CR
+                                            {m.credits} Créditos
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 text-right">

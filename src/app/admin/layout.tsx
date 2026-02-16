@@ -117,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         <div className="h-4 w-px bg-white/10" />
                         <div className="flex items-center text-sm font-bold text-neon-gold">
                             <Sparkles size={16} className="mr-2" />
-                            {ownerBalance !== null ? `${ownerBalance} CR` : '...'}
+                            {ownerBalance !== null ? `${ownerBalance} Créditos` : '...'}
                         </div>
                     </div>
                 </header>

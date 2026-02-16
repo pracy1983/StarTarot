@@ -112,7 +112,7 @@ export default function AdminCreditsPage() {
                 metadata: { granted_by: profile?.id, reason: 'Manual credit grant' }
             })
 
-            toast.success(`+${creditAmount} CR adicionados para ${userName}!`)
+            toast.success(`+${creditAmount} Créditos adicionados para ${userName}!`)
             setAddingCredits(null)
             setCreditAmount(50)
             fetchUsers() // Refresh
@@ -196,7 +196,7 @@ export default function AdminCreditsPage() {
                                         <td className="px-6 py-4">
                                             <span className="text-sm font-bold text-neon-gold flex items-center">
                                                 <Sparkles size={14} className="mr-1" />
-                                                {u.balance} CR
+                                                {u.balance} Créditos
                                             </span>
                                         </td>
                                         <td className="px-6 py-4 text-right">
@@ -228,7 +228,7 @@ export default function AdminCreditsPage() {
                                                     className="flex items-center space-x-1 px-3 py-1.5 bg-neon-purple/10 text-neon-purple rounded-lg text-xs font-bold hover:bg-neon-purple/20 transition-colors ml-auto"
                                                 >
                                                     <Plus size={14} />
-                                                    <span>Adicionar CR</span>
+                                                    <span>Adicionar Créditos</span>
                                                 </button>
                                             )}
                                         </td>

@@ -20,7 +20,7 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
 
-const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 CR
+const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 Créditos
 
 export default function VideoConsultationPage() {
     const { id } = useParams() // consultation_id
@@ -66,7 +66,7 @@ export default function VideoConsultationPage() {
             // Verificar saldo antes de começar (Taxa inicial + pelo menos 1 minuto)
             const minRequired = (o.initial_fee_credits || 0) + (o.credits_per_minute || 5)
             if (profile?.role === 'client' && (profile.credits || 0) < minRequired) {
-                toast.error(`Saldo insuficiente. Você precisa de pelo menos ${minRequired} CR para iniciar.`)
+                toast.error(`Saldo insuficiente. Você precisa de pelo menos ${minRequired} Créditos para iniciar.`)
                 router.push('/app/planos')
                 return
             }
@@ -265,7 +265,7 @@ export default function VideoConsultationPage() {
                     {profile?.role === 'client' && (
                         <div className={`flex items-center px-4 py-2 rounded-full border ${profile.credits! < WARNING_THRESHOLD ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-neon-gold'}`}>
                             <AlertCircle size={16} className="mr-2" />
-                            <span>{profile.credits?.toFixed(2)} CR</span>
+                            <span>{profile.credits?.toFixed(2)} Créditos</span>
                         </div>
                     )}
                 </div>

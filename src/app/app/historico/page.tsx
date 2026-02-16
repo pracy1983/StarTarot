@@ -88,7 +88,7 @@ export default function HistoricoPage() {
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Investimento</p>
                                         <p className="text-sm font-bold text-neon-gold flex items-center justify-center md:justify-start">
-                                            <CreditCard size={14} className="mr-2 opacity-70" /> {atendimento.total_credits} CR
+                                            <CreditCard size={14} className="mr-2 opacity-70" /> {atendimento.total_credits} Créditos
                                         </p>
                                     </div>
                                 </div>

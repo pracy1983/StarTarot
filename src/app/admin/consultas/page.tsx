@@ -219,14 +219,14 @@ export default function AdminConsultationsPage() {
                     <div className="flex space-x-2">
                         <input
                             type="number"
-                            placeholder="Min CR"
+                            placeholder="Min Créditos"
                             value={minCredits}
                             onChange={(e) => setMinCredits(e.target.value)}
                             className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:border-neon-purple/50 outline-none"
                         />
                         <input
                             type="number"
-                            placeholder="Max CR"
+                            placeholder="Max Créditos"
                             value={maxCredits}
                             onChange={(e) => setMaxCredits(e.target.value)}
                             className="w-1/2 bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:border-neon-purple/50 outline-none"

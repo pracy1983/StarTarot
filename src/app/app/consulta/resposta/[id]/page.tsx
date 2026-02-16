@@ -247,7 +247,7 @@ export default function ConsultationResponsePage() {
                             {profile?.role === 'oracle' ? 'Ganhos da Consulta' : 'Investimento'}
                         </p>
                         <p className="text-xl font-bold text-neon-gold">
-                            {consultation.total_credits} CR
+                            {consultation.total_credits} Créditos
                         </p>
                     </div>
                 </div>
