@@ -9,6 +9,7 @@ import {
     Sparkles,
     Clock,
     MessageSquare,
+    Video,
     Star,
     Shield,
     Brain,
@@ -21,7 +22,7 @@ export default function OracleProfilePage() {
     const { id } = useParams()
     const router = useRouter()
     const [oracle, setOracle] = useState<any>(null)
-    const [chatCount, setChatCount] = useState(0)
+    const [consultationCount, setConsultationCount] = useState(0)
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -46,7 +47,7 @@ export default function OracleProfilePage() {
                 .eq('oracle_id', id)
                 .eq('status', 'answered')
 
-            setChatCount(count || 0)
+            setConsultationCount(count || 0)
         } catch (err) {
             console.error('Erro ao carregar oráculo:', err)
         } finally {
@@ -118,15 +119,23 @@ export default function OracleProfilePage() {
                         </p>
 
                         {/* Stats */}
-                        <div className="flex items-center justify-center md:justify-start space-x-6 mb-6">
+                        <div className="flex flex-col space-y-2 mb-6">
                             <div className="flex items-center text-slate-400 text-sm">
                                 <MessageSquare size={16} className="mr-2 text-neon-purple" />
-                                {chatCount} consultas
+                                {consultationCount} consultas realizadas
                             </div>
-                            <div className="flex items-center text-slate-400 text-sm">
-                                <Clock size={16} className="mr-2 text-neon-gold" />
-                                {price} {priceLabel}
-                            </div>
+                            {oracle.allows_video && (
+                                <div className="flex items-center text-slate-400 text-sm">
+                                    <Video size={16} className="mr-2 text-neon-cyan" />
+                                    {oracle.credits_per_minute} créditos por vídeo (minuto)
+                                </div>
+                            )}
+                            {oracle.allows_text && oracle.price_per_message && (
+                                <div className="flex items-center text-slate-400 text-sm">
+                                    <MessageSquare size={16} className="mr-2 text-neon-purple" />
+                                    {oracle.price_per_message} créditos por mensagem
+                                </div>
+                            )}
                         </div>
 
                         <p className="text-slate-300 text-sm leading-relaxed">
@@ -160,14 +169,34 @@ export default function OracleProfilePage() {
                     </div>
                 </GlassCard>
 
-                <NeonButton
-                    variant="purple"
-                    size="lg"
-                    className="sm:w-auto px-8"
-                    onClick={() => router.push(`/app/consulta/${oracle.id}`)}
-                >
-                    {oracle.is_online ? '🔮 Iniciar Consulta' : '💬 Deixar Mensagem'}
-                </NeonButton>
+                <div className="flex flex-col sm:flex-row gap-3">
+                    {oracle.allows_video && (
+                        <NeonButton
+                            variant="green"
+                            size="lg"
+                            className="px-8"
+                            disabled={!oracle.is_online}
+                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=video`)}
+                        >
+                            <Video size={18} className="mr-2" />
+                            Consulta por Vídeo
+                        </NeonButton>
+                    )}
+                    {oracle.allows_text && (
+                        <NeonButton
+                            variant="purple"
+                            size="lg"
+                            className="px-8"
+                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=mensagem`)}
+                        >
+                            {oracle.is_online ? (
+                                <><MessageSquare size={18} className="mr-2" /> Iniciar Mensagem</>
+                            ) : (
+                                <><MessageSquare size={18} className="mr-2" /> Deixar Mensagem</>
+                            )}
+                        </NeonButton>
+                    )}
+                </div>
             </div>
         </div>
     )

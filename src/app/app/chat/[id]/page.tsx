@@ -20,7 +20,7 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 
-export default function ChatRoomPage() {
+export default function MessagingPage() {
     const { id: oracleId } = useParams()
     const { profile } = useAuthStore()
     const router = useRouter()
@@ -246,7 +246,7 @@ export default function ChatRoomPage() {
                         </div>
                         <div className="text-[10px] text-slate-500 mt-0.5">
                             {oracle?.is_ai
-                                ? `${oracle?.price_per_message || 10} CR por pergunta`
+                                ? `${oracle?.price_per_message || 10} CR por mensagem`
                                 : `${oracle?.credits_per_minute} CR por minuto`
                             }
                         </div>
@@ -309,7 +309,7 @@ export default function ChatRoomPage() {
             {/* Input de Mensagem */}
             <form onSubmit={handleSendMessage} className="relative group">
                 <input
-                    placeholder="Sussurre sua pergunta para o universo..."
+                    placeholder="Sussurre sua mensagem para o universo..."
                     value={newMessage}
                     onChange={(e) => setNewMessage(e.target.value)}
                     disabled={isThinking}
@@ -331,7 +331,7 @@ export default function ChatRoomPage() {
                 <span className="flex items-center"><Sparkles size={10} className="mr-1" /> Consulta Assistida por IA DeepSeek</span>
                 <span className="flex items-center">
                     <AlertCircle size={10} className="mr-1" />
-                    {oracle?.is_ai ? 'Cada pergunta enviada consome créditos' : 'O tempo consome créditos em tempo real'}
+                    {oracle?.is_ai ? 'Cada mensagem enviada consome créditos' : 'O tempo consome créditos em tempo real'}
                 </span>
             </div>
         </div>

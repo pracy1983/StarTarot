@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useRouter, usePathname } from 'next/navigation'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import {
     Home,
     Wallet,
@@ -97,7 +97,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         router.push('/')
     }
 
-    const isOracleView = pathname.startsWith('/app/dashboard') || pathname.startsWith('/app/tornar-se-oraculo')
+    const searchParams = useSearchParams()
+    const view = searchParams.get('view')
+
+    const isOracleView = pathname.startsWith('/app/dashboard') ||
+        pathname.startsWith('/app/tornar-se-oraculo') ||
+        (pathname === '/app/mensagens' && view === 'oracle')
+
     const themeColor = isOracleView ? 'neon-purple' : 'neon-cyan'
     const themeGlow = isOracleView ? 'rgba(168,85,247,0.15)' : 'rgba(34,211,238,0.15)'
 

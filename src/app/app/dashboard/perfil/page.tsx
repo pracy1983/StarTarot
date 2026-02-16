@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -23,6 +23,9 @@ export default function OracleProfilePage() {
     const [zoom, setZoom] = useState(1)
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
     const [showCropModal, setShowCropModal] = useState(false)
+    const [specialtiesList, setSpecialtiesList] = useState<any[]>([])
+    const [isAddingCategory, setIsAddingCategory] = useState(false)
+    const [newCategoryName, setNewCategoryName] = useState('')
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -37,10 +40,41 @@ export default function OracleProfilePage() {
         requires_birthtime: false
     })
 
-    const specialties = [
-        'Tarot', 'Astrologia', 'Cartomancia', 'Numerologia',
-        'Runas', 'Clarividência', 'Búzios', 'Outro'
-    ]
+    useEffect(() => {
+        fetchSpecialties()
+    }, [])
+
+    const fetchSpecialties = async () => {
+        const { data } = await supabase
+            .from('specialties')
+            .select('*')
+            .eq('active', true)
+            .order('name', { ascending: true })
+        if (data) setSpecialtiesList(data)
+    }
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return
+        setSaving(true)
+        try {
+            const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
+            const { data, error } = await supabase.from('specialties').insert({
+                name: newCategoryName,
+                slug
+            }).select().single()
+
+            if (error) throw error
+            setSpecialtiesList(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+            setFormData(prev => ({ ...prev, specialty: data.name }))
+            setNewCategoryName('')
+            setIsAddingCategory(false)
+            toast.success('Categoria adicionada!')
+        } catch (err: any) {
+            toast.error('Erro ao adicionar categoria: ' + err.message)
+        } finally {
+            setSaving(false)
+        }
+    }
 
     useEffect(() => {
         if (profile) {
@@ -289,14 +323,14 @@ export default function OracleProfilePage() {
 
                     <GlassCard className="border-white/5" glowColor="gold">
                         <div className="flex items-center space-x-2 text-neon-gold mb-4">
-                            <Star size={18} />
+                            <Star size={18} className="fill-neon-gold/20" />
                             <h3 className="text-sm font-bold uppercase tracking-wider">Taxa de Abertura</h3>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-500 ml-1 italic">
-                                    Quanto custa para abrir o chat com você?
+                                <label className="text-xs font-medium text-slate-400 ml-1 italic">
+                                    Quanto custa para abrir a mensagem com você?
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
@@ -324,7 +358,7 @@ export default function OracleProfilePage() {
                                         </div>
                                     )}
                                 </div>
-                                <p className="text-[9px] text-slate-600 mt-2 italic">
+                                <p className="text-[9px] text-slate-400 mt-2 italic">
                                     * Cobrado apenas no 1º minuto. Livre após o 2º min até o fim da consulta.
                                 </p>
                             </div>
@@ -334,13 +368,13 @@ export default function OracleProfilePage() {
                     <GlassCard className="border-white/5" glowColor="purple">
                         <div className="flex items-center space-x-2 text-neon-purple mb-4">
                             <MessageSquare size={18} />
-                            <h3 className="text-sm font-bold uppercase tracking-wider">Preço por Pergunta</h3>
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Preço por Mensagem</h3>
                         </div>
 
                         <div className="space-y-4">
                             <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-500 ml-1 italic">
-                                    Quantos Créditos por pergunta no Chat?
+                                <label className="text-xs font-medium text-slate-400 ml-1 italic">
+                                    Quantos Créditos por Mensagem?
                                 </label>
                                 <div className="relative">
                                     <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -352,7 +386,7 @@ export default function OracleProfilePage() {
                                     />
                                 </div>
                             </div>
-                            <p className="text-[9px] text-slate-600 italic">
+                            <p className="text-[9px] text-slate-400 italic">
                                 * Este valor é em Créditos (Coins) diretamente.
                             </p>
                         </div>
@@ -415,7 +449,16 @@ export default function OracleProfilePage() {
                                     onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                                 />
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddingCategory(true)}
+                                            className="text-[10px] text-neon-gold hover:text-white font-bold uppercase transition-colors"
+                                        >
+                                            + Nova Categoria
+                                        </button>
+                                    </div>
                                     <div className="relative">
                                         <select
                                             value={formData.specialty}
@@ -423,10 +466,75 @@ export default function OracleProfilePage() {
                                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-10 text-white outline-none focus:border-neon-purple/50 appearance-none"
                                         >
                                             <option value="">Selecione...</option>
-                                            {specialties.map(s => <option key={s} value={s} className="bg-deep-space">{s}</option>)}
+                                            {specialtiesList.map(s => <option key={s.id} value={s.name} className="bg-deep-space">{s.name}</option>)}
+                                            <option value="Outros">Outros...</option>
                                         </select>
                                     </div>
                                 </div>
+                                {formData.specialty === 'Outros' && (
+                                    <motion.div
+                                        initial={{ opacity: 0, height: 0 }}
+                                        animate={{ opacity: 1, height: 'auto' }}
+                                        className="space-y-1.5"
+                                    >
+                                        <GlowInput
+                                            label="Qual Especialidade?"
+                                            placeholder="Ex: Baralho Cigano, Reiki..."
+                                            value={formData.specialty === 'Outros' ? '' : formData.specialty}
+                                            onChange={e => setFormData({ ...formData, specialty: e.target.value })}
+                                            required
+                                        />
+                                    </motion.div>
+                                )}
+
+                                {/* Modal de Nova Categoria */}
+                                <AnimatePresence>
+                                    {isAddingCategory && (
+                                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                className="w-full max-w-sm"
+                                            >
+                                                <GlassCard className="border-neon-gold/30" hover={false}>
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-lg font-bold text-white flex items-center">
+                                                            <Sparkles size={18} className="mr-2 text-neon-gold" />
+                                                            Nova Categoria
+                                                        </h3>
+                                                        <GlowInput
+                                                            label="Nome da Categoria"
+                                                            placeholder="Ex: Baralho Cigano"
+                                                            value={newCategoryName}
+                                                            onChange={e => setNewCategoryName(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex gap-3">
+                                                            <NeonButton
+                                                                variant="purple"
+                                                                fullWidth
+                                                                onClick={() => setIsAddingCategory(false)}
+                                                                type="button"
+                                                            >
+                                                                Cancelar
+                                                            </NeonButton>
+                                                            <NeonButton
+                                                                variant="gold"
+                                                                fullWidth
+                                                                onClick={handleAddCategory}
+                                                                loading={saving}
+                                                                type="button"
+                                                            >
+                                                                Adicionar
+                                                            </NeonButton>
+                                                        </div>
+                                                    </div>
+                                                </GlassCard>
+                                            </motion.div>
+                                        </div>
+                                    )}
+                                </AnimatePresence>
                             </div>
 
                             <GlowInput
@@ -549,6 +657,6 @@ export default function OracleProfilePage() {
                     </div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     )
 }

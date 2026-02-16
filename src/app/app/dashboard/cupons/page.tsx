@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
-import { Ticket, Percent, Users, Calendar, Trash2, Plus, Info, RefreshCcw, DollarSign } from 'lucide-react'
+import { Ticket, Percent, Users, Calendar, Trash2, Plus, Info, RefreshCcw, DollarSign, Sparkles } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -173,17 +173,13 @@ export default function OracleCouponsPage() {
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Tipo de Cupom</label>
-                                    <select
-                                        value={newCoupon.target_type}
-                                        onChange={e => setNewCoupon({ ...newCoupon, target_type: e.target.value })}
-                                        className="w-full bg-deep-space border border-white/10 rounded-xl px-3 py-3 text-sm text-white outline-none focus:border-neon-purple/50"
-                                    >
-                                        <option value="consultation">Desconto em Consulta</option>
-                                        <option value="package">Desconto em Créditos</option>
-                                    </select>
+                                    <div className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-neon-purple font-bold flex items-center">
+                                        <Sparkles size={14} className="mr-2" />
+                                        Desconto em Consulta
+                                    </div>
                                 </div>
                                 <div>
                                     <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Tipo de Desconto</label>
@@ -215,26 +211,28 @@ export default function OracleCouponsPage() {
                                 )}
                             </div>
 
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Limite de Usos</label>
-                                <GlowInput
-                                    type="number"
-                                    value={newCoupon.max_uses}
-                                    onChange={e => setNewCoupon({ ...newCoupon, max_uses: parseInt(e.target.value) })}
-                                    min={1}
-                                    icon={<Users size={16} />}
-                                    placeholder="Ex: 50"
-                                />
-                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Limite de Usos</label>
+                                    <GlowInput
+                                        type="number"
+                                        value={newCoupon.max_uses}
+                                        onChange={e => setNewCoupon({ ...newCoupon, max_uses: parseInt(e.target.value) })}
+                                        min={1}
+                                        icon={<Users size={16} />}
+                                        placeholder="Ex: 50"
+                                    />
+                                </div>
 
-                            <div>
-                                <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Validade (Opcional)</label>
-                                <GlowInput
-                                    type="date"
-                                    value={newCoupon.expires_at}
-                                    onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
-                                    icon={<Calendar size={16} />}
-                                />
+                                <div>
+                                    <label className="text-sm font-medium text-slate-400 ml-1 mb-1 block">Validade (Opcional)</label>
+                                    <GlowInput
+                                        type="date"
+                                        value={newCoupon.expires_at}
+                                        onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
+                                        icon={<Calendar size={16} />}
+                                    />
+                                </div>
                             </div>
 
                             <div className="pt-4">
@@ -250,7 +248,7 @@ export default function OracleCouponsPage() {
 
                             <div className="bg-neon-purple/5 border border-neon-purple/10 rounded-xl p-3 text-xs text-slate-400 flex gap-2">
                                 <Info size={16} className="text-neon-purple shrink-0 mt-0.5" />
-                                <p>O desconto incide sobre a compra de créditos na plataforma. O valor recebido por minuto de consulta permanece inalterado para você.</p>
+                                <p>O desconto será aplicado no valor final da consulta para o cliente. O valor recebido por você permanece integral sobre o tempo de atendimento.</p>
                             </div>
                         </form>
                     </GlassCard>

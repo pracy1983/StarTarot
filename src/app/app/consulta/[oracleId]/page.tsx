@@ -29,6 +29,11 @@ export default function NewConsultationPage() {
     const [clientBirthTime, setClientBirthTime] = useState('')
     const [clientBirthPlace, setClientBirthPlace] = useState('')
 
+    // Coupon State
+    const [couponCode, setCouponCode] = useState('')
+    const [appliedCoupon, setAppliedCoupon] = useState<any>(null)
+    const [isValidatingCoupon, setIsValidatingCoupon] = useState(false)
+
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
 
@@ -78,11 +83,68 @@ export default function NewConsultationPage() {
         }
     }
 
+    const handleApplyCoupon = async () => {
+        if (!couponCode.trim()) return
+        setIsValidatingCoupon(true)
+        try {
+            const { data, error } = await supabase
+                .from('coupons')
+                .select('*')
+                .eq('code', couponCode.toUpperCase())
+                .eq('active', true)
+                .is('is_deleted', false)
+                .single()
+
+            if (error || !data) {
+                toast.error('Cupom inválido ou expirado')
+                setAppliedCoupon(null)
+                return
+            }
+
+            // Check expiry
+            if (data.expires_at && new Date(data.expires_at) < new Date()) {
+                toast.error('Cupom expirado')
+                setAppliedCoupon(null)
+                return
+            }
+
+            // Check target type (must be consultation)
+            if (data.target_type !== 'consultation') {
+                toast.error('Este cupom não é válido para consultas')
+                setAppliedCoupon(null)
+                return
+            }
+
+            toast.success('Cupom aplicado!')
+            setAppliedCoupon(data)
+        } catch (err) {
+            toast.error('Erro ao validar cupom')
+        } finally {
+            setIsValidatingCoupon(false)
+        }
+    }
+
+    const calculateTotal = () => {
+        const validQuestions = questions.filter(q => q.trim().length > 0)
+        const pricePerQuestion = oracle?.price_per_message || 10
+        const initialFee = oracle?.initial_fee_credits || 0
+        let total = (validQuestions.length * pricePerQuestion) + initialFee
+
+        if (appliedCoupon) {
+            if (appliedCoupon.discount_type === 'percent') {
+                total = total * (1 - (appliedCoupon.discount_value / 100))
+            } else {
+                total = Math.max(0, total - appliedCoupon.discount_value)
+            }
+        }
+
+        return Math.ceil(total)
+    }
+
     const handleSubmit = async () => {
-        // 1. Validação de Perguntas
         const validQuestions = questions.filter(q => q.trim().length > 0)
         if (validQuestions.length === 0) {
-            toast.error('Adicione pelo menos uma pergunta')
+            toast.error('Adicione pelo menos uma mensagem')
             return
         }
 
@@ -106,9 +168,7 @@ export default function NewConsultationPage() {
             }
         }
 
-        const pricePerQuestion = oracle?.price_per_message || 10
-        const initialFee = oracle?.initial_fee_credits || 0
-        const totalCost = (validQuestions.length * pricePerQuestion) + initialFee
+        const totalCost = calculateTotal()
 
         if (walletBalance < totalCost) {
             toast.error(`Créditos insuficientes. Você precisa de ${totalCost} CR.`)
@@ -170,7 +230,10 @@ export default function NewConsultationPage() {
                     total_credits: totalCost,
                     subject_name: subjectName || null, // Mantemos compatibilidade
                     subject_birthdate: subjectBirthdate || null, // Mantemos compatibilidade
-                    metadata: metadata,
+                    metadata: {
+                        ...metadata,
+                        coupon_id: appliedCoupon?.id
+                    },
                     status: 'pending'
                 })
                 .select()
@@ -264,7 +327,7 @@ export default function NewConsultationPage() {
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs text-slate-500">Valor por pergunta</p>
+                        <p className="text-xs text-slate-500">Valor por mensagem</p>
                         <p className="text-lg font-bold text-neon-gold">{pricePerQuestion} CR</p>
                         {initialFee > 0 && (
                             <p className="text-[10px] text-slate-400 mt-1">
@@ -346,6 +409,36 @@ export default function NewConsultationPage() {
                         pricePerQuestion={pricePerQuestion}
                     />
 
+                    {/* COUPON SECTION */}
+                    <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                        <label className="text-sm font-bold text-white flex items-center">
+                            <AlertCircle size={16} className="mr-2 text-neon-gold" />
+                            Possui um cupom de desconto?
+                        </label>
+                        <div className="flex gap-2">
+                            <input
+                                type="text"
+                                value={couponCode}
+                                onChange={e => setCouponCode(e.target.value)}
+                                placeholder="DIGITE SEU CUPOM"
+                                className="flex-1 bg-black/20 border border-white/5 rounded-lg px-4 py-2 text-white text-sm outline-none focus:border-neon-gold/50"
+                            />
+                            <button
+                                onClick={handleApplyCoupon}
+                                disabled={!couponCode || isValidatingCoupon}
+                                className="px-4 py-2 bg-neon-gold/20 text-neon-gold border border-neon-gold/30 rounded-lg text-sm font-bold hover:bg-neon-gold/30 disabled:opacity-50 transition-all"
+                            >
+                                {isValidatingCoupon ? '...' : 'Aplicar'}
+                            </button>
+                        </div>
+                        {appliedCoupon && (
+                            <div className="flex justify-between items-center text-xs text-green-400 font-bold px-1 animate-fadeIn">
+                                <span>Cupom {appliedCoupon.code} aplicado!</span>
+                                <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} CR`}</span>
+                            </div>
+                        )}
+                    </div>
+
                     {initialFee > 0 && (
                         <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
                             <span>Taxa de Abertura (Fixa):</span>
@@ -357,7 +450,7 @@ export default function NewConsultationPage() {
                     <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
                         <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
                         <div className="text-xs text-slate-300 leading-relaxed space-y-2">
-                            <p><strong>Como funciona:</strong> O oraculista responderá suas perguntas e você receberá as respostas na sua caixa de entrada.</p>
+                            <p><strong>Como funciona:</strong> O oraculista responderá suas mensagens e você receberá as respostas na sua caixa de entrada.</p>
                             <p className="flex items-center text-neon-cyan">
                                 <Clock size={14} className="mr-1.5" />
                                 Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
@@ -378,7 +471,7 @@ export default function NewConsultationPage() {
                             <div className="flex flex-col items-center leading-none">
                                 <span className="flex items-center gap-2"><Send size={20} /> Enviar Consulta</span>
                                 <span className="text-[10px] opacity-80 font-normal mt-1">
-                                    Total: {(questions.filter(q => q.trim()).length * pricePerQuestion) + initialFee} CR
+                                    Total: {calculateTotal()} CR
                                 </span>
                             </div>
                         </NeonButton>

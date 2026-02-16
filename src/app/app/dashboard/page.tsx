@@ -235,7 +235,7 @@ export default function OracleDashboard() {
                             <div className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/10">
                                 <div>
                                     <p className="text-sm font-bold text-white">Tarifa Inicial</p>
-                                    <p className="text-xs text-slate-500">Taxa para abrir chat</p>
+                                    <p className="text-xs text-slate-500">Taxa para abrir mensagem</p>
                                 </div>
                                 <span className="text-neon-gold font-bold">{profile?.initial_fee_credits || 0} CR</span>
                             </div>

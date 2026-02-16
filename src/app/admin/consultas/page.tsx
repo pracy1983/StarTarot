@@ -121,13 +121,13 @@ export default function AdminConsultationsPage() {
 
     const handleExportCSV = () => {
         const csv = [
-            ['Cliente', 'Email', 'Oraculista', 'Tipo', 'Perguntas', 'Créditos', 'Status', 'Data'].join(','),
+            ['Cliente', 'Email', 'Oraculista', 'Tipo', 'Mensagens', 'Créditos', 'Status', 'Data'].join(','),
             ...filteredConsultations.map(c => [
                 c.client.full_name,
                 c.client.email,
                 c.oracle.full_name,
                 c.oracle.is_ai || c.oracle.oracle_type === 'ai' ? 'IA' : 'Humano',
-                c.total_questions,
+                c.total_questions, // Mensagens
                 c.total_credits,
                 c.status === 'answered' ? 'Respondida' : c.status === 'processing' ? 'Processando' : 'Pendente',
                 new Date(c.created_at).toLocaleDateString('pt-BR')
@@ -264,7 +264,7 @@ export default function AdminConsultationsPage() {
                                     <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
                                     <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Oraculista</th>
                                     <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
-                                    <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Perguntas</th>
+                                    <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mensagens</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Créditos</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
@@ -364,7 +364,7 @@ export default function AdminConsultationsPage() {
                         <div className="space-y-6">
                             {modalQuestions.map((q, idx) => (
                                 <div key={q.id} className="border-b border-white/5 pb-6 last:border-0">
-                                    <p className="text-sm font-bold text-neon-purple mb-2">Pergunta {idx + 1}:</p>
+                                    <p className="text-sm font-bold text-neon-purple mb-2">Mensagem {idx + 1}:</p>
                                     <p className="text-white mb-4">{q.question_text}</p>
                                     <p className="text-sm font-bold text-neon-gold mb-2">Resposta:</p>
                                     <p className="text-slate-300 whitespace-pre-wrap">{q.answer_text || 'Sem resposta ainda'}</p>

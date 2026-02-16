@@ -102,7 +102,7 @@ export default function InboxPage() {
                         ? `🔮 Nova consulta pendente!`
                         : `🔮 Consulta em processamento...`,
                     content: isOracleView
-                        ? `${c.client?.full_name || 'Um cliente'} enviou uma pergunta. Responda agora!`
+                        ? `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`
                         : `Aguardando resposta do oraculista. Quando sua resposta chegar, te avisaremos no whatsapp!`,
                     created_at: c.created_at,
                     is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"

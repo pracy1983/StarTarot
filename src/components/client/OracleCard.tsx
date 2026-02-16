@@ -190,13 +190,21 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         >
             {/* Zero Fee Badge */}
             {isZeroFee && (
-                <div className="absolute top-4 left-4 z-20 px-2 py-0.5 bg-neon-gold text-deep-space text-[9px] font-black uppercase tracking-wider rounded shadow-lg animate-pulse">
+                <div className="absolute top-4 right-4 z-20 px-2 py-0.5 bg-neon-gold text-deep-space text-[9px] font-black uppercase tracking-wider rounded shadow-lg animate-pulse">
                     ZERO TARIFA
                 </div>
             )}
 
+            {/* Rating Stars - Top Left */}
+            <div className="absolute top-4 left-4 z-20 group/rating" title={oracle.rating ? `Avaliação: ${oracle.rating.toFixed(1)}` : 'Sem avaliações ainda'}>
+                <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
+                    <Star size={10} className="text-neon-gold fill-neon-gold" />
+                    <span className="text-[10px] font-bold text-white ml-1">{oracle.rating?.toFixed(1) || '5.0'}</span>
+                </div>
+            </div>
+
             {/* Status Badge */}
-            <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
+            <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${isZeroFee ? 'mt-8' : ''} ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
                 status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
                     'bg-slate-800/50 text-slate-500 border-white/5'
                 }`}>
@@ -231,14 +239,16 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 {/* Info Tags */}
                 <div className="flex flex-col items-center space-y-1">
-                    <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
-                        <Video size={12} className="mr-1 text-neon-cyan/50" />
-                        {oracle.credits_per_minute} | MINUTO (VÍDEO)
-                    </div>
-                    {oracle.price_per_message && (
+                    {oracle.allows_video && (
+                        <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
+                            <Video size={12} className="mr-1 text-neon-cyan/50" />
+                            {oracle.credits_per_minute} | MINUTO (VÍDEO)
+                        </div>
+                    )}
+                    {oracle.allows_text && oracle.price_per_message && (
                         <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                             <MessageSquare size={12} className="mr-1 text-neon-purple/50" />
-                            {oracle.price_per_message} | PERGUNTA (CHAT)
+                            {oracle.price_per_message} | MENSAGEM
                         </div>
                     )}
                 </div>
@@ -251,25 +261,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
                     <div className="flex flex-col items-center space-y-1">
                         <MessageSquare size={16} className={status === 'online' || oracle.allows_text ? 'text-neon-purple/60' : ''} />
-                        <span className="text-[8px] uppercase font-black tracking-tighter">Chat</span>
+                        <span className="text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
                     </div>
-                    {oracle.oracle_type === 'human' && (
+                    {(oracle.oracle_type === 'human' || oracle.allows_video) && (
                         <div className="flex flex-col items-center space-y-1">
-                            <Video size={16} className={status === 'online' ? 'text-neon-cyan/60' : ''} />
+                            <Video size={16} className={status === 'online' && oracle.allows_video ? 'text-neon-cyan/60' : ''} />
                             <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
                         </div>
                     )}
                 </div>
 
                 <div className="mt-2 flex gap-2 w-full">
-                    {/* Rating Stars - New Feature */}
-                    <div className="absolute top-4 right-16 z-20" onClick={(e) => { e.stopPropagation(); /* Open Testimonial Modal Logic Here */ }}>
-                        <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
-                            <Star size={10} className="text-neon-gold fill-neon-gold" />
-                            <span className="text-[10px] font-bold text-white ml-1">{oracle.rating?.toFixed(1) || '5.0'}</span>
-                        </div>
-                    </div>
-
                     {status === 'online' ? (
                         oracle.oracle_type === 'human' ? (
                             <>
@@ -301,12 +303,12 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
                                         if (oracle.allows_text) {
-                                            router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                            router.push(`/app/consulta/${oracle.id}?type=mensagem`)
                                         }
                                     }}
                                 >
                                     <MessageSquare size={16} className="mr-1" />
-                                    {oracle.allows_text ? 'Chat' : 'Indisp.'}
+                                    {oracle.allows_text ? 'Mensagem' : 'Indisp.'}
                                 </NeonButton>
                             </>
                         ) : (
@@ -344,11 +346,11 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
                                         // Allow sending message even if offline (async response)
-                                        router.push(`/app/consulta/${oracle.id}?type=chat`)
+                                        router.push(`/app/consulta/${oracle.id}?type=mensagem`)
                                     }}
                                 >
                                     <MessageSquare size={16} className="mr-1" />
-                                    Deixar Msg
+                                    {oracle.allows_text ? 'Deixar Mensagem' : 'Indisp.'}
                                 </NeonButton>
                             </>
                         ) : (

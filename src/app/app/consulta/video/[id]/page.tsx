@@ -20,9 +20,7 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
 
-const COST_PER_MINUTE = 5.00
 const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 CR
-const MINIMUM_BALANCE = 5.00 // Saldo mínimo para iniciar
 
 export default function VideoConsultationPage() {
     const { id } = useParams() // consultation_id
@@ -65,9 +63,10 @@ export default function VideoConsultationPage() {
             const { data: o } = await supabase.from('profiles').select('*').eq('id', cons.oracle_id).single()
             setOracle(o)
 
-            // Verificar saldo antes de começar
-            if (profile?.role === 'client' && (profile.credits || 0) < MINIMUM_BALANCE) {
-                toast.error('Saldo insuficiente para iniciar chamada de vídeo.')
+            // Verificar saldo antes de começar (Taxa inicial + pelo menos 1 minuto)
+            const minRequired = (o.initial_fee_credits || 0) + (o.credits_per_minute || 5)
+            if (profile?.role === 'client' && (profile.credits || 0) < minRequired) {
+                toast.error(`Saldo insuficiente. Você precisa de pelo menos ${minRequired} CR para iniciar.`)
                 router.push('/app/planos')
                 return
             }
@@ -134,6 +133,10 @@ export default function VideoConsultationPage() {
 
             // 4. Start Billing for Clients
             if (profile?.role === 'client') {
+                // Cobrar taxa inicial se houver
+                if (oracle?.initial_fee_credits > 0) {
+                    await processInitialFee()
+                }
                 startBilling()
             }
         } catch (err) {
@@ -157,25 +160,44 @@ export default function VideoConsultationPage() {
         }, 1000)
     }
 
-    const processMinuteBilling = async () => {
+    const processInitialFee = async () => {
         try {
-            const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', profile!.id).single()
-
-            if (!wallet || wallet.balance < COST_PER_MINUTE) return false
-
-            // RPC call to deduct balance
             const { error } = await supabase.rpc('deduct_video_fee', {
                 client_id: profile!.id,
                 oracle_id: oracle.id,
-                amount: COST_PER_MINUTE,
-                consultation_id: id
+                amount: oracle.initial_fee_credits,
+                consultation_id: id,
+                is_initial: true
+            })
+            if (error) throw error
+            setProfile({ ...profile!, credits: (profile?.credits || 0) - oracle.initial_fee_credits })
+            toast.success('Taxa inicial processada.')
+        } catch (err: any) {
+            console.error('Initial fee error:', err)
+        }
+    }
+
+    const processMinuteBilling = async () => {
+        const cost = oracle?.credits_per_minute || 5
+        try {
+            const { data: wallet } = await supabase.from('wallets').select('balance').eq('user_id', profile!.id).single()
+
+            if (!wallet || wallet.balance < cost) return false
+
+            const { error } = await supabase.rpc('deduct_video_fee', {
+                client_id: profile!.id,
+                oracle_id: oracle.id,
+                amount: cost,
+                consultation_id: id,
+                is_initial: false
             })
 
             if (error) throw error
 
-            setProfile({ ...profile!, credits: wallet.balance - COST_PER_MINUTE })
+            const newBalance = wallet.balance - cost
+            setProfile({ ...profile!, credits: newBalance })
 
-            if (wallet.balance - COST_PER_MINUTE < WARNING_THRESHOLD) {
+            if (newBalance < WARNING_THRESHOLD) {
                 toast('Seu saldo está acabando!', { icon: '⚠️', position: 'top-center' })
             }
 

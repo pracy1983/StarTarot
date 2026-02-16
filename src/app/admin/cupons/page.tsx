@@ -19,9 +19,11 @@ export default function AdminCouponsPage() {
 
     const [newCoupon, setNewCoupon] = useState({
         code: '',
-        discount_percent: 10,
+        discount_type: 'percent',
+        discount_value: 10,
         max_uses: 100,
-        expires_at: ''
+        expires_at: '',
+        target_type: 'package'
     })
 
     useEffect(() => {
@@ -50,7 +52,7 @@ export default function AdminCouponsPage() {
         setCreating(true)
 
         try {
-            if (!newCoupon.code || newCoupon.discount_percent <= 0) {
+            if (!newCoupon.code || newCoupon.discount_value <= 0) {
                 toast.error('Preencha os campos obrigatórios')
                 return
             }
@@ -59,7 +61,9 @@ export default function AdminCouponsPage() {
                 .from('coupons')
                 .insert({
                     code: newCoupon.code.toUpperCase(),
-                    discount_percent: newCoupon.discount_percent,
+                    discount_type: newCoupon.discount_type,
+                    discount_value: newCoupon.discount_value,
+                    target_type: newCoupon.target_type,
                     max_uses: newCoupon.max_uses || null,
                     expires_at: newCoupon.expires_at || null,
                     owner_id: profile?.id
@@ -68,7 +72,14 @@ export default function AdminCouponsPage() {
             if (error) throw error
 
             toast.success('Cupom criado com sucesso!')
-            setNewCoupon({ code: '', discount_percent: 10, max_uses: 100, expires_at: '' })
+            setNewCoupon({
+                code: '',
+                discount_type: 'percent',
+                discount_value: 10,
+                max_uses: 100,
+                expires_at: '',
+                target_type: 'package'
+            })
             fetchCoupons()
         } catch (err: any) {
             console.error('Error creating coupon:', err)
@@ -96,125 +107,160 @@ export default function AdminCouponsPage() {
     )
 
     return (
-        <div className="p-8 space-y-8">
-            <header className="flex justify-between items-center">
+        <div className="p-4 md:p-8 space-y-8">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2 flex items-center">
-                        <Ticket className="mr-3 text-neon-gold" /> Gestão de <span className="neon-text-gold ml-2">Cupons</span>
+                    <h1 className="text-3xl font-bold text-white flex items-center">
+                        <Ticket className="mr-3 text-neon-purple" />
+                        Gestão de Cupons
                     </h1>
-                    <p className="text-slate-400">Crie e gerencie códigos de desconto para o sistema.</p>
+                    <p className="text-slate-400">Crie e gerencie cupons promocionais para a plataforma.</p>
                 </div>
             </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Create Form */}
-                <GlassCard className="border-white/5 h-fit">
-                    <h3 className="text-lg font-bold text-white mb-6 flex items-center">
-                        <Plus size={18} className="mr-2 text-neon-green" /> Novo Cupom
-                    </h3>
-                    <form onSubmit={handleCreate} className="space-y-4">
-                        <GlowInput
-                            label="Código (Ex: BEMVINDO10)"
-                            value={newCoupon.code}
-                            onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                            placeholder="CÓDIGO"
-                        />
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400 ml-1">Desconto (%)</label>
-                                <input
-                                    type="number"
-                                    min="1"
-                                    max="60"
-                                    value={newCoupon.discount_percent}
-                                    onChange={e => setNewCoupon({ ...newCoupon, discount_percent: parseInt(e.target.value) })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-gold/50"
-                                />
+            <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+                {/* Create Section */}
+                <div className="xl:col-span-1">
+                    <GlassCard className="border-white/5 p-6">
+                        <h2 className="text-xl font-bold text-white mb-6 flex items-center">
+                            <Plus className="mr-2 text-neon-purple" size={20} />
+                            Criar Novo Cupom
+                        </h2>
+                        <form onSubmit={handleCreate} className="space-y-4">
+                            <GlowInput
+                                label="Código (Ex: BEMVINDO)"
+                                value={newCoupon.code}
+                                onChange={e => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">Tipo de Cupom</label>
+                                    <select
+                                        value={newCoupon.target_type}
+                                        onChange={e => setNewCoupon({ ...newCoupon, target_type: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-neon-purple/50"
+                                    >
+                                        <option value="package" className="bg-deep-space">Pacote de Créditos</option>
+                                        <option value="consultation" className="bg-deep-space">Consulta</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-1.5">
+                                    <label className="text-xs font-medium text-slate-400">Tipo Desconto</label>
+                                    <select
+                                        value={newCoupon.discount_type}
+                                        onChange={e => setNewCoupon({ ...newCoupon, discount_type: e.target.value })}
+                                        className="w-full bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-white outline-none focus:border-neon-purple/50"
+                                    >
+                                        <option value="percent" className="bg-deep-space">Porcentagem (%)</option>
+                                        <option value="fixed_value" className="bg-deep-space">Valor Fixo</option>
+                                    </select>
+                                </div>
                             </div>
-                            <div className="space-y-1.5">
-                                <label className="text-xs font-medium text-slate-400 ml-1">Máx. Usos</label>
-                                <input
+
+                            <GlowInput
+                                label={newCoupon.discount_type === 'percent' ? "Desconto (%)" : "Valor do Desconto"}
+                                type="number"
+                                value={newCoupon.discount_value}
+                                onChange={e => setNewCoupon({ ...newCoupon, discount_value: parseInt(e.target.value) })}
+                            />
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <GlowInput
+                                    label="Máx Usos"
                                     type="number"
-                                    min="0"
                                     value={newCoupon.max_uses}
                                     onChange={e => setNewCoupon({ ...newCoupon, max_uses: parseInt(e.target.value) })}
-                                    className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-gold/50"
+                                />
+                                <GlowInput
+                                    label="Validade"
+                                    type="date"
+                                    value={newCoupon.expires_at}
+                                    onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
                                 />
                             </div>
-                        </div>
-                        <div className="space-y-1.5">
-                            <label className="text-xs font-medium text-slate-400 ml-1">Validade (Opcional)</label>
-                            <input
-                                type="date"
-                                value={newCoupon.expires_at}
-                                onChange={e => setNewCoupon({ ...newCoupon, expires_at: e.target.value })}
-                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-gold/50"
-                            />
-                        </div>
 
-                        <NeonButton type="submit" variant="gold" fullWidth loading={creating}>
-                            Criar Cupom
-                        </NeonButton>
-                    </form>
-                </GlassCard>
+                            <NeonButton loading={creating} variant="purple" fullWidth className="mt-4">
+                                Gerar Cupom
+                            </NeonButton>
+                        </form>
+                    </GlassCard>
+                </div>
 
-                {/* List */}
-                <div className="lg:col-span-2 space-y-6">
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                {/* List Section */}
+                <div className="xl:col-span-2 space-y-4">
+                    <div className="flex bg-white/5 border border-white/10 rounded-2xl p-2">
+                        <div className="flex items-center px-4 text-slate-500">
+                            <Search size={20} />
+                        </div>
                         <input
                             type="text"
-                            placeholder="Buscar cupom..."
+                            placeholder="Buscar por código..."
+                            className="flex-1 bg-transparent py-3 text-white outline-none placeholder:text-slate-600"
                             value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white outline-none focus:border-neon-gold/50"
+                            onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
 
-                    <div className="space-y-3">
-                        {loading ? (
-                            <p className="text-slate-500 text-center py-10">Carregando...</p>
-                        ) : filteredCoupons.length === 0 ? (
-                            <p className="text-slate-500 text-center py-10">Nenhum cupom encontrado.</p>
-                        ) : (
-                            filteredCoupons.map(coupon => (
-                                <GlassCard key={coupon.id} className="border-white/5 flex items-center justify-between p-4" hover={false}>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="w-12 h-12 rounded-xl bg-neon-gold/10 flex items-center justify-center text-neon-gold">
-                                            <Ticket size={24} />
-                                        </div>
-                                        <div>
-                                            <h4 className="text-lg font-bold text-white tracking-wider">{coupon.code}</h4>
-                                            <div className="flex items-center space-x-3 text-xs text-slate-400">
-                                                <span className="text-neon-green font-bold">{coupon.discount_percent}% OFF</span>
-                                                <span>•</span>
-                                                <span>{coupon.used_count} / {coupon.max_uses || '∞'} usos</span>
-                                                {coupon.profiles && (
-                                                    <>
-                                                        <span>•</span>
-                                                        <span className="text-slate-500">Por: {coupon.profiles.full_name}</span>
-                                                    </>
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-4">
-                                        <div className="text-right text-xs text-slate-500 hidden sm:block">
-                                            <p>{coupon.expires_at ? `Expira em ${format(new Date(coupon.expires_at), 'dd/MM/yyyy')}` : 'Sem validade'}</p>
-                                            <p className={coupon.active ? 'text-green-500' : 'text-red-500'}>
-                                                {coupon.active ? 'Ativo' : 'Inativo'}
-                                            </p>
-                                        </div>
-                                        <button
-                                            onClick={() => handleDelete(coupon.id)}
-                                            className="p-2 hover:bg-red-500/10 text-slate-500 hover:text-red-500 rounded-lg transition-colors"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    </div>
-                                </GlassCard>
-                            ))
-                        )}
+                    <div className="bg-white/5 border border-white/10 rounded-2xl overflow-hidden">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse">
+                                <thead>
+                                    <tr className="bg-white/5 border-b border-white/10">
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Código</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Desconto</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Destino</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Criador</th>
+                                        <th className="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-white/5">
+                                    {filteredCoupons.map(coupon => (
+                                        <tr key={coupon.id} className="hover:bg-white/5 transition-colors">
+                                            <td className="px-6 py-4">
+                                                <span className="text-white font-black tracking-widest">{coupon.code}</span>
+                                            </td>
+                                            <td className="px-6 py-4 text-white">
+                                                {coupon.discount_type === 'percent' ? `${coupon.discount_value}%` : `R$ ${coupon.discount_value}`}
+                                            </td>
+                                            <td className="px-6 py-4 text-xs font-bold">
+                                                <span className={coupon.target_type === 'package' ? 'text-neon-cyan' : 'text-neon-purple'}>
+                                                    {coupon.target_type === 'package' ? 'CRÉDITOS' : 'CONSULTA'}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col text-[10px] text-slate-400">
+                                                    <span>{coupon.used_count || 0} / {coupon.max_uses || '∞'} usos</span>
+                                                    {coupon.expires_at && (
+                                                        <span>Expira: {format(new Date(coupon.expires_at), 'dd/MM/yyyy')}</span>
+                                                    )}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-xs text-slate-400 font-bold">
+                                                {coupon.profiles?.full_name || 'SISTEMA'}
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <button
+                                                    onClick={() => handleDelete(coupon.id)}
+                                                    className="p-2 text-slate-500 hover:text-red-500 transition-colors"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+
+                                    {filteredCoupons.length === 0 && (
+                                        <tr>
+                                            <td colSpan={6} className="px-6 py-12 text-center text-slate-600">
+                                                Nenhum cupom encontrado.
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             </div>

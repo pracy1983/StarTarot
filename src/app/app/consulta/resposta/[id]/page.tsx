@@ -246,7 +246,7 @@ export default function ConsultationResponsePage() {
                                     <div className="w-8 h-8 rounded-full bg-neon-purple/10 border border-neon-purple/30 flex items-center justify-center text-neon-purple text-sm font-bold">
                                         {idx + 1}
                                     </div>
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Sua Pergunta</h3>
+                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Sua Mensagem</h3>
                                 </div>
                                 <p className="text-white leading-relaxed pl-11">{q.question_text}</p>
                             </div>
@@ -352,7 +352,7 @@ export default function ConsultationResponsePage() {
             {/* Footer */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-6 bg-white/5 border border-white/10 rounded-xl">
                 <div className="text-sm text-slate-400 text-center sm:text-left">
-                    <p>Gostou da consulta? Você pode fazer uma nova pergunta ao mesmo oráculo.</p>
+                    <p>Gostou da consulta? Você pode fazer uma nova mensagem ao mesmo oráculo.</p>
                 </div>
                 <NeonButton
                     variant="purple"

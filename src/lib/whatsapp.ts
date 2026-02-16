@@ -62,7 +62,7 @@ export class EvolutionWhatsAppService {
 
 Olá ${clientName}! 👋
 
-O oraculista *${oracleName}* respondeu suas perguntas.
+O oraculista *${oracleName}* respondeu suas mensagens.
 
 🔮 Acesse agora para ver as respostas:
 https://startarot.netlify.app/app/mensagens

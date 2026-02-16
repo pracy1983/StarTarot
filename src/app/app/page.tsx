@@ -207,7 +207,7 @@ export default function MarketplacePage() {
                                 {filterChat && <Sparkles size={12} />}
                                 <input type="checkbox" checked={filterChat} onChange={e => setFilterChat(e.target.checked)} className="hidden" />
                             </div>
-                            <span className={`text-sm ${filterChat ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Msg</span>
+                            <span className={`text-sm ${filterChat ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Mensagem</span>
                         </label>
                     </div>
                 </div>

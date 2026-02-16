@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
@@ -17,6 +17,9 @@ export default function NewOraclePage() {
     const router = useRouter() // Initialize useRouter
     const [isAI, setIsAI] = useState(false)
     const [loading, setLoading] = useState(false)
+    const [specialties, setSpecialties] = useState<any[]>([])
+    const [isAddingCategory, setIsAddingCategory] = useState(false)
+    const [newCategoryName, setNewCategoryName] = useState('')
     const [cropModal, setCropModal] = useState<{ open: boolean, image: string }>({ open: false, image: '' })
     const [formData, setFormData] = useState({
         email: '',
@@ -29,6 +32,42 @@ export default function NewOraclePage() {
         pricePerMessage: 10, // Valor para IA
         avatarUrl: '' // URL da foto
     })
+
+    useEffect(() => {
+        fetchSpecialties()
+    }, [])
+
+    const fetchSpecialties = async () => {
+        const { data } = await supabase
+            .from('specialties')
+            .select('*')
+            .eq('active', true)
+            .order('name', { ascending: true })
+        if (data) setSpecialties(data)
+    }
+
+    const handleAddCategory = async () => {
+        if (!newCategoryName.trim()) return
+        setLoading(true)
+        try {
+            const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
+            const { data, error } = await supabase.from('specialties').insert({
+                name: newCategoryName,
+                slug
+            }).select().single()
+
+            if (error) throw error
+            setSpecialties(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
+            setFormData(prev => ({ ...prev, specialty: data.name }))
+            setNewCategoryName('')
+            setIsAddingCategory(false)
+            toast.success('Categoria adicionada!')
+        } catch (err: any) {
+            toast.error('Erro ao adicionar categoria: ' + err.message)
+        } finally {
+            setLoading(false)
+        }
+    }
 
     const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
         0: [{ start: '00:00', end: '23:59', active: true }], // Domingo
@@ -233,29 +272,80 @@ export default function NewOraclePage() {
                                 )}
 
                                 <div className="space-y-1.5">
-                                    <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
+                                    <div className="flex items-center justify-between mb-1">
+                                        <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
+                                        <button
+                                            type="button"
+                                            onClick={() => setIsAddingCategory(true)}
+                                            className="text-[10px] text-neon-gold hover:text-white font-bold uppercase transition-colors"
+                                        >
+                                            + Nova Categoria
+                                        </button>
+                                    </div>
                                     <select
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50 transition-all font-medium"
-                                        value={['Tarot', 'Astrologia', 'Búzios', 'Runas', 'Numerologia'].includes(formData.specialty) ? formData.specialty : (formData.specialty === '' ? 'Outros' : 'Outros')}
-                                        onChange={e => {
-                                            if (e.target.value === 'Outros') {
-                                                setFormData({ ...formData, specialty: '' })
-                                            } else {
-                                                setFormData({ ...formData, specialty: e.target.value })
-                                            }
-                                        }}
+                                        value={formData.specialty}
+                                        onChange={e => setFormData({ ...formData, specialty: e.target.value })}
                                     >
-                                        <option value="Tarot" className="bg-deep-space">Tarot</option>
-                                        <option value="Astrologia" className="bg-deep-space">Astrologia</option>
-                                        <option value="Búzios" className="bg-deep-space">Búzios</option>
-                                        <option value="Runas" className="bg-deep-space">Runas</option>
-                                        <option value="Numerologia" className="bg-deep-space">Numerologia</option>
+                                        <option value="" className="bg-deep-space text-slate-500">Selecione uma categoria...</option>
+                                        {specialties.map(s => (
+                                            <option key={s.id} value={s.name} className="bg-deep-space">{s.name}</option>
+                                        ))}
                                         <option value="Outros" className="bg-deep-space">Outros (Personalizado)</option>
                                     </select>
                                 </div>
 
+                                {/* Modal de Nova Categoria */}
+                                <AnimatePresence>
+                                    {isAddingCategory && (
+                                        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                                            <motion.div
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                className="w-full max-w-sm"
+                                            >
+                                                <GlassCard className="border-neon-gold/30" hover={false}>
+                                                    <div className="space-y-4">
+                                                        <h3 className="text-lg font-bold text-white flex items-center">
+                                                            <Sparkles size={18} className="mr-2 text-neon-gold" />
+                                                            Nova Categoria
+                                                        </h3>
+                                                        <GlowInput
+                                                            label="Nome da Categoria"
+                                                            placeholder="Ex: Baralho Cigano"
+                                                            value={newCategoryName}
+                                                            onChange={e => setNewCategoryName(e.target.value)}
+                                                            autoFocus
+                                                        />
+                                                        <div className="flex gap-3">
+                                                            <NeonButton
+                                                                variant="purple"
+                                                                fullWidth
+                                                                onClick={() => setIsAddingCategory(false)}
+                                                                type="button"
+                                                            >
+                                                                Cancelar
+                                                            </NeonButton>
+                                                            <NeonButton
+                                                                variant="gold"
+                                                                fullWidth
+                                                                onClick={handleAddCategory}
+                                                                loading={loading}
+                                                                type="button"
+                                                            >
+                                                                Adicionar
+                                                            </NeonButton>
+                                                        </div>
+                                                    </div>
+                                                </GlassCard>
+                                            </motion.div>
+                                        </div>
+                                    )}
+                                </AnimatePresence>
+
                                 {/* Campo para especialidade personalizada */}
-                                {(!['Tarot', 'Astrologia', 'Búzios', 'Runas', 'Numerologia'].includes(formData.specialty) || formData.specialty === '') && (
+                                {formData.specialty === 'Outros' && (
                                     <motion.div
                                         initial={{ opacity: 0, height: 0 }}
                                         animate={{ opacity: 1, height: 'auto' }}
@@ -264,7 +354,7 @@ export default function NewOraclePage() {
                                         <GlowInput
                                             label="Qual Especialidade?"
                                             placeholder="Ex: Baralho Cigano, Reiki..."
-                                            value={formData.specialty}
+                                            value={formData.specialty === 'Outros' ? '' : formData.specialty}
                                             onChange={e => setFormData({ ...formData, specialty: e.target.value })}
                                             required
                                         />
@@ -273,7 +363,7 @@ export default function NewOraclePage() {
 
                                 {isAI ? (
                                     <GlowInput
-                                        label="Créditos por Pergunta"
+                                        label="Créditos por Mensagem"
                                         type="number"
                                         min="1"
                                         value={formData.pricePerMessage}

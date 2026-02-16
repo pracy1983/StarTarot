@@ -48,7 +48,7 @@ export const QuestionInput = ({ questions, onChange, pricePerQuestion }: Questio
                                 <textarea
                                     value={q}
                                     onChange={(e) => updateQuestion(idx, e.target.value)}
-                                    placeholder={idx === 0 ? "Digite sua primeira pergunta..." : "Digite mais uma pergunta..."}
+                                    placeholder={idx === 0 ? "Digite sua primeira mensagem..." : "Digite mais uma mensagem..."}
                                     className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all resize-none"
                                     rows={3}
                                 />
@@ -57,7 +57,7 @@ export const QuestionInput = ({ questions, onChange, pricePerQuestion }: Questio
                                 <button
                                     onClick={() => removeQuestion(idx)}
                                     className="flex-shrink-0 p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors mt-2"
-                                    title="Remover pergunta"
+                                    title="Remover mensagem"
                                 >
                                     <X size={18} />
                                 </button>
@@ -70,10 +70,10 @@ export const QuestionInput = ({ questions, onChange, pricePerQuestion }: Questio
             <button
                 onClick={addQuestion}
                 className="flex items-center space-x-2 px-4 py-2.5 bg-white/5 border border-white/10 hover:border-neon-purple/30 rounded-xl text-slate-400 hover:text-neon-purple transition-all group"
-                title="Adicionar mais uma pergunta"
+                title="Adicionar mais uma mensagem"
             >
                 <Plus size={18} className="group-hover:rotate-90 transition-transform" />
-                <span className="text-sm font-medium">Adicionar Pergunta</span>
+                <span className="text-sm font-medium">Adicionar Mensagem</span>
             </button>
 
             {/* Preview de Créditos */}
@@ -81,7 +81,7 @@ export const QuestionInput = ({ questions, onChange, pricePerQuestion }: Questio
                 <div className="flex items-center space-x-2 text-sm text-slate-300">
                     <Sparkles size={16} className="text-neon-gold" />
                     <span>
-                        {questions.length} {questions.length === 1 ? 'pergunta' : 'perguntas'} × {pricePerQuestion} CR
+                        {questions.length} {questions.length === 1 ? 'mensagem' : 'mensagens'} × {pricePerQuestion} CR
                     </span>
                 </div>
                 <div className="text-lg font-bold text-neon-gold">
