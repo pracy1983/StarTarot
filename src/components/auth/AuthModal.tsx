@@ -42,6 +42,8 @@ export const AuthModal = () => {
     const [formLoading, setFormLoading] = useState(false)
     const [otpCode, setOtpCode] = useState('')
     const [generatedOtp, setGeneratedOtp] = useState('')
+    const [existingUser, setExistingUser] = useState<any>(null)
+    const [upgradeMode, setUpgradeMode] = useState(false)
 
     const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -55,19 +57,24 @@ export const AuthModal = () => {
             const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
 
             if (!isTestNumber) {
-                const { data: existingUser } = await supabase
+                const { data: foundUser } = await supabase
                     .from('profiles')
-                    .select('id, email, phone')
+                    .select('id, email, phone, role, is_oracle')
                     .or(`email.eq.${email.trim().toLowerCase()},phone.eq.${fullPhone}`)
                     .maybeSingle()
 
-                if (existingUser) {
-                    if (registrationRole === 'oracle') {
-                        setError('Você já possui uma conta de membro. Deseja tornar-se um oraculista? Faça login e use a opção no menu lateral.')
-                        setFormLoading(false)
-                        return
+                if (foundUser) {
+                    setExistingUser(foundUser)
+                    const isOracle = foundUser.role === 'oracle' || foundUser.is_oracle || foundUser.role === 'owner'
+                    const targetType = registrationRole === 'oracle' ? 'Oraculista' : 'Membro'
+                    const currentType = isOracle ? 'Oraculista' : 'Membro'
+
+                    if ((registrationRole === 'oracle' && isOracle) || (registrationRole === 'client' && !isOracle)) {
+                        setError(`Este ${foundUser.email === email.trim().toLowerCase() ? 'e-mail' : 'telefone'} já está cadastrado como ${currentType}. Por favor, faça login.`)
+                    } else {
+                        setUpgradeMode(true)
+                        setError(`Você já possui uma conta de ${currentType}. Deseja também ser um ${targetType}? Basta fazer login com sua senha atual para ativar esta nova função em sua conta!`)
                     }
-                    setError(existingUser.email === email.trim().toLowerCase() ? 'Este e-mail já está em uso.' : 'Este número de WhatsApp já está cadastrado.')
                     setFormLoading(false)
                     return
                 }
@@ -141,6 +148,13 @@ export const AuthModal = () => {
             if (!result.success) {
                 setError(result.error || 'Erro ao fazer login')
             } else {
+                // If we were in upgrade mode, activate the other role
+                if (upgradeMode || registrationRole === 'oracle') {
+                    await supabase
+                        .from('profiles')
+                        .update({ is_oracle: true })
+                        .eq('email', email.trim().toLowerCase())
+                }
                 setShowAuthModal(false)
                 router.push('/app')
             }
@@ -149,6 +163,11 @@ export const AuthModal = () => {
         } finally {
             setFormLoading(false)
         }
+    }
+
+    const handleUpgradeSubmit = async (e: React.FormEvent) => {
+        e.preventDefault()
+        await handleSubmitLogin(e)
     }
 
     if (!showAuthModal) return null
@@ -254,12 +273,17 @@ export const AuthModal = () => {
                                 icon={<Lock size={18} />}
                                 required
                             />
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {upgradeMode && (
+                                <div className="p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-xl text-xs text-slate-300 leading-relaxed">
+                                    Ao fazer login, sua conta atual será mantida e você ganhará acesso extra como <strong>{registrationRole === 'oracle' ? 'Oraculista' : 'Membro'}</strong>.
+                                </div>
+                            )}
+                            {error && <div className={`text-sm p-3 rounded-lg border text-center ${upgradeMode ? 'text-neon-gold bg-neon-gold/10 border-neon-gold/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}>{error}</div>}
                             <NeonButton type="submit" variant={registrationRole === 'oracle' ? 'gold' : 'purple'} fullWidth loading={formLoading} size="lg">
-                                Gerar Código WhatsApp
+                                {upgradeMode ? 'Fazer Login e Ativar' : 'Gerar Código WhatsApp'}
                             </NeonButton>
-                            <button type="button" onClick={() => setIsRegistering(false)} className="w-full text-sm text-slate-400 hover:text-white flex items-center justify-center pt-2">
-                                <ArrowLeft size={14} className="mr-2" /> Já tenho uma conta
+                            <button type="button" onClick={() => { setIsRegistering(false); setUpgradeMode(false); setExistingUser(null); setError('') }} className="w-full text-sm text-slate-400 hover:text-white flex items-center justify-center pt-2">
+                                <ArrowLeft size={14} className="mr-2" /> {upgradeMode ? 'Usar outro e-mail' : 'Já tenho uma conta'}
                             </button>
                         </form>
                     ) : (
@@ -289,7 +313,10 @@ export const AuthModal = () => {
                             </NeonButton>
                             <div className="pt-4 flex flex-col space-y-4 text-center">
                                 <p className="text-sm text-slate-500">
-                                    Novo no templo? <button type="button" onClick={() => setIsRegistering(true)} className="text-neon-gold hover:underline">Iniciar jornada</button>
+                                    Deseja ser atendido E atender? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('oracle'); }} className="text-neon-gold hover:underline">Entre como Oraculista</button>
+                                </p>
+                                <p className="text-sm text-slate-500">
+                                    Novo no templo? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('client'); }} className="text-neon-gold hover:underline">Iniciar jornada</button>
                                 </p>
                             </div>
                         </form>

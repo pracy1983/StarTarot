@@ -11,11 +11,14 @@ import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import Cropper from 'react-easy-crop'
 import { motion, AnimatePresence } from 'framer-motion'
+import { AlertTriangle } from 'lucide-react'
 
 export default function OracleProfilePage() {
-    const { profile, setProfile } = useAuthStore()
+    const { profile, setProfile, logout } = useAuthStore()
     const router = useRouter()
     const [saving, setSaving] = useState(false)
+    const [showDeleteModal, setShowDeleteModal] = useState(false)
+    const [deleteLoading, setDeleteLoading] = useState(false)
 
     // Avatar Crop States
     const [imageSource, setImageSource] = useState<string | null>(null)
@@ -220,6 +223,22 @@ export default function OracleProfilePage() {
 
     const toggle = (field: 'requires_birthdate' | 'requires_birthtime') => {
         setFormData(prev => ({ ...prev, [field]: !prev[field] }))
+    }
+
+    const handleDeleteAccount = async () => {
+        setDeleteLoading(true)
+        try {
+            const { error } = await supabase.rpc('delete_own_account')
+            if (error) throw error
+
+            await logout()
+            toast.success('Conta deletada com sucesso.')
+            router.push('/')
+        } catch (err: any) {
+            toast.error('Erro ao deletar conta: ' + err.message)
+        } finally {
+            setDeleteLoading(false)
+        }
     }
 
     return (
@@ -653,6 +672,60 @@ export default function OracleProfilePage() {
                                     </NeonButton>
                                 </div>
                             </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            <div className="pt-10 border-t border-white/5">
+                <GlassCard className="border-red-500/20 bg-red-500/5 p-6 flex flex-col md:flex-row items-center justify-between gap-6" hover={false}>
+                    <div>
+                        <h3 className="text-lg font-bold text-white mb-1">Zona de Perigo</h3>
+                        <p className="text-sm text-slate-400">Ao deletar sua conta, todos os seus dados e créditos serão removidos permanentemente.</p>
+                    </div>
+                    <NeonButton variant="purple" className="bg-red-500 hover:bg-red-600 border-red-500" onClick={() => setShowDeleteModal(true)}>
+                        Deletar Minha Conta
+                    </NeonButton>
+                </GlassCard>
+            </div>
+
+            <AnimatePresence>
+                {showDeleteModal && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="w-full max-w-md"
+                        >
+                            <GlassCard className="border-red-500/50 p-8" hover={false} glowColor="none">
+                                <div className="text-center space-y-4">
+                                    <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                        <AlertTriangle size={32} />
+                                    </div>
+                                    <h2 className="text-2xl font-bold text-white">Tem certeza absoluta?</h2>
+                                    <p className="text-slate-400 leading-relaxed">
+                                        Esta ação é irreversível. Seu perfil de oraculista será removido e seus <span className="text-white font-bold">créditos disponíveis</span> não serão reembolsados.
+                                    </p>
+
+                                    <div className="flex flex-col gap-3 pt-6">
+                                        <NeonButton
+                                            variant="purple"
+                                            fullWidth
+                                            loading={deleteLoading}
+                                            onClick={handleDeleteAccount}
+                                            className="bg-red-500 hover:bg-red-600 border-red-500"
+                                        >
+                                            Sim, Deletar Permanentemente
+                                        </NeonButton>
+                                        <button
+                                            onClick={() => setShowDeleteModal(false)}
+                                            className="text-sm text-slate-500 hover:text-white transition-colors py-2"
+                                        >
+                                            Cancelar e Voltar
+                                        </button>
+                                    </div>
+                                </div>
+                            </GlassCard>
                         </motion.div>
                     </div>
                 )}

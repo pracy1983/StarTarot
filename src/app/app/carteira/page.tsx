@@ -245,9 +245,12 @@ export default function WalletPage() {
                             {customAmount ? Math.floor(parseFloat(customAmount) / COIN_PRICE) : 0} Coins
                         </span>
                     </div>
-                    <NeonButton variant="cyan" size="sm" onClick={handleCustomPurchase}>
-                        Comprar
-                    </NeonButton>
+                    <div className="flex flex-col items-center">
+                        <NeonButton variant="cyan" size="sm" onClick={handleCustomPurchase}>
+                            Comprar
+                        </NeonButton>
+                        <p className="text-[10px] text-slate-500 mt-2 italic">* Créditos não são reembolsáveis</p>
+                    </div>
                 </div>
             </GlassCard>
 
@@ -397,7 +400,8 @@ export default function WalletPage() {
                                     {billingType === 'PIX' ? 'Gerar PIX' : 'Ir para Pagamento'}
                                 </NeonButton>
                                 <p className="text-[10px] text-center text-slate-600">
-                                    Ambiente seguro via Asaas. Seus dados estão protegidos.
+                                    Ambiente seguro via Asaas. Seus dados estão protegidos.<br />
+                                    <span className="text-red-400 font-bold uppercase mt-1 block">Ao comprar, você declara estar ciente de que os créditos não são reembolsáveis.</span>
                                 </p>
                             </div>
                         </GlassCard>

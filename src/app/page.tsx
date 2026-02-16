@@ -117,6 +117,9 @@ export default function LandingPage() {
           </div>
 
           <div className="hidden md:flex items-center space-x-8">
+            <button onClick={() => { setRegistrationRole('oracle'); setIsRegistering(true); setShowAuthModal(true); }} className="text-sm font-medium text-slate-400 hover:text-neon-cyan transition-colors">
+              Trabalhe Conosco
+            </button>
             {isAuthenticated ? (
               <NeonButton variant="purple" size="sm" onClick={() => router.push('/app')}>
                 <LayoutDashboard size={16} className="mr-2" /> Meu Portal
@@ -251,11 +254,49 @@ export default function LandingPage() {
                 <p className="text-slate-300">Cadastre-se hoje e ganhe bônus de créditos para sua primeira orientação.</p>
               </div>
               <NeonButton variant="gold" size="lg" className="px-10" onClick={() => openAuth('client', true)}>
-                Resgatar Bônus Agara
+                Resgatar Bônus Agora
               </NeonButton>
             </div>
           </section>
         )}
+
+        {/* Oracle Registration Section */}
+        <section className="mt-32 pb-20">
+          <GlassCard className="p-12 border-white/5 relative overflow-hidden" hover={false}>
+            <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/10 blur-[100px] -z-10" />
+            <div className="flex flex-col md:flex-row items-center gap-12">
+              <div className="flex-1 space-y-6">
+                <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-[10px] font-bold uppercase tracking-widest">
+                  <Sparkles size={12} />
+                  <span>Oportunidade</span>
+                </div>
+                <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                  Seja um Oraculista no <br />
+                  <span className="neon-text-cyan">StarTarot</span>
+                </h2>
+                <p className="text-slate-400 text-lg leading-relaxed">
+                  Transforme seu dom em uma fonte de renda. Atenda clientes de todo o país através de chat e vídeo com total segurança e suporte.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-4 pt-4">
+                  <NeonButton variant="cyan" size="lg" onClick={() => { setRegistrationRole('oracle'); setIsRegistering(true); setShowAuthModal(true); }}>
+                    Cadastrar como Oraculista
+                  </NeonButton>
+                  <button className="text-sm font-bold text-slate-400 hover:text-white transition-colors px-6">
+                    Saiba mais sobre ganhos
+                  </button>
+                </div>
+              </div>
+              <div className="flex-shrink-0 w-full md:w-80 h-80 relative group">
+                <div className="absolute inset-0 bg-neon-cyan/20 blur-3xl rounded-full group-hover:bg-neon-cyan/30 transition-all" />
+                <img
+                  src="https://images.unsplash.com/photo-1515940175183-6798529cb860?auto=format&fit=crop&q=80&w=800"
+                  alt="Oracle"
+                  className="w-full h-full object-cover rounded-3xl relative z-10 border border-white/10"
+                />
+              </div>
+            </div>
+          </GlassCard>
+        </section>
       </main>
 
       {/* Footer Minimalist */}
@@ -266,6 +307,6 @@ export default function LandingPage() {
       </footer>
 
       <AuthModal />
-    </div>
+    </div >
   )
 }

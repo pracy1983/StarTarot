@@ -105,8 +105,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         pathname.startsWith('/app/tornar-se-oraculo') ||
         (pathname === '/app/mensagens' && view === 'oracle')
 
-    const themeColor = isOracleView ? 'neon-purple' : 'neon-cyan'
-    const themeGlow = isOracleView ? 'rgba(168,85,247,0.15)' : 'rgba(34,211,238,0.15)'
+    const isAdminView = pathname.startsWith('/admin')
+
+    const themeColor = isAdminView ? 'neon-gold' : isOracleView ? 'neon-purple' : 'neon-cyan'
+    const themeGlow = isAdminView ? 'rgba(234,179,8,0.15)' : isOracleView ? 'rgba(168,85,247,0.15)' : 'rgba(34,211,238,0.15)'
 
     const clientNav = [
         { label: 'Templo', icon: <Home size={22} />, href: '/app' },
@@ -118,17 +120,24 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const oracleNav = [
         { label: 'Dashboard', icon: <LayoutDashboard size={22} />, href: '/app/dashboard' },
-        { label: 'Sala de Atendimento', icon: <Radio size={22} />, href: '/app/dashboard/sala' },
-        { label: 'Meus Ganhos', icon: <Wallet size={22} />, href: '/app/dashboard/ganhos' },
-        { label: 'Meus Cupons', icon: <Ticket size={22} />, href: '/app/dashboard/cupons' },
+        { label: 'Sala', icon: <Radio size={22} />, href: '/app/dashboard/sala' },
+        { label: 'Ganhos', icon: <Wallet size={22} />, href: '/app/dashboard/ganhos' },
         { label: 'Mensagens', icon: <Inbox size={22} />, href: '/app/mensagens?view=oracle' },
-        { label: 'Meu Perfil Profissional', icon: <User size={22} />, href: '/app/dashboard/perfil' },
+        { label: 'Perfil', icon: <User size={22} />, href: '/app/dashboard/perfil' },
     ]
 
-    const navItems = isOracleView ? oracleNav : clientNav
+    const adminNav = [
+        { label: 'Admin', icon: <LayoutDashboard size={22} />, href: '/admin' },
+        { label: 'Usuários', icon: <User size={22} />, href: '/admin/usuarios' },
+        { label: 'Financeiro', icon: <Wallet size={22} />, href: '/admin/financeiro' },
+        { label: 'Config', icon: <Home size={22} />, href: '/admin/config' },
+        { label: 'Sair Admin', icon: <LogOut size={22} />, href: '/app' },
+    ]
+
+    const navItems = isAdminView ? adminNav : isOracleView ? oracleNav : clientNav
 
     return (
-        <div className={`flex min-h-screen bg-deep-space relative flex-col ${isOracleView ? 'theme-oracle' : 'theme-client'}`}>
+        <div className={`flex min-h-screen bg-deep-space relative flex-col ${isAdminView ? 'theme-owner' : isOracleView ? 'theme-oracle' : 'theme-client'}`}>
             <div className={`stars-overlay ${isOracleView ? 'opacity-30' : 'opacity-20'}`} />
 
             {/* Top Banner / Search */}
@@ -139,7 +148,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         <img src="/logo.png" alt="Star Tarot" className="relative z-10 w-full" />
                     </div>
                     <span className="text-2xl font-bold tracking-tighter text-white hidden sm:block">
-                        Star <span className={themeColor === 'neon-purple' ? 'neon-text-purple' : 'neon-text-cyan'}>Tarot</span>
+                        Star <span className={isAdminView ? 'neon-text-gold' : isOracleView ? 'neon-text-purple' : 'neon-text-cyan'}>Tarot</span>
                     </span>
                 </div>
 
@@ -160,7 +169,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
                     {/* Global Oracle Status Toggle */}
                     {(profile?.role === 'oracle' || (profile?.role === 'owner' && isOracleView)) && (
-                        <div className="hidden sm:block">
+                        <div className="flex items-center">
                             <OracleStatusToggle isOnline={isOnline} onToggle={toggleOnline} />
                         </div>
                     )}
@@ -197,15 +206,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                     key={item.label}
                                     onClick={() => router.push(item.href)}
                                     className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group relative ${isActive
-                                        ? `bg-${themeColor}/20 text-white shadow-[0_0_20px_${themeGlow}] border border-${themeColor}/30`
+                                        ? isAdminView ? 'bg-neon-gold/20 text-white shadow-[0_0_20px_rgba(234,179,8,0.15)] border border-neon-gold/30'
+                                            : isOracleView ? 'bg-neon-purple/20 text-white shadow-[0_0_20px_rgba(168,85,247,0.15)] border border-neon-purple/30'
+                                                : 'bg-neon-cyan/20 text-white shadow-[0_0_20px_rgba(34,211,238,0.15)] border border-neon-cyan/30'
                                         : 'text-slate-400 hover:text-white hover:bg-white/5'
                                         }`}
                                 >
-                                    <span className={`${isActive ? `text-${themeColor}` : `group-hover:text-${themeColor}`} transition-colors`}>
+                                    <span className={`${isActive
+                                        ? isAdminView ? 'text-neon-gold' : isOracleView ? 'text-neon-purple' : 'text-neon-cyan'
+                                        : isAdminView ? 'group-hover:text-neon-gold' : isOracleView ? 'group-hover:text-neon-purple' : 'group-hover:text-neon-cyan'
+                                        } transition-colors`}>
                                         {item.icon}
                                     </span>
                                     <span className={`text-sm font-medium hidden lg:block text-left`}>{item.label}</span>
-                                    {isActive && <motion.div layoutId="nav-glow" className={`absolute right-0 w-1 h-8 bg-${themeColor} rounded-l-full`} />}
+                                    {isActive && <motion.div layoutId="nav-glow" className={`absolute right-0 w-1 h-8 ${isAdminView ? 'bg-neon-gold' : isOracleView ? 'bg-neon-purple' : 'bg-neon-cyan'} rounded-l-full`} />}
                                     {item.label === 'Mensagens' && unreadCount > 0 && (
                                         <div className="absolute right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
                                             {unreadCount}
@@ -249,7 +263,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             <button
                                 key={item.label}
                                 onClick={() => router.push(item.href)}
-                                className={`flex flex-col items-center justify-center space-y-1 ${isActive ? `text-${themeColor}` : 'text-slate-500'}`}
+                                className={`flex flex-col items-center justify-center space-y-1 ${isActive
+                                    ? isAdminView ? 'text-neon-gold' : isOracleView ? 'text-neon-purple' : 'text-neon-cyan'
+                                    : 'text-slate-500'}`}
                             >
                                 {item.icon}
                                 <span className="text-[10px] font-medium">{item.label}</span>
