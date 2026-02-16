@@ -196,7 +196,15 @@ export const useAuthStore = create<AuthState>((set) => ({
       return { success: false, error: 'Usuário autenticado mas perfil não localizado.' }
     } catch (error: any) {
       console.error('Erro detalhado no login:', error)
-      return { success: false, error: error.message || 'Credenciais inválidas' }
+      let errorMessage = error.message || 'Erro ao fazer login'
+
+      if (errorMessage.includes('Invalid login credentials')) {
+        errorMessage = 'E-mail ou senha incorretos.'
+      } else if (errorMessage.includes('Email not confirmed')) {
+        errorMessage = 'E-mail não confirmado. Verifique sua caixa de entrada.'
+      }
+
+      return { success: false, error: errorMessage }
     }
   },
 
