@@ -88,7 +88,7 @@ export default function InboxPage() {
                         ? `Atendimento concluído. Clique para revisar.`
                         : `Sua consulta foi respondida. Clique para ver.`,
                     created_at: c.answered_at || c.created_at,
-                    is_read: false,
+                    is_read: true, // Virtual consultations are duplicates of inbox messages usually, or already 'seen' status update.
                     metadata: { type: 'consultation_answered', consultation_id: c.id }
                 }))
 
@@ -257,7 +257,7 @@ export default function InboxPage() {
                                                         </div>
                                                     </div>
                                                 ) : msg.is_read ? (
-                                                    <MailOpen size={24} className="text-slate-500 mt-2" />
+                                                    <Mail size={24} className="text-slate-500 mt-2" />
                                                 ) : (
                                                     <Mail size={24} className="text-red-400 mt-2 animate-bounce" />
                                                 )}

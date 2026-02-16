@@ -168,18 +168,21 @@ export default function NewConsultationPage() {
         const validQuestions = questions.filter(q => q.trim().length > 0)
         const pricePerQuestion = oracle?.price_per_message || 10
         const initialFee = oracle?.initial_fee_credits || 0
-        let total = (validQuestions.length * pricePerQuestion) + initialFee
 
+        let subtotal = 0
+        if (isVideo) {
+            subtotal = initialFee
+        } else {
+            subtotal = (validQuestions.length * pricePerQuestion)
+        }
+
+        let total = subtotal
         if (appliedCoupon) {
             if (appliedCoupon.discount_type === 'percent') {
                 total = total * (1 - (appliedCoupon.discount_value / 100))
             } else {
                 total = Math.max(0, total - appliedCoupon.discount_value)
             }
-        }
-
-        if (isVideo) {
-            return initialFee
         }
 
         return Math.ceil(total)
@@ -389,7 +392,7 @@ export default function NewConsultationPage() {
                         <p className="text-lg font-bold text-neon-gold">
                             {isVideo ? oracle.credits_per_minute : pricePerQuestion} Créditos
                         </p>
-                        {initialFee > 0 && (
+                        {isVideo && initialFee > 0 && (
                             <p className="text-[10px] text-slate-400 mt-1">
                                 + {initialFee} Créditos taxa inicial
                             </p>
@@ -543,7 +546,7 @@ export default function NewConsultationPage() {
                             )}
                         </div>
 
-                        {initialFee > 0 && (
+                        {isVideo && initialFee > 0 && (
                             <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
                                 <span>Taxa de Abertura (Fixa):</span>
                                 <span>{initialFee} Créditos</span>
