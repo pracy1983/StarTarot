@@ -18,7 +18,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
+import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
 
 const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 CR
 
@@ -81,6 +81,7 @@ export default function VideoConsultationPage() {
     }
 
     const initAgora = async () => {
+        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
         clientRef.current = client
 
@@ -120,6 +121,7 @@ export default function VideoConsultationPage() {
             await clientRef.current.join(appId, id as string, token, profile!.id)
 
             // 3. Create and Publish Tracks
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
             const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
             const videoTrack = await AgoraRTC.createCameraVideoTrack()
 

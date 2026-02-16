@@ -23,7 +23,7 @@ import {
 import toast from 'react-hot-toast'
 
 import { useSearchParams } from 'next/navigation'
-import AgoraRTC, { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
+import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
 
 function RemotePlayer({ user }: { user: any }) {
     const containerRef = React.useRef<HTMLDivElement>(null)
@@ -119,6 +119,7 @@ export default function ServiceRoomPage() {
     }
 
     const initAgora = async () => {
+        const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
         const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
         clientRef.current = client
 
@@ -154,6 +155,7 @@ export default function ServiceRoomPage() {
 
             await clientRef.current.join(appId, consultationId, token, profile!.id)
 
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
             const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
             const videoTrack = await AgoraRTC.createCameraVideoTrack()
 
