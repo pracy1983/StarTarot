@@ -29,8 +29,22 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Você não tem permissão para rejeitar esta consulta' }, { status: 403 })
         }
 
-        if (consultation.status !== 'pending') {
-            return NextResponse.json({ error: 'Esta consulta não pode mais ser rejeitada' }, { status: 400 })
+        if (consultation.status === 'answered') {
+            return NextResponse.json({ error: 'Uma consulta já respondida não pode ser estornada por aqui.' }, { status: 400 })
+        }
+
+        // Se já estiver como 'rejected' ou 'canceled', mas o oracle quer garantir o estorno, permitimos continuar
+        // a menos que a transação já esteja como 'refunded'.
+        const { data: existingTransactions } = await supabaseAdmin
+            .from('transactions')
+            .select('status')
+            .eq('user_id', consultation.client_id)
+            .eq('type', 'consultation_charge')
+            .contains('metadata', { consultation_id: consultationId })
+            .single()
+
+        if (existingTransactions?.status === 'refunded') {
+            return NextResponse.json({ error: 'O valor desta consulta já foi estornado.' }, { status: 400 })
         }
 
         // 2. Devolver créditos ao cliente

@@ -8,10 +8,12 @@ interface ClientCallModalProps {
     isOpen: boolean
     oracleName: string
     avatarUrl: string
+    creditsPerMinute: number
+    initialFee: number
     onCancel: () => void
 }
 
-export function ClientCallModal({ isOpen, oracleName, avatarUrl, onCancel }: ClientCallModalProps) {
+export function ClientCallModal({ isOpen, oracleName, avatarUrl, creditsPerMinute, initialFee, onCancel }: ClientCallModalProps) {
     if (!isOpen) return null
 
     return (
@@ -37,7 +39,18 @@ export function ClientCallModal({ isOpen, oracleName, avatarUrl, onCancel }: Cli
                     </div>
 
                     <h3 className="text-2xl font-bold text-white mb-2">Chamando...</h3>
-                    <p className="text-slate-400 mb-8">Aguarde {oracleName} aceitar a chamada.</p>
+                    <p className="text-slate-400 mb-4 font-medium">Aguarde {oracleName} aceitar a chamada.</p>
+
+                    <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="bg-white/5 border border-white/5 rounded-2xl p-3">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Por Minuto</p>
+                            <p className="text-sm font-bold text-neon-gold">{creditsPerMinute} Créditos</p>
+                        </div>
+                        <div className="bg-white/5 border border-white/5 rounded-2xl p-3">
+                            <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Tarifa Inicial</p>
+                            <p className="text-sm font-bold text-white">{initialFee > 0 ? `${initialFee} Créditos` : 'Grátis'}</p>
+                        </div>
+                    </div>
 
                     <div className="flex justify-center mb-8">
                         <div className="flex space-x-2">

@@ -143,9 +143,9 @@ export default function ConsultationResponsePage() {
 
             // 3. Adicionar Créditos (Reward)
             const { error: rewardError } = await supabase.rpc('grant_reward_credits', {
-                user_id: profile!.id,
-                amount: totalReward,
-                description: `Recompensa por avaliação da consulta ${id}`
+                p_user_id: profile!.id,
+                p_amount: totalReward,
+                p_description: `Recompensa por avaliação da consulta ${id}`
             })
 
             if (rewardError) throw rewardError

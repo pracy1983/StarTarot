@@ -24,6 +24,7 @@ export default function OracleProfilePage() {
     const [oracle, setOracle] = useState<any>(null)
     const [consultationCount, setConsultationCount] = useState(0)
     const [ratings, setRatings] = useState<any[]>([])
+    const [avgResponseTime, setAvgResponseTime] = useState<string>('30 minutos')
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -40,6 +41,38 @@ export default function OracleProfilePage() {
 
             if (error) throw error
             setOracle(data)
+
+            const isAI = data.is_ai || data.oracle_type === 'ai'
+
+            // Calcular média de resposta
+            if (isAI) {
+                // Estável baseado no ID
+                const oracleIdStr = String(id)
+                const hash = oracleIdStr.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
+                const stableRandom = (hash % (40 - 15 + 1)) + 15
+                setAvgResponseTime(`${stableRandom} minutos`)
+            } else {
+                const { data: qData } = await supabase
+                    .from('consultations')
+                    .select('created_at, answered_at')
+                    .eq('oracle_id', id)
+                    .eq('status', 'answered')
+                    .not('answered_at', 'is', null)
+                    .limit(20)
+
+                if (qData && qData.length > 0) {
+                    const diffs = qData.map(c => {
+                        const start = new Date(c.created_at).getTime()
+                        const end = new Date(c.answered_at).getTime()
+                        return end - start
+                    })
+                    const avgMs = diffs.reduce((a, b) => a + b, 0) / diffs.length
+                    const avgMin = Math.round(avgMs / (1000 * 60))
+                    setAvgResponseTime(`${avgMin > 0 ? avgMin : 15} minutos`)
+                } else {
+                    setAvgResponseTime('30 minutos')
+                }
+            }
 
             // Contar consultas realizadas
             const { count } = await supabase
@@ -168,13 +201,27 @@ export default function OracleProfilePage() {
             {/* Status & CTA */}
             <div className="flex flex-col sm:flex-row gap-4">
                 <GlassCard className="flex-1 border-white/5 flex items-center space-x-4" hover={false}>
-                    <div className={`p-3 rounded-xl ${oracle.is_online ? 'bg-green-500/10 text-green-400' : 'bg-slate-800 text-slate-500'}`}>
-                        <Shield size={24} />
+                    <div className={`p-3 rounded-xl relative ${oracle.is_online ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-500'}`}>
+                        {oracle.is_online ? <Shield size={24} /> : <Shield size={24} className="opacity-50" />}
+                        <div className={`absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse ${oracle.is_online ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-white">{oracle.is_online ? 'Disponível Agora' : 'Indisponível'}</p>
+                        <p className="text-sm font-bold text-white">{oracle.is_online ? 'Online Agora' : 'Offline'}</p>
                         <p className="text-[10px] text-slate-500">
-                            {oracle.is_online ? 'Pronto para iniciar uma consulta' : 'Você pode deixar uma mensagem'}
+                            {oracle.is_online ? 'Pronto para guiar você agora' : 'Deixe suas perguntas e eu responderei'}
+                        </p>
+                    </div>
+                </GlassCard>
+
+                {/* Tempo de Resposta */}
+                <GlassCard className="flex-1 border-white/5 flex items-center space-x-4" hover={false}>
+                    <div className="p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan">
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-white">Média de Resposta</p>
+                        <p className="text-[10px] text-slate-500">
+                            {avgResponseTime}
                         </p>
                     </div>
                 </GlassCard>
@@ -199,11 +246,8 @@ export default function OracleProfilePage() {
                             className="px-8"
                             onClick={() => router.push(`/app/consulta/${oracle.id}?type=message`)}
                         >
-                            {oracle.is_online ? (
-                                <><MessageSquare size={18} className="mr-2" /> Iniciar Mensagem</>
-                            ) : (
-                                <><MessageSquare size={18} className="mr-2" /> Deixar Mensagem</>
-                            )}
+                            <MessageSquare size={18} className="mr-2" />
+                            Enviar minhas perguntas
                         </NeonButton>
                     )}
                 </div>

@@ -12,7 +12,10 @@ import {
     User,
     Clock,
     Send,
-    AlertCircle
+    AlertCircle,
+    Calendar,
+    MapPin,
+    Video
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
@@ -249,6 +252,33 @@ export default function OracleAnswerPage() {
                                 )}
                             </div>
                         )}
+
+                        {/* Dados adicionais do cliente se existirem no snapshot */}
+                        {consultation.metadata?.client_snapshot && (
+                            <div className="mt-4 pt-4 border-t border-white/5 space-y-3">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-2">Dados de Nascimento</p>
+                                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                                    {consultation.metadata.client_snapshot.birth_date && (
+                                        <div className="flex items-center text-slate-300">
+                                            <Calendar size={12} className="mr-1.5 text-neon-purple" />
+                                            {new Date(consultation.metadata.client_snapshot.birth_date).toLocaleDateString('pt-BR')}
+                                        </div>
+                                    )}
+                                    {consultation.metadata.client_snapshot.birth_time && (
+                                        <div className="flex items-center text-slate-300">
+                                            <Clock size={12} className="mr-1.5 text-neon-purple" />
+                                            {consultation.metadata.client_snapshot.birth_time}
+                                        </div>
+                                    )}
+                                    {consultation.metadata.client_snapshot.birth_place && (
+                                        <div className="col-span-2 flex items-center text-slate-300">
+                                            <MapPin size={12} className="mr-1.5 text-neon-purple" />
+                                            {consultation.metadata.client_snapshot.birth_place}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </GlassCard>
 
                     <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl flex items-start space-x-3">
@@ -259,58 +289,113 @@ export default function OracleAnswerPage() {
                     </div>
                 </div>
 
-                {/* Principal: Perguntas e Respostas */}
+                {/* Principal: Perguntas e Respostas OU Info de Vídeo */}
                 <div className="lg:col-span-2 space-y-6">
-                    {questions.map((q, idx) => (
-                        <GlassCard key={q.id} hover={false} className="border-white/5">
-                            <div className="flex items-center justify-between mb-4">
-                                <span className="text-[10px] font-black text-neon-purple uppercase tracking-[0.2em]">Pergunta {idx + 1}</span>
-                                <MessageSquare size={16} className="text-slate-600" />
+                    {consultation.type === 'video' ? (
+                        <GlassCard hover={false} className="border-neon-cyan/30 bg-neon-cyan/5 p-8 text-center space-y-6">
+                            <div className="w-20 h-20 bg-neon-cyan/20 rounded-full flex items-center justify-center mx-auto">
+                                <Video size={40} className="text-neon-cyan" />
                             </div>
-                            <h4 className="text-lg font-medium text-white mb-6 leading-relaxed">
-                                {q.question_text}
-                            </h4>
+                            <div>
+                                <h3 className="text-xl font-bold text-white mb-2">Consulta por Vídeo</h3>
+                                <p className="text-slate-400 text-sm max-w-md mx-auto">
+                                    Esta solicitação foi iniciada como uma chamada de vídeo.
+                                    Se você ainda estiver online, pode clicar no botão abaixo para entrar na sala.
+                                </p>
+                            </div>
 
-                            <div className="space-y-2">
-                                <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Sua Resposta</label>
-                                <textarea
-                                    className="w-full bg-deep-space/50 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-neon-purple/50 transition-all h-40 resize-none"
-                                    placeholder="Digite sua interpretação aqui..."
-                                    value={answers[q.id] || ''}
-                                    onChange={(e) => handleAnswerChange(q.id, e.target.value)}
-                                />
-                                <div className="flex justify-between items-center px-1">
-                                    <p className="text-[10px] text-slate-600">Mínimo de 50 caracteres para uma boa resposta.</p>
-                                    <p className={`text-[10px] font-bold ${answers[q.id]?.length > 50 ? 'text-green-500' : 'text-slate-600'}`}>
-                                        {answers[q.id]?.length || 0} caracteres
-                                    </p>
-                                </div>
+                            <div className="pt-4 flex flex-col items-center gap-4">
+                                <NeonButton
+                                    variant="cyan"
+                                    size="lg"
+                                    onClick={() => router.push(`/app/dashboard/sala?consultationId=${consultation.id}`)}
+                                >
+                                    ENTRAR NA SALA DE VÍDEO
+                                </NeonButton>
+
+                                <button
+                                    onClick={handleRefuse}
+                                    className="text-xs text-red-500 hover:text-red-400 underline transition-colors opacity-70"
+                                >
+                                    Recusar Chamada / Estornar Cliente
+                                </button>
                             </div>
                         </GlassCard>
-                    ))}
+                    ) : questions.length === 0 ? (
+                        <GlassCard hover={false} className="border-red-500/30 bg-red-500/5 p-8 text-center space-y-6">
+                            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <AlertCircle size={32} className="text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white mb-2">Erro na Consulta</h3>
+                                <p className="text-slate-400 text-sm max-w-md mx-auto">
+                                    Não encontramos perguntas associadas a este atendimento. Isso pode ter ocorrido por uma falha na conexão do cliente.
+                                </p>
+                            </div>
+                            <div className="pt-4">
+                                <NeonButton
+                                    variant="red"
+                                    onClick={handleRefuse}
+                                    loading={sending}
+                                >
+                                    Estornar Créditos ao Cliente
+                                </NeonButton>
+                            </div>
+                        </GlassCard>
+                    ) : (
+                        <>
+                            {questions.map((q, idx) => (
+                                <GlassCard key={q.id} hover={false} className="border-white/5">
+                                    <div className="flex items-center justify-between mb-4">
+                                        <span className="text-[10px] font-black text-neon-purple uppercase tracking-[0.2em]">Pergunta {idx + 1}</span>
+                                        <MessageSquare size={16} className="text-slate-600" />
+                                    </div>
+                                    <h4 className="text-lg font-medium text-white mb-6 leading-relaxed">
+                                        {q.question_text}
+                                    </h4>
 
-                    <div className="flex justify-end gap-4">
-                        <NeonButton
-                            variant="purple"
-                            size="lg"
-                            className="px-12 h-14"
-                            onClick={handleSubmit}
-                            loading={sending}
-                        >
-                            <Send size={18} className="mr-2" />
-                            Enviar Respostas e Receber Créditos
-                        </NeonButton>
-                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Sua Resposta</label>
+                                        <textarea
+                                            className="w-full bg-deep-space/50 border border-white/10 rounded-xl p-4 text-white outline-none focus:border-neon-purple/50 transition-all h-40 resize-none"
+                                            placeholder="Digite sua interpretação aqui..."
+                                            value={answers[q.id] || ''}
+                                            onChange={(e) => handleAnswerChange(q.id, e.target.value)}
+                                        />
+                                        <div className="flex justify-between items-center px-1">
+                                            <p className="text-[10px] text-slate-600">Mínimo de 50 caracteres para uma boa resposta.</p>
+                                            <p className={`text-[10px] font-bold ${answers[q.id]?.length > 50 ? 'text-green-500' : 'text-slate-600'}`}>
+                                                {answers[q.id]?.length || 0} caracteres
+                                            </p>
+                                        </div>
+                                    </div>
+                                </GlassCard>
+                            ))}
 
-                    <div className="pt-8 border-t border-white/5 flex justify-center">
-                        <button
-                            onClick={handleRefuse}
-                            disabled={sending}
-                            className="text-xs text-red-500 hover:text-red-400 underline transition-colors opacity-70 hover:opacity-100"
-                        >
-                            Não posso atender esta consulta (Estornar Cliente)
-                        </button>
-                    </div>
+                            <div className="flex justify-end gap-4">
+                                <NeonButton
+                                    variant="purple"
+                                    size="lg"
+                                    className="px-12 h-14"
+                                    onClick={handleSubmit}
+                                    loading={sending}
+                                >
+                                    <Send size={18} className="mr-2" />
+                                    Enviar Respostas e Receber Créditos
+                                </NeonButton>
+                            </div>
+
+                            <div className="pt-8 border-t border-white/5 flex justify-center">
+                                <button
+                                    onClick={handleRefuse}
+                                    disabled={sending}
+                                    className="text-xs text-red-500 hover:text-red-400 underline transition-colors opacity-70 hover:opacity-100"
+                                >
+                                    Não posso atender esta consulta (Estornar Cliente)
+                                </button>
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
         </div>

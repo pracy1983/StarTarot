@@ -94,22 +94,25 @@ export default function InboxPage() {
 
             const pendingConsultations = (consultationsData || [])
                 .filter(c => c.status !== 'answered' && c.status !== 'canceled' && c.status !== 'rejected')
-                .map(c => ({
-                    id: `pend-${c.id}`,
-                    title: isOracleView
-                        ? `🔮 Nova consulta pendente!`
-                        : `🔮 Consulta em processamento...`,
-                    content: isOracleView
-                        ? `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`
-                        : `Aguardando resposta de ${c.oracle?.full_name || 'Oraculista'}.`,
-                    created_at: c.created_at,
-                    is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"
-                    metadata: {
-                        type: 'consultation_pending',
-                        consultation_id: c.id,
-                        oracle_data: c.oracle // Passando dados do oraculo para renderizar avatar
+                .map(c => {
+                    const isVideo = c.type === 'video'
+                    return {
+                        id: `pend-${c.id}`,
+                        title: isOracleView
+                            ? (isVideo ? `📹 Nova chamada de vídeo!` : `🔮 Nova consulta pendente!`)
+                            : (isVideo ? `📹 Chamada em andamento...` : `🔮 Consulta em processamento...`),
+                        content: isOracleView
+                            ? (isVideo ? `${c.client?.full_name || 'Um cliente'} está te chamando por vídeo.` : `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`)
+                            : (isVideo ? `Vídeo consulta com ${c.oracle?.full_name || 'Oraculista'}.` : `Aguardando resposta de ${c.oracle?.full_name || 'Oraculista'}.`),
+                        created_at: c.created_at,
+                        is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"
+                        metadata: {
+                            type: 'consultation_pending',
+                            consultation_id: c.id,
+                            oracle_data: c.oracle // Passando dados do oraculo para renderizar avatar
+                        }
                     }
-                }))
+                })
 
             const allMessages = [
                 ...(inboxData || []),
@@ -218,7 +221,7 @@ export default function InboxPage() {
                             >
                                 <GlassCard
                                     className={`border-white/5 cursor-pointer group transition-all relative overflow-hidden ${!msg.is_read
-                                        ? 'bg-red-500/10 border-red-500/30' // Red for unread
+                                        ? 'bg-neon-purple/5 border-neon-purple/20' // Subtle purple for unread
                                         : 'hover:bg-white/5'
                                         }`}
                                     onClick={() => handleMessageClick(msg)}

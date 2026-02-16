@@ -134,10 +134,10 @@ export default function OracleDashboard() {
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-neon-purple/20 border border-neon-purple/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(168,85,247,0.15)]"
+                    className="bg-red-500/20 border border-red-500/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(239,68,68,0.15)]"
                 >
                     <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-neon-purple rounded-xl text-white animate-bounce">
+                        <div className="p-3 bg-red-500 rounded-xl text-white animate-bounce">
                             <MessageSquare size={24} />
                         </div>
                         <div>
@@ -146,7 +146,7 @@ export default function OracleDashboard() {
                         </div>
                     </div>
                     <NeonButton
-                        variant="purple"
+                        variant="red"
                         onClick={() => router.push('/app/mensagens?view=oracle')}
                     >
                         Ver Mensagens

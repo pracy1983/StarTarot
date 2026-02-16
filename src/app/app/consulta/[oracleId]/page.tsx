@@ -399,156 +399,202 @@ export default function NewConsultationPage() {
             </GlassCard>
 
             {/* Form */}
-            <GlassCard className="border-white/5" hover={false}>
-                <div className="space-y-8">
-
-                    {/* SEUS DADOS (CLIENTE) */}
-                    <div className="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <h3 className="text-sm font-bold text-white flex items-center">
-                            <span className="w-2 h-2 bg-neon-purple rounded-full mr-2" />
-                            Seus Dados para o Atendimento
-                        </h3>
-                        <p className="text-xs text-slate-500">
-                            Confira seus dados. Se alterar aqui, seu perfil será atualizado automaticamente.
+            {isVideo ? (
+                <div className="space-y-6">
+                    <GlassCard className="border-white/5 p-8 text-center space-y-4" hover={false}>
+                        <div className="w-20 h-20 bg-neon-cyan/10 rounded-full flex items-center justify-center mx-auto mb-2">
+                            <Video size={40} className="text-neon-cyan" />
+                        </div>
+                        <h3 className="text-xl font-bold text-white">Chamada de Vídeo Privada</h3>
+                        <p className="text-slate-400 text-sm max-w-sm mx-auto leading-relaxed">
+                            Você está prestes a iniciar um atendimento por vídeo com {oracle.full_name}.
+                            Seus dados de perfil (Nome, Nascimento) serão compartilhados com o guia.
                         </p>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500">Nome Completo</label>
-                                <input disabled value={profile?.full_name || ''} className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-slate-400 text-sm cursor-not-allowed" />
+                        <div className="grid grid-cols-2 gap-4 mt-6 text-left">
+                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Custo por Minuto</p>
+                                <p className="text-lg font-bold text-neon-gold">{oracle.credits_per_minute} Créditos</p>
                             </div>
-
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500">Data de Nascimento {oracle.requires_birthdate && <span className="text-neon-purple">*</span>}</label>
-                                <input
-                                    type="date"
-                                    value={clientBirthDate}
-                                    onChange={e => setClientBirthDate(e.target.value)}
-                                    className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthDate && oracle.requires_birthdate ? 'border-red-500/30' : 'border-white/5'}`}
-                                />
+                            <div className="p-4 rounded-2xl bg-white/5 border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold mb-1">Tarifa Inicial</p>
+                                <p className="text-lg font-bold text-white">{initialFee > 0 ? `${initialFee} Créditos` : 'Zero'}</p>
                             </div>
+                        </div>
 
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500">Hora de Nascimento {oracle.requires_birthtime && <span className="text-neon-purple">*</span>}</label>
-                                <input
-                                    type="time"
-                                    value={clientBirthTime}
-                                    onChange={e => setClientBirthTime(e.target.value)}
-                                    className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthTime && oracle.requires_birthtime ? 'border-red-500/30' : 'border-white/5'}`}
-                                />
+                        <div className="pt-6">
+                            <NeonButton
+                                variant="gold"
+                                size="lg"
+                                fullWidth
+                                onClick={handleSubmit}
+                                loading={submitting}
+                                className="py-6 text-lg font-black tracking-wider group"
+                            >
+                                <Video size={24} className="group-hover:scale-110 transition-transform" />
+                                INICIAR VIDEO CONSULTA
+                            </NeonButton>
+                            <p className="text-[10px] text-slate-500 mt-4 uppercase tracking-widest font-bold">
+                                O tempo só começa a contar após o oráculo aceitar
+                            </p>
+                        </div>
+                    </GlassCard>
+                </div>
+            ) : (
+                <GlassCard className="border-white/5" hover={false}>
+                    <div className="space-y-8">
+
+                        {/* SEUS DADOS (CLIENTE) */}
+                        <div className="space-y-4 p-4 bg-white/5 rounded-xl border border-white/10">
+                            <h3 className="text-sm font-bold text-white flex items-center">
+                                <span className="w-2 h-2 bg-neon-purple rounded-full mr-2" />
+                                Seus Dados para o Atendimento
+                            </h3>
+                            <p className="text-xs text-slate-500">
+                                Confira seus dados. Se alterar aqui, seu perfil será atualizado automaticamente.
+                            </p>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500">Nome Completo</label>
+                                    <input disabled value={profile?.full_name || ''} className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-slate-400 text-sm cursor-not-allowed" />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500">Data de Nascimento {oracle.requires_birthdate && <span className="text-neon-purple">*</span>}</label>
+                                    <input
+                                        type="date"
+                                        value={clientBirthDate}
+                                        onChange={e => setClientBirthDate(e.target.value)}
+                                        className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthDate && oracle.requires_birthdate ? 'border-red-500/30' : 'border-white/5'}`}
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500">Hora de Nascimento {oracle.requires_birthtime && <span className="text-neon-purple">*</span>}</label>
+                                    <input
+                                        type="time"
+                                        value={clientBirthTime}
+                                        onChange={e => setClientBirthTime(e.target.value)}
+                                        className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthTime && oracle.requires_birthtime ? 'border-red-500/30' : 'border-white/5'}`}
+                                    />
+                                </div>
+
+                                <div className="space-y-1">
+                                    <label className="text-xs text-slate-500">Local de Nascimento</label>
+                                    <input
+                                        type="text"
+                                        value={clientBirthPlace}
+                                        onChange={e => setClientBirthPlace(e.target.value)}
+                                        placeholder="Ex: São Paulo, SP"
+                                        className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all"
+                                    />
+                                </div>
                             </div>
+                        </div>
 
-                            <div className="space-y-1">
-                                <label className="text-xs text-slate-500">Local de Nascimento</label>
+                        <div className="border-t border-white/5 my-4" />
+
+                        <SubjectInfo
+                            subjectName={subjectName}
+                            subjectBirthdate={subjectBirthdate}
+                            subjectBirthtime={subjectBirthtime}
+                            onNameChange={setSubjectName}
+                            onBirthdateChange={setSubjectBirthdate}
+                            onBirthtimeChange={setSubjectBirthtime}
+                            isMandatory={false}
+                        />
+
+                        {!isVideo && (
+                            <QuestionInput
+                                questions={questions}
+                                onChange={setQuestions}
+                                pricePerQuestion={pricePerQuestion}
+                            />
+                        )}
+
+                        {/* COUPON SECTION */}
+                        <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
+                            <label className="text-sm font-bold text-white flex items-center">
+                                <AlertCircle size={16} className="mr-2 text-neon-gold" />
+                                Possui um cupom de desconto?
+                            </label>
+                            <div className="flex gap-2">
                                 <input
                                     type="text"
-                                    value={clientBirthPlace}
-                                    onChange={e => setClientBirthPlace(e.target.value)}
-                                    placeholder="Ex: São Paulo, SP"
-                                    className="w-full bg-black/20 border border-white/5 rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all"
+                                    value={couponCode}
+                                    onChange={e => setCouponCode(e.target.value)}
+                                    placeholder="DIGITE SEU CUPOM"
+                                    className="flex-1 bg-black/20 border border-white/5 rounded-lg px-4 py-2 text-white text-sm outline-none focus:border-neon-gold/50"
                                 />
+                                <button
+                                    onClick={handleApplyCoupon}
+                                    disabled={!couponCode || isValidatingCoupon}
+                                    className="px-4 py-2 bg-neon-gold/20 text-neon-gold border border-neon-gold/30 rounded-lg text-sm font-bold hover:bg-neon-gold/30 disabled:opacity-50 transition-all"
+                                >
+                                    {isValidatingCoupon ? '...' : 'Aplicar'}
+                                </button>
                             </div>
-                        </div>
-                    </div>
-
-                    <div className="border-t border-white/5 my-4" />
-
-                    <SubjectInfo
-                        subjectName={subjectName}
-                        subjectBirthdate={subjectBirthdate}
-                        subjectBirthtime={subjectBirthtime}
-                        onNameChange={setSubjectName}
-                        onBirthdateChange={setSubjectBirthdate}
-                        onBirthtimeChange={setSubjectBirthtime}
-                        isMandatory={false}
-                    />
-
-                    {!isVideo && (
-                        <QuestionInput
-                            questions={questions}
-                            onChange={setQuestions}
-                            pricePerQuestion={pricePerQuestion}
-                        />
-                    )}
-
-                    {/* COUPON SECTION */}
-                    <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
-                        <label className="text-sm font-bold text-white flex items-center">
-                            <AlertCircle size={16} className="mr-2 text-neon-gold" />
-                            Possui um cupom de desconto?
-                        </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="text"
-                                value={couponCode}
-                                onChange={e => setCouponCode(e.target.value)}
-                                placeholder="DIGITE SEU CUPOM"
-                                className="flex-1 bg-black/20 border border-white/5 rounded-lg px-4 py-2 text-white text-sm outline-none focus:border-neon-gold/50"
-                            />
-                            <button
-                                onClick={handleApplyCoupon}
-                                disabled={!couponCode || isValidatingCoupon}
-                                className="px-4 py-2 bg-neon-gold/20 text-neon-gold border border-neon-gold/30 rounded-lg text-sm font-bold hover:bg-neon-gold/30 disabled:opacity-50 transition-all"
-                            >
-                                {isValidatingCoupon ? '...' : 'Aplicar'}
-                            </button>
-                        </div>
-                        {appliedCoupon && (
-                            <div className="flex justify-between items-center text-xs text-green-400 font-bold px-1 animate-fadeIn">
-                                <span>Cupom {appliedCoupon.code} aplicado!</span>
-                                <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} Créditos`}</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {initialFee > 0 && (
-                        <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
-                            <span>Taxa de Abertura (Fixa):</span>
-                            <span>{initialFee} Créditos</span>
-                        </div>
-                    )}
-
-                    {/* Info de como funciona */}
-                    <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
-                        <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
-                        <div className="text-xs text-slate-300 leading-relaxed space-y-2">
-                            <p><strong>Como funciona:</strong> {isVideo ? 'Você entrará em uma sala de vídeo privada com o oraculista. A cobrança é feita por minuto.' : 'O oraculista responderá suas mensagens e você receberá as respostas na sua caixa de entrada.'}</p>
-                            {!isVideo && (
-                                <p className="flex items-center text-neon-cyan">
-                                    <Clock size={14} className="mr-1.5" />
-                                    Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
-                                </p>
+                            {appliedCoupon && (
+                                <div className="flex justify-between items-center text-xs text-green-400 font-bold px-1 animate-fadeIn">
+                                    <span>Cupom {appliedCoupon.code} aplicado!</span>
+                                    <span>-{appliedCoupon.discount_type === 'percent' ? `${appliedCoupon.discount_value}%` : `${appliedCoupon.discount_value} Créditos`}</span>
+                                </div>
                             )}
                         </div>
-                    </div>
 
-                    <div className="pt-2">
-                        <NeonButton
-                            variant={isVideo ? 'gold' : 'purple'}
-                            size="lg"
-                            fullWidth
-                            onClick={handleSubmit}
-                            loading={submitting}
-                            disabled={(!isVideo && questions.filter(q => q.trim()).length === 0) || submitting}
-                            className="text-base font-bold py-4 gap-3"
-                        >
-                            <div className="flex flex-col items-center leading-none">
-                                <span className="flex items-center gap-2">
-                                    {isVideo ? <Video size={24} /> : <Send size={20} />}
-                                    {isVideo ? 'Iniciar Chamada de Vídeo' : 'Enviar Consulta'}
-                                </span>
-                                <span className="text-[10px] opacity-80 font-normal mt-1">
-                                    {isVideo ? `Custo Inicial: ${calculateTotal()} Créditos` : `Total: ${calculateTotal()} Créditos`}
-                                </span>
+                        {initialFee > 0 && (
+                            <div className="flex justify-between items-center px-4 py-2 bg-neon-gold/5 border border-neon-gold/20 rounded-lg text-xs font-bold text-neon-gold">
+                                <span>Taxa de Abertura (Fixa):</span>
+                                <span>{initialFee} Créditos</span>
                             </div>
-                        </NeonButton>
+                        )}
+
+                        {/* Info de como funciona */}
+                        <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
+                            <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
+                            <div className="text-xs text-slate-300 leading-relaxed space-y-2">
+                                <p><strong>Como funciona:</strong> {isVideo ? 'Você entrará em uma sala de vídeo privada com o oraculista. A cobrança é feita por minuto.' : 'O oraculista responderá suas mensagens e você receberá as respostas na sua caixa de entrada.'}</p>
+                                {!isVideo && (
+                                    <p className="flex items-center text-neon-cyan">
+                                        <Clock size={14} className="mr-1.5" />
+                                        Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="pt-2">
+                            <NeonButton
+                                variant={isVideo ? 'gold' : 'purple'}
+                                size="lg"
+                                fullWidth
+                                onClick={handleSubmit}
+                                loading={submitting}
+                                disabled={(!isVideo && questions.filter(q => q.trim()).length === 0) || submitting}
+                                className="text-base font-bold py-4 gap-3"
+                            >
+                                <div className="flex flex-col items-center leading-none">
+                                    <span className="flex items-center gap-2">
+                                        {isVideo ? <Video size={24} /> : <Send size={20} />}
+                                        {isVideo ? 'Iniciar Chamada de Vídeo' : 'Enviar Consulta'}
+                                    </span>
+                                    <span className="text-[10px] opacity-80 font-normal mt-1">
+                                        {isVideo ? `Custo Inicial: ${calculateTotal()} Créditos` : `Total: ${calculateTotal()} Créditos`}
+                                    </span>
+                                </div>
+                            </NeonButton>
+                        </div>
                     </div>
-                </div>
-            </GlassCard>
+                </GlassCard>
+            )}
+
             <ClientCallModal
                 isOpen={callModalOpen}
                 oracleName={oracle.full_name}
                 avatarUrl={oracle.avatar_url || ''}
+                creditsPerMinute={oracle.credits_per_minute || 0}
+                initialFee={oracle.initial_fee_credits || 0}
                 onCancel={async () => {
                     if (consultationId) {
                         await supabase.from('consultations').update({ status: 'canceled' }).eq('id', consultationId)
