@@ -147,6 +147,50 @@ export const useAuthStore = create<AuthState>((set) => ({
             isAuthenticated: true
           })
           return { success: true }
+        } else {
+          // Self-Healing Strategy if profile not found
+          console.warn('Perfil ausente, tentando auto-correção...')
+
+          // Try to recover role from metadata or default to client
+          const metadata = data.user.user_metadata || {}
+          const fallbackRole = metadata.role || 'client'
+          const fallbackName = metadata.full_name || 'Usuário'
+
+          const { data: fixResult, error: fixError } = await supabase.rpc('ensure_user_profile', {
+            p_user_id: data.user.id,
+            p_email: data.user.email,
+            p_full_name: fallbackName,
+            p_role: fallbackRole
+          })
+
+          if (fixResult?.success) {
+            // Retry fetch
+            const { data: profileRetry } = await supabase
+              .from('profiles')
+              .select('*')
+              .eq('id', data.user.id)
+              .single()
+
+            if (profileRetry) {
+              const { data: walletRetry } = await supabase
+                .from('wallets')
+                .select('balance')
+                .eq('user_id', profileRetry.id)
+                .maybeSingle()
+
+              set({
+                profile: {
+                  ...profileRetry,
+                  credits: walletRetry?.balance || 0
+                },
+                isAuthenticated: true
+              })
+              return { success: true }
+            }
+          }
+
+          console.error('Falha na auto-correção:', fixError || fixResult)
+          return { success: false, error: 'Perfil corrompido. Contate o suporte.' }
         }
       }
       return { success: false, error: 'Usuário autenticado mas perfil não localizado.' }
@@ -184,26 +228,21 @@ export const useAuthStore = create<AuthState>((set) => ({
           .maybeSingle()
 
         if (!profile) {
-          console.log('Trigger delayed or failed, creating profile manually...')
-          // Fallback: Cria o perfil manualmente
-          await supabase.from('profiles').insert({
-            id: data.user.id,
-            email: email.trim().toLowerCase(),
-            full_name: full_name.trim(),
-            role: role,
-            phone: phone
+          console.log('Trigger delayed or failed, creating profile manually via RPC...')
+          // Fallback: Cria o perfil manualmente usando RPC seguro
+          const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+            p_user_id: data.user.id,
+            p_email: email.trim().toLowerCase(),
+            p_full_name: full_name.trim(),
+            p_role: role
           })
-        }
 
-        // 3. Garante que a carteira exista (para evitar erro 406 no checkAuth)
-        const { data: wallet } = await supabase
-          .from('wallets')
-          .select('user_id')
-          .eq('user_id', data.user.id)
-          .maybeSingle()
-
-        if (!wallet) {
-          await supabase.from('wallets').insert({ user_id: data.user.id, balance: 0 })
+          if (rpcError) {
+            console.error('Failed to create profile via RPC fallback:', rpcError)
+          } else {
+            // Atualiza o telefone separadamente, pois a RPC de fallback pode ser generica
+            await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
+          }
         }
 
         return { success: true }
