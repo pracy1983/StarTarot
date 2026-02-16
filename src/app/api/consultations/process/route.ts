@@ -73,6 +73,16 @@ export async function POST(req: Request) {
             }
         }
 
+        // 5.5. Buscar Comissão
+        const { data: commissionSetting } = await supabaseAdmin
+            .from('global_settings')
+            .select('value')
+            .eq('key', 'oracle_commission_pc')
+            .maybeSingle()
+
+        const commissionPc = parseInt(commissionSetting?.value || '70')
+        const oracleEarnings = Math.floor(consultation.total_credits * (commissionPc / 100))
+
         // 5. Buscar perguntas (Se não for vídeo)
         let questions: any[] = []
         if (consultation.type !== 'video') {
@@ -115,7 +125,7 @@ export async function POST(req: Request) {
                 metadata: { consultation_id: consultationId, type: 'new_pending_consultation' }
             })
 
-            // Registrar transações (Cliente confirmada, Oráculo pendente)
+            // Registrar transações (Cliente confirmada, Oráculo pendente com comissão aplicada)
             await supabaseAdmin.from('transactions').insert([
                 {
                     user_id: consultation.client_id,
@@ -128,10 +138,10 @@ export async function POST(req: Request) {
                 {
                     user_id: oracle.id,
                     type: 'earnings',
-                    amount: consultation.total_credits,
+                    amount: oracleEarnings,
                     status: 'pending',
                     description: `Pendente: Consulta de ${client.full_name}`,
-                    metadata: { consultation_id: consultationId, client_id: consultation.client_id }
+                    metadata: { consultation_id: consultationId, client_id: consultation.client_id, commission_pc: commissionPc }
                 }
             ])
 
@@ -289,10 +299,10 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             {
                 user_id: oracle.id,
                 type: 'earnings',
-                amount: consultation.total_credits,
+                amount: oracleEarnings,
                 status: 'confirmed',
                 description: `Ganhos: Consulta de ${client.full_name}`,
-                metadata: { consultation_id: consultationId, client_id: consultation.client_id }
+                metadata: { consultation_id: consultationId, client_id: consultation.client_id, commission_pc: commissionPc }
             }
         ])
 

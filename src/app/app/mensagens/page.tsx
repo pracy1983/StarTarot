@@ -60,9 +60,8 @@ export default function InboxPage() {
 
             if (iError) console.error('Error fetching inbox:', iError)
 
-            // 2. Buscar consultas (não ocultas da inbox)
             let query = supabase.from('consultations')
-                .select('*, oracle:profiles!oracle_id(full_name, avatar_url, username), client:profiles!client_id(full_name, avatar_url, username)')
+                .select('*, oracle:profiles!oracle_id(full_name, avatar_url), client:profiles!client_id(full_name, avatar_url)')
                 .eq('hidden_inbox', false)
 
             if (isOracleView) {

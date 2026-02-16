@@ -10,26 +10,59 @@ import toast from 'react-hot-toast'
 
 export default function AdminConfigPage() {
     const [masterPrompt, setMasterPrompt] = useState('')
-    const [loading, setLoading] = useState(true)
+    const [commission, setCommission] = useState('70')
+    const [creditPrice, setCreditPrice] = useState('0.20')
+    const [updatingRules, setUpdatingRules] = useState(false)
     const [saving, setSaving] = useState(false)
+    const [loading, setLoading] = useState(true)
 
     useEffect(() => {
-        fetchSettings()
+        const init = async () => {
+            setLoading(true)
+            await Promise.all([fetchSettings(), fetchBusinessRules()])
+            setLoading(false)
+        }
+        init()
     }, [])
 
     const fetchSettings = async () => {
         try {
-            const { data, error } = await supabase
+            const { data } = await supabase
                 .from('global_settings')
-                .select('*')
+                .select('value')
                 .eq('key', 'master_ai_prompt')
                 .maybeSingle()
 
             if (data) setMasterPrompt(data.value)
         } catch (err) {
             console.error('Error fetching settings:', err)
+        }
+    }
+
+    const fetchBusinessRules = async () => {
+        try {
+            const { data: comm } = await supabase.from('global_settings').select('value').eq('key', 'oracle_commission_pc').maybeSingle()
+            const { data: price } = await supabase.from('global_settings').select('value').eq('key', 'credit_price_brl').maybeSingle()
+
+            if (comm) setCommission(comm.value)
+            if (price) setCreditPrice(price.value)
+        } catch (err) {
+            console.error('Error fetching business rules:', err)
+        }
+    }
+
+    const handleUpdateRules = async () => {
+        setUpdatingRules(true)
+        try {
+            await supabase.from('global_settings').upsert([
+                { key: 'oracle_commission_pc', value: commission },
+                { key: 'credit_price_brl', value: creditPrice }
+            ])
+            toast.success('Regras de negócio atualizadas!')
+        } catch (err: any) {
+            toast.error('Erro ao salvar regras: ' + err.message)
         } finally {
-            setLoading(false)
+            setUpdatingRules(false)
         }
     }
 
@@ -101,7 +134,7 @@ export default function AdminConfigPage() {
                 {/* Configurações de API */}
                 <GlassCard className="border-white/5 space-y-6" hover={false}>
                     <div className="flex items-center space-x-3 text-neon-cyan mb-2">
-                        <Brain size={20} />
+                        <Database size={20} />
                         <h3 className="font-bold text-white uppercase tracking-wider text-sm">Integrações de IA</h3>
                     </div>
 
@@ -131,16 +164,25 @@ export default function AdminConfigPage() {
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                        <GlowInput
-                            label="Valor 1 Crédito (R$)"
-                            defaultValue="1.00"
-                            type="number"
-                        />
-                        <GlowInput
-                            label="Comissão Guias (%)"
-                            defaultValue="70"
-                            type="number"
-                        />
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Valor 1 Crédito (R$)</label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={creditPrice}
+                                onChange={e => setCreditPrice(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-neon-purple/50 outline-none"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Comissão Oráculo (%)</label>
+                            <input
+                                type="number"
+                                value={commission}
+                                onChange={e => setCommission(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-neon-purple/50 outline-none"
+                            />
+                        </div>
                     </div>
 
                     <div className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5">
@@ -151,9 +193,17 @@ export default function AdminConfigPage() {
                         <input type="checkbox" defaultChecked className="w-5 h-5 accent-neon-purple" />
                     </div>
 
-                    <NeonButton variant="gold" size="sm">Atualizar Regras</NeonButton>
+                    <NeonButton
+                        variant="gold"
+                        size="sm"
+                        onClick={handleUpdateRules}
+                        loading={updatingRules}
+                    >
+                        Atualizar Regras
+                    </NeonButton>
                 </GlassCard>
             </div>
         </div>
     )
 }
+
