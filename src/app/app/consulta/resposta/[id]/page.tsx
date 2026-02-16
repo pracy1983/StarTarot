@@ -14,6 +14,13 @@ const REWARD_STARS = 5
 const REWARD_TESTIMONIAL = 15
 const MIN_WORDS_FOR_REWARD = 10
 
+const GIFTS = [
+    { id: 'heart', name: 'Coração GIF', icon: '❤️', credits: 5 },
+    { id: 'flowers', name: 'Buquê de Flores', icon: '💐', credits: 15 },
+    { id: 'bear', name: 'Urso de Pelúcia', icon: '🧸', credits: 50 },
+    { id: 'moon', name: 'Lua Cheia com Laço', icon: '🌕', credits: 150 },
+]
+
 export default function ConsultationResponsePage() {
     const { id } = useParams()
     const router = useRouter()
@@ -31,6 +38,8 @@ export default function ConsultationResponsePage() {
     const [isSubmittingRating, setIsSubmittingRating] = useState(false)
     const [hasRated, setHasRated] = useState(false)
     const [showRatingPrompt, setShowRatingPrompt] = useState(false)
+    const [isSendingGift, setIsSendingGift] = useState<string | null>(null)
+    const [sentGifts, setSentGifts] = useState<string[]>([])
 
     useEffect(() => {
         if (id) fetchConsultation()
@@ -157,6 +166,39 @@ export default function ConsultationResponsePage() {
         }
     }
 
+    const handleSendGift = async (gift: typeof GIFTS[0]) => {
+        if (!profile || (profile.credits || 0) < gift.credits) {
+            toast.error('Saldo insuficiente para enviar este presente.')
+            return
+        }
+
+        setIsSendingGift(gift.id)
+        try {
+            const { error } = await supabase.rpc('purchase_gift', {
+                p_consultation_id: id,
+                p_sender_id: profile.id,
+                p_receiver_id: oracle.id,
+                p_gift_name: gift.name,
+                p_credits: gift.credits
+            })
+
+            if (error) throw error
+
+            setProfile({
+                ...profile,
+                credits: (profile.credits || 0) - gift.credits
+            })
+
+            setSentGifts(prev => [...prev, gift.id])
+            toast.success(`Presente ${gift.name} enviado com sucesso! 🎁✨`)
+        } catch (err: any) {
+            console.error('Error sending gift:', err)
+            toast.error('Erro ao enviar presente: ' + err.message)
+        } finally {
+            setIsSendingGift(null)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -267,6 +309,54 @@ export default function ConsultationResponsePage() {
                     </motion.div>
                 ))}
             </div>
+
+            {/* Gifts Section */}
+            <GlassCard className="border-neon-gold/20 bg-neon-gold/5" hover={false}>
+                <div className="text-center space-y-4">
+                    <div className="flex items-center justify-center space-x-2 text-neon-gold">
+                        <Sparkles size={20} />
+                        <h3 className="text-lg font-bold uppercase tracking-wider">Envie um Presente Especial</h3>
+                    </div>
+                    <p className="text-slate-400 text-sm italic">
+                        Gostou do atendimento? Demonstre seu carinho enviando um presente simbólico ao oraculista.
+                    </p>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                        {GIFTS.map((gift) => {
+                            const isSent = sentGifts.includes(gift.id)
+                            return (
+                                <button
+                                    key={gift.id}
+                                    onClick={() => !isSent && handleSendGift(gift)}
+                                    disabled={isSendingGift === gift.id || isSent}
+                                    className={`relative group p-4 rounded-2xl border transition-all flex flex-col items-center justify-center space-y-2 ${isSent
+                                        ? 'bg-green-500/10 border-green-500/30'
+                                        : 'bg-white/5 border-white/10 hover:border-neon-gold/50 hover:bg-neon-gold/10'
+                                        }`}
+                                >
+                                    <span className="text-4xl group-hover:scale-110 transition-transform">
+                                        {gift.icon}
+                                    </span>
+                                    <div className="text-center">
+                                        <p className="text-[10px] font-bold text-white uppercase truncate w-full px-1">{gift.name}</p>
+                                        <p className="text-xs text-neon-gold font-bold">{gift.credits} CR</p>
+                                    </div>
+                                    {isSendingGift === gift.id && (
+                                        <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
+                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                        </div>
+                                    )}
+                                    {isSent && (
+                                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg border border-white/20">
+                                            <Sparkles size={12} />
+                                        </div>
+                                    )}
+                                </button>
+                            )
+                        })}
+                    </div>
+                </div>
+            </GlassCard>
 
             {/* Rating Section */}
             {!hasRated ? (

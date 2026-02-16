@@ -283,12 +283,10 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                     onClick={(e) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
-                                        // Specific logic for video
                                         if (oracle.allows_video) {
-                                            startCallFlow()
+                                            router.push(`/app/consulta/${oracle.id}?type=video`)
                                         }
                                     }}
-                                    loading={isChecking}
                                     className={!oracle.allows_video ? 'opacity-50 cursor-not-allowed grayscale' : ''}
                                 >
                                     <Video size={16} className="mr-1" />
@@ -303,7 +301,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
                                         if (oracle.allows_text) {
-                                            router.push(`/app/consulta/${oracle.id}?type=mensagem`)
+                                            router.push(`/app/consulta/${oracle.id}?type=message`)
                                         }
                                     }}
                                 >
@@ -346,7 +344,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         e.stopPropagation()
                                         if (!isAuthenticated) return handleStartConsultation(e)
                                         // Allow sending message even if offline (async response)
-                                        router.push(`/app/consulta/${oracle.id}?type=mensagem`)
+                                        router.push(`/app/consulta/${oracle.id}?type=message`)
                                     }}
                                 >
                                     <MessageSquare size={16} className="mr-1" />

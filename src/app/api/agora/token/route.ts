@@ -25,11 +25,11 @@ export async function POST(req: NextRequest) {
         const currentTimestamp = Math.floor(Date.now() / 1000)
         const privilegeExpiredTs = currentTimestamp + expirationTimeInSeconds
 
-        const token = RtcTokenBuilder.buildTokenWithUid(
+        const token = RtcTokenBuilder.buildTokenWithUserAccount(
             appId,
             appCertificate,
             channelName,
-            uid,
+            uid, // Agora accepts string for UserAccount
             agoraRole,
             privilegeExpiredTs,
             privilegeExpiredTs // tokenExpireTs

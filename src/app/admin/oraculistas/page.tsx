@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -46,7 +46,22 @@ export default function AdminOraculistasPage() {
                 .order('full_name', { ascending: true })
 
             if (error) throw error
-            setOraculistas(data || [])
+
+            // Fetch unread gifts count for each oracle
+            const { data: giftCounts, error: gError } = await supabase
+                .from('gifts')
+                .select('receiver_id, name, credits, profiles!sender_id(full_name)')
+                .eq('is_seen_by_admin', false)
+
+            const oracleWithGifts = data.map(o => {
+                const unreadGifts = giftCounts?.filter(g => g.receiver_id === o.id) || []
+                return {
+                    ...o,
+                    unread_gifts: unreadGifts
+                }
+            })
+
+            setOraculistas(oracleWithGifts || [])
         } catch (err: any) {
             console.error('Erro ao buscar oraculistas:', err)
             toast.error('Erro ao carregar lista de guias')
@@ -231,7 +246,7 @@ export default function AdminOraculistasPage() {
                             {filteredOracles.map((o) => (
                                 <tr key={o.id} className="hover:bg-white/5 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center space-x-3">
+                                        <div className="relative">
                                             <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
                                                 {o.avatar_url ? (
                                                     <img src={o.avatar_url} className="w-full h-full object-cover" alt={o.full_name} />
@@ -241,8 +256,18 @@ export default function AdminOraculistasPage() {
                                                     </div>
                                                 )}
                                             </div>
-                                            <span className="text-sm font-medium text-white">{o.full_name}</span>
+                                            {o.unread_gifts?.length > 0 && (
+                                                <motion.div
+                                                    initial={{ scale: 0 }}
+                                                    animate={{ scale: 1 }}
+                                                    className="absolute -top-1 -right-1 bg-neon-gold text-deep-space rounded-full p-1 shadow-[0_0_10px_rgba(251,191,36,0.5)] z-10"
+                                                    title={`Recebeu ${o.unread_gifts.length} presente(s): ${o.unread_gifts.map((g: any) => `${g.name} (${g.profiles?.full_name})`).join(', ')}`}
+                                                >
+                                                    <Star size={10} fill="currentColor" />
+                                                </motion.div>
+                                            )}
                                         </div>
+                                        <span className="text-sm font-medium text-white">{o.full_name}</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${o.is_ai ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'}`}>

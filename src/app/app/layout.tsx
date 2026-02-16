@@ -155,7 +155,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
                 <div className="flex items-center space-x-2 sm:space-x-4">
                     {/* Dropdown de Visões (Apenas para Oráculo ou Owner) */}
-                    {(profile?.role === 'owner' || profile?.role === 'oracle' || profile?.is_oracle) && <RoleSwitcher />}
+                    {(profile?.role === 'owner' || profile?.role === 'oracle' || profile?.is_oracle || profile?.application_status === 'approved') && <RoleSwitcher />}
 
                     {/* Global Oracle Status Toggle */}
                     {(profile?.role === 'oracle' || (profile?.role === 'owner' && isOracleView)) && (
@@ -214,6 +214,19 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             )
                         })}
                     </nav>
+
+                    {/* Become Oracle Button (Discrete) */}
+                    {profile?.role === 'client' && !isOracleView && (
+                        <div className="px-4 mb-2">
+                            <button
+                                onClick={() => router.push('/app/tornar-se-oraculo')}
+                                className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
+                            >
+                                <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
+                                <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
+                            </button>
+                        </div>
+                    )}
 
 
                     <div className="p-4 border-t border-white/5">

@@ -25,31 +25,32 @@ export default function OracleGanhosPage() {
     const fetchGanhos = async () => {
         setLoading(true)
         try {
-            // Fetch finished consultations
-            const { data: consultations, error } = await supabase
-                .from('consultations')
-                .select('*, profiles!client_id(full_name)')
-                .eq('oracle_id', profile!.id)
+            // Fetch all earnings transactions
+            const { data: transactions, error } = await supabase
+                .from('transactions')
+                .select('*')
+                .eq('user_id', profile!.id)
+                .eq('type', 'earnings')
                 .order('created_at', { ascending: false })
 
             if (error) throw error
 
-            const total = consultations?.reduce((acc, c) => acc + (c.credits_consumed || 0), 0) || 0
+            const total = transactions?.reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
 
             const firstDayOfMonth = new Date()
             firstDayOfMonth.setDate(1)
             firstDayOfMonth.setHours(0, 0, 0, 0)
 
-            const monthly = consultations
-                ?.filter(c => new Date(c.created_at) >= firstDayOfMonth)
-                .reduce((acc, c) => acc + (c.credits_consumed || 0), 0) || 0
+            const monthly = transactions
+                ?.filter(t => new Date(t.created_at) >= firstDayOfMonth)
+                .reduce((acc, t) => acc + (Math.abs(Number(t.amount)) || 0), 0) || 0
 
             setStats({
                 totalEarned: total,
                 monthlyEarned: monthly,
                 pendingPayout: total // Simplified for now
             })
-            setHistory(consultations || [])
+            setHistory(transactions || [])
         } catch (err) {
             console.error('Error fetching gains:', err)
         } finally {
@@ -117,26 +118,35 @@ export default function OracleGanhosPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
-                            {history.map((item) => (
-                                <tr key={item.id} className="group hover:bg-white/[0.02] transition-colors">
-                                    <td className="py-4">
-                                        <div className="flex items-center text-sm text-white">
-                                            <Calendar size={14} className="mr-2 text-slate-500" />
-                                            {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                                        </div>
-                                    </td>
-                                    <td className="py-4 font-medium text-slate-300">{(item.profiles as any)?.full_name || 'Anônimo'}</td>
-                                    <td className="py-4">
-                                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${item.type === 'video' ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-neon-purple/10 text-neon-purple'}`}>
-                                            {item.type}
-                                        </span>
-                                    </td>
-                                    <td className="py-4 text-sm text-slate-400">{item.duration_seconds ? `${Math.floor(item.duration_seconds / 60)} min` : '-'}</td>
-                                    <td className="py-4 text-right">
-                                        <span className="text-sm font-bold text-neon-gold">+{item.credits_consumed || 0} CR</span>
-                                    </td>
-                                </tr>
-                            ))}
+                            {history.map((item) => {
+                                const isGift = item.description.toLowerCase().includes('presente')
+                                const amount = Math.abs(Number(item.amount))
+
+                                return (
+                                    <tr key={item.id} className="group hover:bg-white/[0.02] transition-colors">
+                                        <td className="py-4">
+                                            <div className="flex items-center text-sm text-white">
+                                                <Calendar size={14} className="mr-2 text-slate-500" />
+                                                {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                                            </div>
+                                        </td>
+                                        <td className="py-4 font-medium text-slate-300">
+                                            {isGift ? 'Gift (Consulente)' : 'Consulente'}
+                                        </td>
+                                        <td className="py-4">
+                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${isGift ? 'bg-neon-gold/10 text-neon-gold' : 'bg-neon-purple/10 text-neon-purple'}`}>
+                                                {isGift ? 'Presente' : 'Consulta'}
+                                            </span>
+                                        </td>
+                                        <td className="py-4 text-sm text-slate-400">
+                                            {isGift ? item.metadata?.gift_name : '-'}
+                                        </td>
+                                        <td className="py-4 text-right">
+                                            <span className="text-sm font-bold text-neon-gold">+{amount} CR</span>
+                                        </td>
+                                    </tr>
+                                )
+                            })}
                         </tbody>
                     </table>
                 </div>

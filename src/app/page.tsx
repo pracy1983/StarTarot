@@ -113,6 +113,13 @@ export default function LandingPage() {
           .maybeSingle()
 
         if (existingUser) {
+          if (registrationRole === 'oracle') {
+            // Se está tentando se cadastrar como oráculo mas já existe como membro
+            setError('Você já possui uma conta de membro. Deseja tornar-se um oraculista? Faça login e use a opção no menu lateral.')
+            setFormLoading(false)
+            return
+          }
+
           if (existingUser.email === email.trim().toLowerCase()) {
             setError('Este e-mail já está em uso.')
           } else {
@@ -302,12 +309,6 @@ export default function LandingPage() {
               <NeonButton variant="purple" size="lg" className="min-w-[220px]" onClick={() => openAuth('client', true)}>
                 Iniciar Minha Jornada
               </NeonButton>
-              <button
-                onClick={() => openAuth('oracle', true)}
-                className="px-8 py-4 rounded-2xl bg-white/5 border border-white/10 text-white font-bold hover:bg-white/10 transition-all flex items-center"
-              >
-                Trabalhe Conosco
-              </button>
             </motion.div>
           )}
         </header>
@@ -389,12 +390,6 @@ export default function LandingPage() {
 
       {/* Footer Minimalist */}
       <footer className="py-12 px-6 border-t border-white/5 mt-24 text-center space-y-6">
-        <button
-          onClick={() => openAuth('oracle', true)}
-          className="text-sm font-bold text-slate-400 hover:text-neon-purple transition-colors uppercase tracking-widest flex items-center justify-center mx-auto group"
-        >
-          <Sparkles size={16} className="mr-2 group-hover:text-neon-gold transition-colors" /> Seja um oraculista da StarTarot
-        </button>
         <p className="text-slate-500 text-xs uppercase tracking-[0.2em] font-bold">
           © 2026 StarTarot Portal - Todos os direitos reservados
         </p>

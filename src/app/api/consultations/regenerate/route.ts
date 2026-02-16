@@ -50,7 +50,7 @@ export async function POST(req: Request) {
 
         if (!questions) throw new Error('Nenhuma pergunta encontrada')
 
-        // 4. Lógica de IA (DeepSeek)
+        // 4. Lógica de IA (DeepSeek) - Processamento Paralelo
         const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
 
         const subjectContext = consultation.subject_name
@@ -64,8 +64,13 @@ ESTILO: ${oracle.personality || 'Direto e acolhedor.'}
 INSTRUÇÕES: Respondas as perguntas do consulente de forma mística, profunda e direta.${subjectContext}
         `.trim()
 
-        for (const q of questions) {
+        // Processamento paralelo com controle
+        const results = await Promise.all(questions.map(async (q) => {
             try {
+                // Timeout manual de 45 segundos para cada chamada
+                const controller = new AbortController()
+                const timeoutId = setTimeout(() => controller.abort(), 45000)
+
                 const response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -78,20 +83,37 @@ INSTRUÇÕES: Respondas as perguntas do consulente de forma mística, profunda e
                             { role: 'system', content: systemMessage },
                             { role: 'user', content: q.question_text }
                         ],
-                        temperature: 0.7
-                    })
+                        temperature: 0.7,
+                        max_tokens: 1000
+                    }),
+                    signal: controller.signal
                 })
+
+                clearTimeout(timeoutId)
 
                 if (response.ok) {
                     const data = await response.json()
+                    const answer = data.choices[0].message.content
+
                     await supabaseAdmin
                         .from('consultation_questions')
-                        .update({ answer_text: data.choices[0].message.content })
+                        .update({ answer_text: answer })
                         .eq('id', q.id)
+
+                    return { id: q.id, success: true }
+                } else {
+                    const errorMsg = await response.text()
+                    throw new Error(`DeepSeek Error: ${response.status} - ${errorMsg}`)
                 }
-            } catch (e) {
-                console.error('Erro ao regenerar pergunta:', q.id, e)
+            } catch (e: any) {
+                console.error(`Erro ao regenerar pergunta ${q.id}:`, e.message)
+                return { id: q.id, success: false, error: e.message }
             }
+        }))
+
+        const allFailed = results.every(r => !r.success)
+        if (allFailed) {
+            throw new Error('Todas as tentativas de regeneração falharam.')
         }
 
         // 5. Finalizar

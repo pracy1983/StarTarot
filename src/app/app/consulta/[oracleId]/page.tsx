@@ -1,18 +1,22 @@
 'use client'
 
 import React, { useState, useEffect } from 'react'
-import { useParams, useRouter } from 'next/navigation'
+import { useParams, useRouter, useSearchParams } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { QuestionInput, SubjectInfo } from '@/components/consultation/QuestionInput'
-import { ArrowLeft, Send, AlertCircle, Clock, Save, User, Calendar, MapPin } from 'lucide-react'
+import { ArrowLeft, Send, AlertCircle, Clock, Save, User, Calendar, MapPin, Video } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import { ClientCallModal } from '@/components/client/ClientCallModal'
 
 export default function NewConsultationPage() {
     const { oracleId } = useParams()
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const consultationType = searchParams.get('type') || 'message'
+    const isVideo = consultationType === 'video'
     const { profile, setProfile } = useAuthStore()
 
     const [oracle, setOracle] = useState<any>(null)
@@ -36,6 +40,8 @@ export default function NewConsultationPage() {
 
     const [loading, setLoading] = useState(true)
     const [submitting, setSubmitting] = useState(false)
+    const [callModalOpen, setCallModalOpen] = useState(false)
+    const [consultationId, setConsultationId] = useState<string | null>(null)
 
     // Derived state
     const isAstroOrNum = oracle?.specialty?.toLowerCase().includes('astrologia') ||
@@ -54,6 +60,40 @@ export default function NewConsultationPage() {
             setClientBirthPlace(profile.birth_place || '')
         }
     }, [profile])
+
+    useEffect(() => {
+        if (!consultationId || !callModalOpen) return
+
+        const channel = supabase
+            .channel(`consultation_${consultationId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'consultations',
+                    filter: `id=eq.${consultationId}`
+                },
+                (payload) => {
+                    const newStatus = payload.new.status
+                    if (newStatus === 'active') {
+                        // Accepted!
+                        toast.success('O oraculista aceitou a chamada!')
+                        router.push(`/app/consulta/video/${consultationId}`)
+                    } else if (newStatus === 'canceled' || newStatus === 'missed') {
+                        // Rejected/Timeout
+                        setCallModalOpen(false)
+                        setConsultationId(null)
+                        toast.error('O oraculista não pôde atender no momento.')
+                    }
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
+    }, [consultationId, callModalOpen])
 
     const fetchData = async () => {
         try {
@@ -138,12 +178,16 @@ export default function NewConsultationPage() {
             }
         }
 
+        if (isVideo) {
+            return initialFee
+        }
+
         return Math.ceil(total)
     }
 
     const handleSubmit = async () => {
         const validQuestions = questions.filter(q => q.trim().length > 0)
-        if (validQuestions.length === 0) {
+        if (!isVideo && validQuestions.length === 0) {
             toast.error('Adicione pelo menos uma mensagem')
             return
         }
@@ -226,8 +270,9 @@ export default function NewConsultationPage() {
                 .insert({
                     client_id: profile!.id,
                     oracle_id: oracleId,
-                    total_questions: validQuestions.length,
+                    total_questions: isVideo ? 0 : validQuestions.length,
                     total_credits: totalCost,
+                    type: consultationType,
                     subject_name: subjectName || null, // Mantemos compatibilidade
                     subject_birthdate: subjectBirthdate || null, // Mantemos compatibilidade
                     metadata: {
@@ -242,17 +287,19 @@ export default function NewConsultationPage() {
             if (consultationError) throw consultationError
 
             // C. Inserir perguntas
-            const questionsToInsert = validQuestions.map((q, idx) => ({
-                consultation_id: consultation.id,
-                question_text: q,
-                question_order: idx + 1
-            }))
+            if (!isVideo) {
+                const questionsToInsert = validQuestions.map((q, idx) => ({
+                    consultation_id: consultation.id,
+                    question_text: q,
+                    question_order: idx + 1
+                }))
 
-            const { error: questionsError } = await supabase
-                .from('consultation_questions')
-                .insert(questionsToInsert)
+                const { error: questionsError } = await supabase
+                    .from('consultation_questions')
+                    .insert(questionsToInsert)
 
-            if (questionsError) throw questionsError
+                if (questionsError) throw questionsError
+            }
 
             // D. Chamar API para processar (Notificações, etc)
             // Não bloqueia se falhar a API, pois o banco já foi
@@ -262,8 +309,13 @@ export default function NewConsultationPage() {
                 body: JSON.stringify({ consultationId: consultation.id })
             }).catch(e => console.error('Erro ao chamar process:', e))
 
-            toast.success('Consulta enviada com sucesso!')
-            router.push('/app/mensagens')
+            if (isVideo) {
+                setConsultationId(consultation.id)
+                setCallModalOpen(true)
+            } else {
+                toast.success('Consulta enviada com sucesso!')
+                router.push('/app/mensagens')
+            }
         } catch (err: any) {
             console.error('Error submitting consultation:', err)
             toast.error('Erro: ' + err.message)
@@ -302,6 +354,9 @@ export default function NewConsultationPage() {
                 >
                     <ArrowLeft size={18} className="mr-2" /> Voltar
                 </button>
+                <h1 className="text-lg font-bold text-white">
+                    Nova {isVideo ? 'Consulta por Vídeo' : 'Consulta por Mensagem'}
+                </h1>
                 <div className="text-sm font-bold text-neon-gold">
                     Saldo: {walletBalance} CR
                 </div>
@@ -322,13 +377,18 @@ export default function NewConsultationPage() {
                         <p className="text-neon-cyan text-xs font-medium uppercase tracking-wider">{oracle.specialty}</p>
                         {/* Badges de Requisitos */}
                         <div className="flex gap-2 mt-2">
+                            <span className={`text-[10px] px-2 py-0.5 rounded font-bold uppercase ${isVideo ? 'bg-neon-purple/20 text-neon-purple' : 'bg-neon-cyan/20 text-neon-cyan'}`}>
+                                {isVideo ? 'Modo Vídeo' : 'Modo Mensagem'}
+                            </span>
                             {oracle.requires_birthdate && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-300">Exige Nasc.</span>}
                             {oracle.requires_birthtime && <span className="text-[10px] bg-white/5 px-2 py-0.5 rounded text-slate-300">Exige Hora</span>}
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs text-slate-500">Valor por mensagem</p>
-                        <p className="text-lg font-bold text-neon-gold">{pricePerQuestion} CR</p>
+                        <p className="text-xs text-slate-500">{isVideo ? 'Valor por minuto' : 'Valor por mensagem'}</p>
+                        <p className="text-lg font-bold text-neon-gold">
+                            {isVideo ? oracle.credits_per_minute : pricePerQuestion} CR
+                        </p>
                         {initialFee > 0 && (
                             <p className="text-[10px] text-slate-400 mt-1">
                                 + {initialFee} CR taxa inicial
@@ -403,11 +463,13 @@ export default function NewConsultationPage() {
                         isMandatory={false}
                     />
 
-                    <QuestionInput
-                        questions={questions}
-                        onChange={setQuestions}
-                        pricePerQuestion={pricePerQuestion}
-                    />
+                    {!isVideo && (
+                        <QuestionInput
+                            questions={questions}
+                            onChange={setQuestions}
+                            pricePerQuestion={pricePerQuestion}
+                        />
+                    )}
 
                     {/* COUPON SECTION */}
                     <div className="space-y-3 p-4 bg-white/5 rounded-xl border border-white/10">
@@ -450,34 +512,51 @@ export default function NewConsultationPage() {
                     <div className="flex items-start space-x-3 p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
                         <AlertCircle size={20} className="text-blue-400 flex-shrink-0 mt-0.5" />
                         <div className="text-xs text-slate-300 leading-relaxed space-y-2">
-                            <p><strong>Como funciona:</strong> O oraculista responderá suas mensagens e você receberá as respostas na sua caixa de entrada.</p>
-                            <p className="flex items-center text-neon-cyan">
-                                <Clock size={14} className="mr-1.5" />
-                                Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
-                            </p>
+                            <p><strong>Como funciona:</strong> {isVideo ? 'Você entrará em uma sala de vídeo privada com o oraculista. A cobrança é feita por minuto.' : 'O oraculista responderá suas mensagens e você receberá as respostas na sua caixa de entrada.'}</p>
+                            {!isVideo && (
+                                <p className="flex items-center text-neon-cyan">
+                                    <Clock size={14} className="mr-1.5" />
+                                    Tempo médio de resposta: <strong className="ml-1">30 minutos</strong>
+                                </p>
+                            )}
                         </div>
                     </div>
 
                     <div className="pt-2">
                         <NeonButton
-                            variant="purple"
+                            variant={isVideo ? 'gold' : 'purple'}
                             size="lg"
                             fullWidth
                             onClick={handleSubmit}
                             loading={submitting}
-                            disabled={questions.filter(q => q.trim()).length === 0 || submitting}
+                            disabled={(!isVideo && questions.filter(q => q.trim()).length === 0) || submitting}
                             className="text-base font-bold py-4 gap-3"
                         >
                             <div className="flex flex-col items-center leading-none">
-                                <span className="flex items-center gap-2"><Send size={20} /> Enviar Consulta</span>
+                                <span className="flex items-center gap-2">
+                                    {isVideo ? <Video size={24} /> : <Send size={20} />}
+                                    {isVideo ? 'Iniciar Chamada de Vídeo' : 'Enviar Consulta'}
+                                </span>
                                 <span className="text-[10px] opacity-80 font-normal mt-1">
-                                    Total: {calculateTotal()} CR
+                                    {isVideo ? `Custo Inicial: ${calculateTotal()} CR` : `Total: ${calculateTotal()} CR`}
                                 </span>
                             </div>
                         </NeonButton>
                     </div>
                 </div>
             </GlassCard>
+            <ClientCallModal
+                isOpen={callModalOpen}
+                oracleName={oracle.full_name}
+                avatarUrl={oracle.avatar_url || ''}
+                onCancel={async () => {
+                    if (consultationId) {
+                        await supabase.from('consultations').update({ status: 'canceled' }).eq('id', consultationId)
+                    }
+                    setCallModalOpen(false)
+                    setConsultationId(null)
+                }}
+            />
         </div>
     )
 }
