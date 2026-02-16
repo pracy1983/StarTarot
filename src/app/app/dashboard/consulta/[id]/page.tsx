@@ -72,6 +72,11 @@ export default function OracleAnswerPage() {
     }
 
     const handleSubmit = async () => {
+        if (questions.length === 0) {
+            toast.error('Nenhuma pergunta encontrada para esta consulta.')
+            return
+        }
+
         const missingAnswers = questions.some(q => !answers[q.id]?.trim())
         if (missingAnswers) {
             toast.error('Por favor, responda todas as perguntas.')

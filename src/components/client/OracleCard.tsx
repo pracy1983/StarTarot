@@ -155,7 +155,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     }
 
     const { status, label } = getOracleStatus(oracle.is_online, oracle.schedules || [])
-    const isZeroFee = oracle.initial_fee_credits === 0
+    const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -189,17 +189,19 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             {/* Zero Fee Badge */}
             {isZeroFee && (
                 <div className="absolute top-4 right-4 z-20 px-2 py-0.5 bg-neon-gold text-deep-space text-[9px] font-black uppercase tracking-wider rounded shadow-lg animate-pulse">
-                    ZERO TARIFA
+                    ZERO TARIFA INICIAL
                 </div>
             )}
 
-            {/* Rating Stars - Top Left */}
-            <div className="absolute top-4 left-4 z-20 group/rating" title={oracle.rating ? `Avaliação: ${oracle.rating.toFixed(1)}` : 'Sem avaliações ainda'}>
-                <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
-                    <Star size={10} className="text-neon-gold fill-neon-gold" />
-                    <span className="text-[10px] font-bold text-white ml-1">{oracle.rating?.toFixed(1) || '5.0'}</span>
+            {/* Rating Stars - Top Left (Only if rating exists) */}
+            {oracle.rating ? (
+                <div className="absolute top-4 left-4 z-20 group/rating" title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
+                    <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
+                        <Star size={10} className="text-neon-gold fill-neon-gold" />
+                        <span className="text-[10px] font-bold text-white ml-1">{oracle.rating.toFixed(1)}</span>
+                    </div>
                 </div>
-            </div>
+            ) : null}
 
             {/* Status Badge */}
             <div className={`absolute top-4 right-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${isZeroFee ? 'mt-8' : ''} ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :

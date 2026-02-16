@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { Sparkles, Send, User, Book, MessageSquare, Info, Star } from 'lucide-react'
@@ -16,15 +16,22 @@ export default function OracleSignupPage() {
     const [formData, setFormData] = useState({
         full_name: profile?.full_name || '',
         specialty: '',
+        custom_specialty: '',
         bio: '',
         personality: '',
         phone: profile?.phone || ''
     })
+    const [specialties, setSpecialties] = useState<string[]>([])
 
-    const specialties = [
-        'Tarot', 'Astrologia', 'Cartomancia', 'Numerologia',
-        'Runas', 'Clarividência', 'Búzios', 'Outro'
-    ]
+    useEffect(() => {
+        const fetchSpecialties = async () => {
+            const { data } = await supabase.from('specialties').select('name').order('name')
+            if (data) {
+                setSpecialties(data.map(s => s.name))
+            }
+        }
+        fetchSpecialties()
+    }, [])
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
@@ -39,8 +46,9 @@ export default function OracleSignupPage() {
                 .from('profiles')
                 .update({
                     ...formData,
+                    custom_specialty: formData.specialty === 'Outros' ? formData.custom_specialty : null,
                     application_status: 'pending',
-                    role: 'oracle' // Já definimos como oracle mas com status pending
+                    role: 'oracle'
                 })
                 .eq('id', profile!.id)
 
@@ -128,6 +136,19 @@ export default function OracleSignupPage() {
                                 <option value="">Selecione...</option>
                                 {specialties.map(s => <option key={s} value={s}>{s}</option>)}
                             </select>
+
+                            {formData.specialty === 'Outros' && (
+                                <div className="mt-2">
+                                    <input
+                                        type="text"
+                                        value={formData.custom_specialty || ''}
+                                        onChange={e => setFormData({ ...formData, custom_specialty: e.target.value })}
+                                        className="w-full bg-deep-space border border-dashed border-neon-cyan/30 rounded-xl p-3 text-white focus:border-neon-cyan/50 outline-none transition-all placeholder-slate-500"
+                                        placeholder="Digite sua especialidade..."
+                                        required
+                                    />
+                                </div>
+                            )}
                         </div>
 
                         {/* Telefone */}

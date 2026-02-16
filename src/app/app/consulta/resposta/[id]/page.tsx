@@ -118,10 +118,7 @@ export default function ConsultationResponsePage() {
         }
 
         const words = testimonial.trim().split(/\s+/).filter(w => w.length > 0)
-        if (words.length < 10) {
-            toast.error('Seu depoimento deve ter pelo menos 10 palavras.')
-            return
-        }
+        const hasTestimonial = words.length >= 10
 
         setIsSubmittingRating(true)
         try {
@@ -139,7 +136,10 @@ export default function ConsultationResponsePage() {
             if (ratingError) throw ratingError
 
             // 2. Calcular recompensas
-            let totalReward = REWARD_STARS + REWARD_TESTIMONIAL
+            let totalReward = REWARD_STARS
+            if (hasTestimonial) {
+                totalReward += REWARD_TESTIMONIAL
+            }
 
             // 3. Adicionar Créditos (Reward)
             const { error: rewardError } = await supabase.rpc('grant_reward_credits', {
@@ -243,13 +243,11 @@ export default function ConsultationResponsePage() {
                         <p className="text-neon-cyan text-xs font-medium uppercase tracking-wider">{oracle.specialty}</p>
                     </div>
                     <div className="text-right">
-                        <p className="text-xs text-slate-500">Consulta realizada em</p>
-                        <p className="text-sm font-bold text-white">
-                            {new Date(consultation.created_at).toLocaleDateString('pt-BR', {
-                                day: '2-digit',
-                                month: 'long',
-                                year: 'numeric'
-                            })}
+                        <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
+                            {profile?.role === 'oracle' ? 'Ganhos da Consulta' : 'Investimento'}
+                        </p>
+                        <p className="text-xl font-bold text-neon-gold">
+                            {consultation.total_credits} CR
                         </p>
                     </div>
                 </div>
@@ -407,7 +405,7 @@ export default function ConsultationResponsePage() {
                                     <Award size={14} className="mr-1" /> +5 Créditos pela nota
                                 </div>
                                 <div className={`flex items-center ${testimonial.trim().split(/\s+/).filter(Boolean).length >= MIN_WORDS_FOR_REWARD ? 'text-green-400' : 'text-slate-500'}`}>
-                                    <Award size={14} className="mr-1" /> +15 Créditos pelo depoimento (&gt;10 palavras)
+                                    <Award size={14} className="mr-1" /> +15 Créditos pelo depoimento (com mais de 10 palavras)
                                 </div>
                             </div>
 

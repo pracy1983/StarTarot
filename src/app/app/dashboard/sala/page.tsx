@@ -84,11 +84,21 @@ export default function ServiceRoomPage() {
 
         fetchQueueCount()
 
+        // Prevent accidental tab close
+        const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+            if (joined) {
+                e.preventDefault()
+                e.returnValue = ''
+            }
+        }
+        window.addEventListener('beforeunload', handleBeforeUnload)
+
         return () => {
             supabase.removeChannel(channel)
+            window.removeEventListener('beforeunload', handleBeforeUnload)
             leaveCall()
         }
-    }, [consultationId])
+    }, [consultationId, joined]) // Added joined to dependency to update listener closure
 
     const fetchQueueCount = async () => {
         if (!profile?.id) return

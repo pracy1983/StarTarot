@@ -23,6 +23,7 @@ export default function OracleProfilePage() {
     const router = useRouter()
     const [oracle, setOracle] = useState<any>(null)
     const [consultationCount, setConsultationCount] = useState(0)
+    const [ratings, setRatings] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
 
     useEffect(() => {
@@ -48,6 +49,15 @@ export default function OracleProfilePage() {
                 .eq('status', 'answered')
 
             setConsultationCount(count || 0)
+
+            // Buscar avaliações
+            const { data: ratingsData } = await supabase
+                .from('ratings')
+                .select('*, client:client_id(full_name, avatar_url)')
+                .eq('oracle_id', id)
+                .order('created_at', { ascending: false })
+
+            setRatings(ratingsData || [])
         } catch (err) {
             console.error('Erro ao carregar oráculo:', err)
         } finally {
@@ -198,6 +208,65 @@ export default function OracleProfilePage() {
                     )}
                 </div>
             </div>
+
+            {/* Avaliações */}
+            <GlassCard className="border-white/5 space-y-6" hover={false}>
+                <h3 className="font-bold text-white uppercase tracking-wider text-sm flex items-center">
+                    <Star size={18} className="mr-2 text-neon-gold" />
+                    Avaliações ({ratings.length})
+                </h3>
+
+                {ratings.length === 0 ? (
+                    <div className="text-center py-8 text-slate-400 text-sm">
+                        Sem avaliações ainda.
+                    </div>
+                ) : (
+                    <div className="space-y-4">
+                        {ratings.map((rating: any) => {
+                            // Format Name: Ana S.
+                            const fullName = rating.client?.full_name || 'Anônimo'
+                            const names = fullName.split(' ')
+                            const displayName = names.length > 1
+                                ? `${names[0]} ${names[names.length - 1][0]}.`
+                                : names[0]
+
+                            return (
+                                <div key={rating.id} className="border-b border-white/5 pb-4 last:border-0 last:pb-0">
+                                    <div className="flex justify-between items-start mb-2">
+                                        <div className="flex items-center space-x-2">
+                                            <div className="w-8 h-8 rounded-full bg-deep-space overflow-hidden border border-white/10">
+                                                <img
+                                                    src={rating.client?.avatar_url || `https://ui-avatars.com/api/?name=${fullName}&background=random`}
+                                                    alt={fullName}
+                                                    className="w-full h-full object-cover"
+                                                />
+                                            </div>
+                                            <div>
+                                                <p className="text-sm font-bold text-white">{displayName}</p>
+                                                <div className="flex space-x-0.5">
+                                                    {[...Array(5)].map((_, i) => (
+                                                        <Star
+                                                            key={i}
+                                                            size={10}
+                                                            className={i < rating.stars ? "text-neon-gold fill-neon-gold" : "text-slate-700"}
+                                                        />
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <span className="text-[10px] text-slate-500">
+                                            {new Date(rating.created_at).toLocaleDateString('pt-BR')}
+                                        </span>
+                                    </div>
+                                    {rating.testimonial && (
+                                        <p className="text-sm text-slate-300 italic pl-10">"{rating.testimonial}"</p>
+                                    )}
+                                </div>
+                            )
+                        })}
+                    </div>
+                )}
+            </GlassCard>
         </div>
     )
 }

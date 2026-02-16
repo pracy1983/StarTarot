@@ -85,15 +85,29 @@ export default function LandingPage() {
 
   // Removed unused handlers (handled by AuthModal)
 
-  const filteredOracles = oracles.filter(o => {
-    const matchesSearch = (o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      o.specialty?.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredOracles = oracles
+    .filter(o => {
+      const matchesSearch = (o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        o.specialty?.toLowerCase().includes(searchTerm.toLowerCase()))
 
-    if (filter === 'all') return matchesSearch
-    if (filter === 'online') return matchesSearch && o.is_online
-    if (filter === 'tarot') return matchesSearch && o.specialty === 'Tarot'
-    return matchesSearch
-  })
+      if (filter === 'all') return matchesSearch
+      if (filter === 'online') return matchesSearch && o.is_online
+      if (filter === 'tarot') return matchesSearch && o.specialty === 'Tarot'
+      return matchesSearch
+    })
+    .sort((a, b) => {
+      // 1. Online First
+      if (a.is_online && !b.is_online) return -1
+      if (!a.is_online && b.is_online) return 1
+
+      // 2. Zero Fee First (Destaque)
+      const aFree = a.initial_fee_credits === 0
+      const bFree = b.initial_fee_credits === 0
+      if (aFree && !bFree) return -1
+      if (!aFree && bFree) return 1
+
+      return 0
+    })
 
   const openAuth = (role: 'client' | 'oracle' = 'client', register: boolean = false) => {
     // Note: The new AuthModal handles its own internal state for now. 
