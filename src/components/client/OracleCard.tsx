@@ -155,7 +155,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     }
 
     const { status, label } = getOracleStatus(oracle.is_online, oracle.schedules || [])
-    const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video
+    const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video && !oracle.is_ai
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -167,10 +167,6 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     }
 
     const handleViewProfile = () => {
-        if (!isAuthenticated && pathname === '/') {
-            setShowAuthModal(true)
-            return
-        }
         router.push(`/app/oraculo/${oracle.id}`)
     }
 
@@ -205,13 +201,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
             {/* Status Badge - Top Left */}
             <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
-                    status === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' :
-                        status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
-                            'bg-slate-800/50 text-slate-500 border-white/5'
+                status === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' :
+                    status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
+                        'bg-slate-800/50 text-slate-500 border-white/5'
                 }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-400 animate-pulse ring-2 ring-green-500/50' :
-                        status === 'offline' ? 'bg-red-500 animate-pulse ring-2 ring-red-500/50' :
-                            status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
+                    status === 'offline' ? 'bg-red-500 animate-pulse ring-2 ring-red-500/50' :
+                        status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
                     }`} />
                 <span>{status === 'online' ? 'ONLINE' : label}</span>
             </div>
