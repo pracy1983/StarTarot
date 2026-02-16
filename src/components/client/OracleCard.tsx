@@ -35,7 +35,7 @@ interface OracleCardProps {
 export const OracleCard = ({ oracle }: OracleCardProps) => {
     const router = useRouter()
     const pathname = usePathname()
-    const { isAuthenticated, profile } = useAuthStore()
+    const { isAuthenticated, profile, setShowAuthModal } = useAuthStore()
 
     // Call States
     const [isChecking, setIsChecking] = React.useState(false)
@@ -159,10 +159,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
         if (!isAuthenticated) {
-            toast.error('Faça login para iniciar uma consulta')
-            // Se estiver na landing, abrimos o modal via algum estado global ou simplesmente avisamos
-            // Como não temos estado global de modal fácil, vamos redirecionar pro topo or trigger local
-            window.scrollTo({ top: 0, behavior: 'smooth' })
+            setShowAuthModal(true)
             return
         }
         router.push(`/app/consulta/${oracle.id}`)
@@ -170,7 +167,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
     const handleViewProfile = () => {
         if (!isAuthenticated && pathname === '/') {
-            window.scrollTo({ top: 0, behavior: 'smooth' })
+            setShowAuthModal(true)
             return
         }
         router.push(`/app/oraculo/${oracle.id}`)
@@ -239,16 +236,16 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 {/* Info Tags */}
                 <div className="flex flex-col items-center space-y-1">
-                    {oracle.allows_video && (
+                    {oracle.allows_video && oracle.oracle_type === 'human' && (
                         <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                             <Video size={12} className="mr-1 text-neon-cyan/50" />
                             {oracle.credits_per_minute} | MINUTO (VÍDEO)
                         </div>
                     )}
-                    {oracle.allows_text && oracle.price_per_message && (
+                    {oracle.allows_text && (
                         <div className="flex items-center text-slate-400 text-[10px] font-bold uppercase tracking-wider">
                             <MessageSquare size={12} className="mr-1 text-neon-purple/50" />
-                            {oracle.price_per_message} | MENSAGEM
+                            {oracle.price_per_message || 10} | MENSAGEM
                         </div>
                     )}
                 </div>
@@ -258,18 +255,22 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </p>
 
                 {/* Feature Icons */}
-                <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
-                    <div className="flex flex-col items-center space-y-1">
-                        <MessageSquare size={16} className={status === 'online' || oracle.allows_text ? 'text-neon-purple/60' : ''} />
-                        <span className="text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
+                {(oracle.allows_text || (oracle.oracle_type === 'human' && oracle.allows_video)) && (
+                    <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
+                        {oracle.allows_text && (
+                            <div className="flex flex-col items-center space-y-1">
+                                <MessageSquare size={16} className={status === 'online' ? 'text-neon-purple/60' : ''} />
+                                <span className="text-[8px] uppercase font-black tracking-tighter">Chat</span>
+                            </div>
+                        )}
+                        {oracle.oracle_type === 'human' && oracle.allows_video && (
+                            <div className="flex flex-col items-center space-y-1">
+                                <Video size={16} className={status === 'online' ? 'text-neon-cyan/60' : ''} />
+                                <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
+                            </div>
+                        )}
                     </div>
-                    {(oracle.oracle_type === 'human' || oracle.allows_video) && (
-                        <div className="flex flex-col items-center space-y-1">
-                            <Video size={16} className={status === 'online' && oracle.allows_video ? 'text-neon-cyan/60' : ''} />
-                            <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
-                        </div>
-                    )}
-                </div>
+                )}
 
                 <div className="mt-2 flex gap-2 w-full">
                     {status === 'online' ? (

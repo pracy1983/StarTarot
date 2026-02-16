@@ -57,6 +57,8 @@ interface AuthState {
   signUp: (email: string, password: string, full_name: string, phone: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   setProfile: (profile: Profile) => void
+  showAuthModal: boolean
+  setShowAuthModal: (show: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -220,4 +222,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   setProfile: (profile: Profile) => {
     set({ profile })
   },
+  showAuthModal: false,
+  setShowAuthModal: (show: boolean) => set({ showAuthModal: show })
 }))

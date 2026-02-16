@@ -23,6 +23,7 @@ import { IncomingCallModal } from '@/components/oracle/IncomingCallModal'
 import { OracleStatusToggle } from '@/components/oracle/OracleStatusToggle'
 import { useRealtimeCalls } from '@/hooks/useRealtimeCalls'
 import toast from 'react-hot-toast'
+import { AuthModal } from '@/components/auth/AuthModal'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
     const { profile, logout } = useAuthStore()
@@ -268,12 +269,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </main>
             </div>
 
-            {/* Global Incoming Call Modal */}
             <IncomingCallModal
                 call={incomingCall}
                 onAccept={handleAcceptCall}
                 onReject={rejectCall}
             />
+            <AuthModal />
         </div>
     )
 }

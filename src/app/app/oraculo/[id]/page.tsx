@@ -124,16 +124,16 @@ export default function OracleProfilePage() {
                                 <MessageSquare size={16} className="mr-2 text-neon-purple" />
                                 {consultationCount} consultas realizadas
                             </div>
-                            {oracle.allows_video && (
+                            {oracle.allows_video && oracle.oracle_type === 'human' && (
                                 <div className="flex items-center text-slate-400 text-sm">
                                     <Video size={16} className="mr-2 text-neon-cyan" />
                                     {oracle.credits_per_minute} créditos por vídeo (minuto)
                                 </div>
                             )}
-                            {oracle.allows_text && oracle.price_per_message && (
+                            {oracle.allows_text && (
                                 <div className="flex items-center text-slate-400 text-sm">
                                     <MessageSquare size={16} className="mr-2 text-neon-purple" />
-                                    {oracle.price_per_message} créditos por mensagem
+                                    {(oracle.price_per_message || 10)} créditos por mensagem
                                 </div>
                             )}
                         </div>
@@ -170,7 +170,7 @@ export default function OracleProfilePage() {
                 </GlassCard>
 
                 <div className="flex flex-col sm:flex-row gap-3">
-                    {oracle.allows_video && (
+                    {oracle.allows_video && oracle.oracle_type === 'human' && (
                         <NeonButton
                             variant="green"
                             size="lg"
@@ -187,7 +187,7 @@ export default function OracleProfilePage() {
                             variant="purple"
                             size="lg"
                             className="px-8"
-                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=mensagem`)}
+                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=message`)}
                         >
                             {oracle.is_online ? (
                                 <><MessageSquare size={18} className="mr-2" /> Iniciar Mensagem</>
