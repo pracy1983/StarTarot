@@ -44,7 +44,7 @@ export function useRealtimeCalls() {
                 .gt('created_at', new Date(Date.now() - 20000).toISOString()) // Only recent (last 20s)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
+                .maybeSingle()
 
             if (data) {
                 setIncomingCall({

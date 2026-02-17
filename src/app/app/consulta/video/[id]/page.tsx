@@ -108,6 +108,24 @@ export default function VideoConsultationPage() {
         client.on('user-unpublished', (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
         })
+
+        // AUTO-PREVIEW: Start local tracks on init
+        try {
+            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+            const videoTrack = await AgoraRTC.createCameraVideoTrack()
+
+            setLocalAudioTrack(audioTrack)
+            setLocalVideoTrack(videoTrack)
+
+            // Play local preview immediately if container exists
+            const playerContainer = document.getElementById('local-player')
+            if (playerContainer) {
+                videoTrack.play(playerContainer)
+            }
+        } catch (err) {
+            console.error('Error initializing client preview:', err)
+            toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso.')
+        }
     }
 
     const startCall = async () => {
@@ -126,21 +144,18 @@ export default function VideoConsultationPage() {
             })
             const { token, appId } = await response.json()
 
+            if (!appId) throw new Error('Configuração de vídeo incompleta no servidor')
+
             // 2. Join Channel
             await clientRef.current.join(appId, id as string, token, profile!.id)
 
-            // 3. Create and Publish Tracks
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
-            const videoTrack = await AgoraRTC.createCameraVideoTrack()
-
-            setLocalAudioTrack(audioTrack)
-            setLocalVideoTrack(videoTrack)
-
-            await clientRef.current.publish([audioTrack, videoTrack])
+            // 3. Publish Tracks (Reuse created ones)
+            if (localAudioTrack && localVideoTrack) {
+                await clientRef.current.publish([localAudioTrack, localVideoTrack])
+            }
 
             setJoined(true)
-            videoTrack.play('local-player')
+            // No need to play again, it's already playing via preview
 
             // 4. Start Billing for Clients - WAIT FOR ORACLE TO CHARGE INITIAL FEE
             if (profile?.role === 'client') {
@@ -391,11 +406,11 @@ export default function VideoConsultationPage() {
                     <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
                         <div id="local-player" className="w-full h-full bg-slate-900">
                             {!joined && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-deep-space/80 z-10">
-                                    <div className="text-center space-y-6">
-                                        <p className="text-white font-bold">Inicie sua conexão</p>
-                                        <NeonButton variant="purple" onClick={startCall}>
-                                            Conectar Câmera e Áudio
+                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
+                                    <div className="text-center space-y-6 pointer-events-auto bg-black/40 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
+                                        <p className="text-white font-bold text-lg drop-shadow-md">Sua câmera está funcionando?</p>
+                                        <NeonButton variant="purple" onClick={startCall} className="shadow-lg hover:scale-105 transition-transform">
+                                            Sim, Entrar na Consulta
                                         </NeonButton>
                                     </div>
                                 </div>
