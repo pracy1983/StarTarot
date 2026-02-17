@@ -178,6 +178,21 @@ export function useRealtimeCalls() {
         if (!profile?.id) return
 
         const newState = !isOnline
+
+        // VALIDATION: Must have at least one channel enabled to go online
+        if (newState === true) {
+            if (!profile.allows_video && !profile.allows_text) {
+                toast.error('Ative Vídeo ou Mensagem para ficar Online!', {
+                    icon: '🚫',
+                    style: {
+                        background: '#ef4444',
+                        color: '#fff'
+                    }
+                })
+                return
+            }
+        }
+
         try {
             const { error } = await supabase
                 .from('profiles')

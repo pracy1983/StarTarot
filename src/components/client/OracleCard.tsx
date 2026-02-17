@@ -308,6 +308,18 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                             Mensagem
                                         </NeonButton>
                                     )}
+                                    {/* Fallback if online but no specific channel enabled */}
+                                    {!oracle.allows_video && !oracle.allows_text && (
+                                        <NeonButton
+                                            variant="gold"
+                                            fullWidth
+                                            size="md"
+                                            onClick={handleViewProfile}
+                                        >
+                                            <Sparkles size={16} className="mr-2" />
+                                            Ver Perfil
+                                        </NeonButton>
+                                    )}
                                 </>
                             </>
                         ) : (
