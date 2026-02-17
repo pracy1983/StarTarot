@@ -83,6 +83,23 @@ https://startarot.netlify.app/app/dashboard`
     }
 
     /**
+     * Notifica seguidores sobre oráculo online
+     */
+    async sendOracleOnlineNotification(phone: string, clientName: string, oracleName: string): Promise<boolean> {
+        const message = `🌟 *O Oráculo ${oracleName} está Online!*
+        
+Olá ${clientName}! 👋
+
+O oraculista que você favoritou, *${oracleName}*, acaba de ficar online e está disponível para atendimentos por vídeo ou chat.
+
+🔮 Conecte-se agora:
+https://startarot.netlify.app/app/oraculo/${oracleName}
+
+Aproveite este momento para tirar suas dúvidas! ✨`
+        return this.sendTextMessage({ phone, message })
+    }
+
+    /**
      * Formata número de telefone para padrão internacional
      * Aceita: (11) 98765-4321, 11987654321, +5511987654321
      * Retorna: 5511987654321

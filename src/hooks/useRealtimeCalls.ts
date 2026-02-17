@@ -203,6 +203,15 @@ export function useRealtimeCalls() {
             setIsOnline(newState)
             useAuthStore.getState().setProfile({ ...profile, is_online: newState })
             toast.success(newState ? 'Você está Online!' : 'Você está Offline')
+
+            // Trigger notifications if going online
+            if (newState === true) {
+                fetch('/api/oracle/notify-online', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ oracleId: profile.id })
+                }).catch(err => console.error('Failed to trigger online notifications:', err))
+            }
         } catch (err) {
             toast.error('Erro ao mudar status')
         }

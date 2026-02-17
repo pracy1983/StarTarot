@@ -19,17 +19,31 @@ export default function MarketplacePage() {
     const [specialtyFilter, setSpecialtyFilter] = useState('all')
     const [filterVideo, setFilterVideo] = useState(false)
     const [filterMessage, setFilterMessage] = useState(false)
+    const [favorites, setFavorites] = useState<string[]>([])
 
     const specialties = ['Tarot', 'Astrologia', 'Búzios', 'Numerologia', 'Reiki', 'Vidência']
 
     useEffect(() => {
         fetchOracles()
+        fetchFavorites()
         // Load persistency
         const v = localStorage.getItem('pref_filter_video') === 'true'
         const m = localStorage.getItem('pref_filter_message') === 'true'
         if (v) setFilterVideo(true)
         if (m) setFilterMessage(true)
-    }, [])
+    }, [profile?.id])
+
+    const fetchFavorites = async () => {
+        if (!profile?.id) return
+        const { data } = await supabase
+            .from('user_favorites')
+            .select('oracle_id')
+            .eq('user_id', profile.id)
+
+        if (data) {
+            setFavorites(data.map(f => f.oracle_id))
+        }
+    }
 
     useEffect(() => {
         localStorage.setItem('pref_filter_video', String(filterVideo))
@@ -89,17 +103,20 @@ export default function MarketplacePage() {
                 schedules: schedules?.filter(s => s.oracle_id === p.id) || []
             }))
 
-            // 4. Lógica de Ordenação e Randomização
-            const zeroFee = oraclesWithSchedules.filter(o => o.initial_fee_credits === 0)
-            const others = oraclesWithSchedules.filter(o => o.initial_fee_credits !== 0)
+            // 4. Lógica de Ordenação: Favoritos (Online > Offline) > Resto (Online > Offline)
+            const sortedOracles = oraclesWithSchedules.sort((a, b) => {
+                const aFav = favorites.includes(a.id) ? 1 : 0
+                const bFav = favorites.includes(b.id) ? 1 : 0
 
-            const shuffle = (array: any[]) => array.sort(() => Math.random() - 0.5)
+                if (aFav !== bFav) return bFav - aFav
 
-            // Embaralha dentro dos grupos
-            const sortedOracles = [
-                ...shuffle(zeroFee),
-                ...shuffle(others)
-            ]
+                const aOnline = a.is_online ? 1 : 0
+                const bOnline = b.is_online ? 1 : 0
+
+                if (aOnline !== bOnline) return bOnline - aOnline
+
+                return 0
+            })
 
             setOracles(sortedOracles)
         } catch (err) {

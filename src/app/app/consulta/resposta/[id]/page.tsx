@@ -92,9 +92,9 @@ export default function ConsultationResponsePage() {
             .eq('consultation_id', id)
             .single()
 
-        if (data) {
+        if (data && data.stars > 0) {
             setStars(data.stars)
-            setTestimonial(data.testimonial)
+            setTestimonial(data.comment || '')
             setHasRated(true)
         }
     }
@@ -272,7 +272,7 @@ export default function ConsultationResponsePage() {
                     </div>
                     <div className="text-right">
                         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-                            {profile?.role === 'oracle' ? 'Ganhos da Consulta' : 'Investimento'}
+                            {consultation.client_id === profile?.id ? 'Valor Investido' : 'Ganhos da Consulta'}
                         </p>
                         <p className="text-xl font-bold text-neon-gold">
                             {consultation.total_credits} Créditos
@@ -353,7 +353,7 @@ export default function ConsultationResponsePage() {
                             </div>
                             <div className="bg-black/20 p-3 rounded-xl border border-white/5">
                                 <p className="text-[10px] text-slate-500 uppercase font-bold">Créditos Utilizados</p>
-                                <p className="text-lg font-bold text-neon-gold">{consultation.total_credits} CR</p>
+                                <p className="text-lg font-bold text-neon-gold">{consultation.total_credits} Créditos</p>
                             </div>
                         </div>
                     </div>
@@ -413,90 +413,96 @@ export default function ConsultationResponsePage() {
             </GlassCard>
 
             {/* Rating Section */}
-            {!hasRated && (consultation.type !== 'video' || (consultation.duration_seconds || 0) >= 300) ? (
-                <GlassCard className="border-neon-purple/20 bg-neon-purple/5" hover={false}>
-                    <div className="text-center space-y-6 py-4">
-                        <div className="space-y-2">
-                            <h3 className="text-xl font-bold text-white flex items-center justify-center">
-                                <Heart className="mr-2 text-red-500 fill-red-500" size={20} />
-                                O que achou do atendimento?
-                            </h3>
-                            <p className="text-slate-400 text-sm">
-                                Ganhe até <span className="text-neon-gold font-bold">20 Créditos</span> avaliando agora!
-                            </p>
-                        </div>
-
-                        {/* Stars */}
-                        <div className="flex justify-center space-x-2">
-                            {[1, 2, 3, 4, 5].map((num) => (
-                                <button
-                                    key={num}
-                                    onMouseEnter={() => setHoverStars(num)}
-                                    onMouseLeave={() => setHoverStars(0)}
-                                    onClick={() => setStars(num)}
-                                    className="transform transition-all active:scale-90"
-                                >
-                                    <Star
-                                        size={40}
-                                        className={`${(hoverStars || stars) >= num
-                                            ? 'text-neon-gold fill-neon-gold'
-                                            : 'text-slate-600'
-                                            } transition-colors`}
-                                    />
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Testimonial */}
-                        <div className="max-w-xl mx-auto space-y-3">
-                            <textarea
-                                value={testimonial}
-                                onChange={(e) => setTestimonial(e.target.value)}
-                                placeholder="Deixe um depoimento sobre sua experiência..."
-                                className="w-full bg-deep-space/50 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:outline-none focus:border-neon-purple/50 transition-colors min-h-[100px]"
-                            />
-
-                            <div className="flex flex-wrap justify-center gap-4 text-xs">
-                                <div className={`flex items-center ${stars > 0 ? 'text-green-400' : 'text-slate-500'}`}>
-                                    <Award size={14} className="mr-1" /> +5 Créditos pela nota
-                                </div>
-                                <div className={`flex items-center ${testimonial.trim().split(/\s+/).filter(Boolean).length >= MIN_WORDS_FOR_REWARD ? 'text-green-400' : 'text-slate-500'}`}>
-                                    <Award size={14} className="mr-1" /> +15 Créditos pelo depoimento (com mais de 10 palavras)
-                                </div>
+            {(consultation.type !== 'video' || (consultation.duration_seconds || 0) >= 300) && (
+                !hasRated ? (
+                    <GlassCard className="border-neon-purple/20 bg-neon-purple/5" hover={false}>
+                        <div className="text-center space-y-6 py-4">
+                            <div className="space-y-2">
+                                <h3 className="text-xl font-bold text-white flex items-center justify-center">
+                                    <Heart className="mr-2 text-red-500 fill-red-500" size={20} />
+                                    O que achou do atendimento?
+                                </h3>
+                                <p className="text-slate-400 text-sm">
+                                    Ganhe até <span className="text-neon-gold font-bold">20 Créditos</span> avaliando agora!
+                                </p>
                             </div>
 
-                            <NeonButton
-                                variant="gold"
-                                fullWidth
-                                loading={isSubmittingRating}
-                                onClick={handleRatingSubmit}
-                            >
-                                Enviar e Coletar Recompensa
-                            </NeonButton>
+                            {/* Stars */}
+                            <div className="flex justify-center space-x-2">
+                                {[1, 2, 3, 4, 5].map((num) => (
+                                    <button
+                                        key={num}
+                                        onMouseEnter={() => setHoverStars(num)}
+                                        onMouseLeave={() => setHoverStars(0)}
+                                        onClick={() => setStars(num)}
+                                        className="transform transition-all active:scale-90"
+                                    >
+                                        <Star
+                                            size={40}
+                                            className={`${(hoverStars || stars) >= num
+                                                ? 'text-neon-gold fill-neon-gold'
+                                                : 'text-slate-600'
+                                                } transition-colors`}
+                                        />
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Testimonial */}
+                            <div className="max-w-xl mx-auto space-y-3">
+                                <textarea
+                                    value={testimonial}
+                                    onChange={(e) => setTestimonial(e.target.value)}
+                                    placeholder="Deixe um depoimento sobre sua experiência..."
+                                    className="w-full bg-deep-space/50 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:outline-none focus:border-neon-purple/50 transition-colors min-h-[100px]"
+                                />
+
+                                <div className="flex flex-wrap justify-center gap-4 text-xs">
+                                    <div className={`flex items-center ${stars > 0 ? 'text-green-400' : 'text-slate-500'}`}>
+                                        <Award size={14} className="mr-1" /> +5 Créditos pela nota
+                                    </div>
+                                    <div className={`flex items-center ${testimonial.trim().split(/\s+/).filter(Boolean).length >= MIN_WORDS_FOR_REWARD ? 'text-green-400' : 'text-slate-500'}`}>
+                                        <Award size={14} className="mr-1" /> +15 Créditos pelo depoimento (com mais de 10 palavras)
+                                    </div>
+                                </div>
+
+                                <NeonButton
+                                    variant="gold"
+                                    fullWidth
+                                    loading={isSubmittingRating}
+                                    onClick={handleRatingSubmit}
+                                >
+                                    Enviar e Coletar Recompensa
+                                </NeonButton>
+                            </div>
                         </div>
-                    </div>
-                </GlassCard>
-            ) : (
-                <GlassCard className="border-white/5 bg-white/5" hover={false}>
-                    <div className="text-center py-4 space-y-3">
-                        <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
-                            <Sparkles className="text-green-400" size={24} />
+                    </GlassCard>
+                ) : (
+                    <GlassCard className="border-white/5 bg-white/5" hover={false}>
+                        <div className="text-center py-4 space-y-3">
+                            <div className="w-12 h-12 bg-green-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <Sparkles className="text-green-400" size={24} />
+                            </div>
+                            <h3 className="text-lg font-bold text-white">Avaliação Enviada!</h3>
+                            <p className="text-slate-400 text-sm italic">"{testimonial}"</p>
+                            <div className="flex justify-center space-x-1">
+                                {[1, 2, 3, 4, 5].map(n => (
+                                    <Star key={n} size={16} className={n <= stars ? 'text-neon-gold fill-neon-gold' : 'text-slate-700'} />
+                                ))}
+                            </div>
                         </div>
-                        <h3 className="text-lg font-bold text-white">Avaliação Enviada!</h3>
-                        <p className="text-slate-400 text-sm italic">"{testimonial}"</p>
-                        <div className="flex justify-center space-x-1">
-                            {[1, 2, 3, 4, 5].map(n => (
-                                <Star key={n} size={16} className={n <= stars ? 'text-neon-gold fill-neon-gold' : 'text-slate-700'} />
-                            ))}
-                        </div>
-                    </div>
-                </GlassCard>
+                    </GlassCard>
+                )
             )}
 
             {/* Footer */}
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-6 bg-white/5 border border-white/10 rounded-xl">
                 <div className="text-sm text-slate-400 text-center sm:text-left">
-                    <p>Gostou da consulta? Você pode fazer uma nova mensagem ao mesmo oráculo.</p>
+                    <p>
+                        {consultation.type === 'video'
+                            ? 'Gostou da consulta? Favorite este oraculista.'
+                            : 'Gostou da consulta? Você pode fazer uma nova mensagem ao mesmo oráculo.'}
+                    </p>
                 </div>
                 <NeonButton
                     variant="purple"

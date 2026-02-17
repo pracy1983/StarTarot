@@ -14,6 +14,30 @@ interface ClientCallModalProps {
 }
 
 export function ClientCallModal({ isOpen, oracleName, avatarUrl, creditsPerMinute, initialFee, onCancel }: ClientCallModalProps) {
+    const callingRef = React.useRef<HTMLAudioElement | null>(null)
+
+    useEffect(() => {
+        if (isOpen) {
+            if (!callingRef.current) {
+                callingRef.current = new Audio('/sounds/calling.mp3')
+                callingRef.current.loop = true
+            }
+            callingRef.current.play().catch(e => console.log('Audio play failed', e))
+        } else {
+            if (callingRef.current) {
+                callingRef.current.pause()
+                callingRef.current.currentTime = 0
+            }
+        }
+
+        return () => {
+            if (callingRef.current) {
+                callingRef.current.pause()
+                callingRef.current.currentTime = 0
+            }
+        }
+    }, [isOpen])
+
     if (!isOpen) return null
 
     return (
