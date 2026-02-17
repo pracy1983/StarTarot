@@ -488,93 +488,33 @@ export default function OracleProfilePage() {
                                     value={formData.name_fantasy}
                                     onChange={e => setFormData({ ...formData, name_fantasy: e.target.value })}
                                 />
-                                <div className="space-y-1.5">
-                                    <div className="flex items-center justify-between mb-1">
-                                        <label className="text-sm font-medium text-slate-400 ml-1">Especialidade Principal</label>
-                                        <button
-                                            type="button"
-                                            onClick={() => setIsAddingCategory(true)}
-                                            className="text-[10px] text-neon-gold hover:text-white font-bold uppercase transition-colors"
-                                        >
-                                            + Nova Categoria
-                                        </button>
-                                    </div>
-                                    <div className="relative">
+
+                                <div className="md:col-span-2 space-y-3">
+                                    <label className="text-sm font-bold text-slate-300 flex items-center">
+                                        <Star size={16} className="mr-2 text-neon-gold" />
+                                        Especialidade Principal
+                                    </label>
+                                    <div className="relative group">
                                         <select
                                             value={formData.specialty}
                                             onChange={e => setFormData({ ...formData, specialty: e.target.value })}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-4 pr-10 text-white outline-none focus:border-neon-purple/50 appearance-none"
+                                            className="w-full appearance-none bg-deep-space border border-white/10 rounded-xl p-4 text-white focus:border-neon-purple/50 outline-none transition-all cursor-pointer hover:bg-white/5 shadow-lg"
                                         >
-                                            <option value="">Selecione...</option>
-                                            {specialtiesList.map(s => <option key={s.id} value={s.name} className="bg-deep-space">{s.name}</option>)}
-                                            <option value="Outros">Outros...</option>
+                                            <option value="" className="text-slate-500">Selecione sua especialidade...</option>
+                                            {specialtiesList.map(s => (
+                                                <option key={s.id} value={s.name} className="bg-deep-space text-white py-2">
+                                                    {s.name}
+                                                </option>
+                                            ))}
                                         </select>
-                                    </div>
-                                </div>
-                                {formData.specialty === 'Outros' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, height: 0 }}
-                                        animate={{ opacity: 1, height: 'auto' }}
-                                        className="space-y-1.5"
-                                    >
-                                        <GlowInput
-                                            label="Qual Especialidade?"
-                                            placeholder="Ex: Baralho Cigano, Reiki..."
-                                            value={formData.custom_specialty}
-                                            onChange={e => setFormData({ ...formData, custom_specialty: e.target.value })}
-                                            required
-                                        />
-                                    </motion.div>
-                                )}
-
-                                {/* Modal de Nova Categoria */}
-                                <AnimatePresence>
-                                    {isAddingCategory && (
-                                        <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                                            <motion.div
-                                                initial={{ opacity: 0, scale: 0.9 }}
-                                                animate={{ opacity: 1, scale: 1 }}
-                                                exit={{ opacity: 0, scale: 0.9 }}
-                                                className="w-full max-w-sm"
-                                            >
-                                                <GlassCard className="border-neon-gold/30" hover={false}>
-                                                    <div className="space-y-4">
-                                                        <h3 className="text-lg font-bold text-white flex items-center">
-                                                            <Sparkles size={18} className="mr-2 text-neon-gold" />
-                                                            Nova Categoria
-                                                        </h3>
-                                                        <GlowInput
-                                                            label="Nome da Categoria"
-                                                            placeholder="Ex: Baralho Cigano"
-                                                            value={newCategoryName}
-                                                            onChange={e => setNewCategoryName(e.target.value)}
-                                                            autoFocus
-                                                        />
-                                                        <div className="flex gap-3">
-                                                            <NeonButton
-                                                                variant="purple"
-                                                                fullWidth
-                                                                onClick={() => setIsAddingCategory(false)}
-                                                                type="button"
-                                                            >
-                                                                Cancelar
-                                                            </NeonButton>
-                                                            <NeonButton
-                                                                variant="gold"
-                                                                fullWidth
-                                                                onClick={handleAddCategory}
-                                                                loading={saving}
-                                                                type="button"
-                                                            >
-                                                                Adicionar
-                                                            </NeonButton>
-                                                        </div>
-                                                    </div>
-                                                </GlassCard>
-                                            </motion.div>
+                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-neon-gold transition-colors">
+                                            <MessageSquare size={18} />
                                         </div>
-                                    )}
-                                </AnimatePresence>
+                                    </div>
+                                    <p className="text-xs text-slate-500 px-1">
+                                        * Apenas categorias oficiais do sistema. Para sugerir novas, contate a administração.
+                                    </p>
+                                </div>
                             </div>
 
                             <GlowInput
