@@ -94,22 +94,22 @@ export default function InboxPage() {
 
             const pendingConsultations = (consultationsData || [])
                 .filter(c => c.status !== 'answered' && c.status !== 'canceled' && c.status !== 'rejected')
+                .filter(c => c.type !== 'video') // EXCLUDE VIDEO FROM INBOX
                 .map(c => {
-                    const isVideo = c.type === 'video'
                     return {
                         id: `pend-${c.id}`,
                         title: isOracleView
-                            ? (isVideo ? `📹 Nova chamada de vídeo!` : `🔮 Nova consulta pendente!`)
-                            : (isVideo ? `📹 Chamada em andamento...` : `🔮 Consulta em processamento...`),
+                            ? `🔮 Nova consulta pendente!`
+                            : `🔮 Consulta em processamento...`,
                         content: isOracleView
-                            ? (isVideo ? `${c.client?.full_name || 'Um cliente'} está te chamando por vídeo.` : `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`)
-                            : (isVideo ? `Vídeo consulta com ${c.oracle?.full_name || 'Oraculista'}.` : `Aguardando resposta de ${c.oracle?.full_name || 'Oraculista'}.`),
+                            ? `${c.client?.full_name || 'Um cliente'} enviou uma mensagem. Responda agora!`
+                            : `Aguardando resposta de ${c.oracle?.full_name || 'Oraculista'}.`,
                         created_at: c.created_at,
-                        is_read: isOracleView ? false : true, // Para o oráculo, queremos que brilhe como "não lido"
+                        is_read: isOracleView ? false : true,
                         metadata: {
                             type: 'consultation_pending',
                             consultation_id: c.id,
-                            oracle_data: c.oracle // Passando dados do oraculo para renderizar avatar
+                            oracle_data: c.oracle
                         }
                     }
                 })

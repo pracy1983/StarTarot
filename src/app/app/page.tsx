@@ -6,7 +6,10 @@ import { OracleCard } from '@/components/client/OracleCard'
 import { supabase } from '@/lib/supabase'
 import { Sparkles, Filter, Search, Moon, Sun, Star } from 'lucide-react'
 
+import { useAuthStore } from '@/stores/authStore'
+
 export default function MarketplacePage() {
+    const { profile } = useAuthStore()
     const [oracles, setOracles] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
@@ -21,6 +24,28 @@ export default function MarketplacePage() {
     useEffect(() => {
         fetchOracles()
     }, [])
+
+    // AUTO-REDIRECT FOR ORACLES
+    useEffect(() => {
+        if (profile?.role === 'oracle' && profile?.application_status === 'approved') {
+            // Check if user explicitly wants to stay (e.g. clicked "View as Client")
+            // We can simple check if they are already on the right page? No this is the client page.
+
+            // Simpler: Just redirect if no special query param is present.
+            // But how to allow them to view it?
+
+            // The user said: "Se a pessoa for oraculsita E cliente normal, sempre abra o app na tela de oraculista"
+            // This means default landing.
+
+            // We can use a session storage flag to avoid looping
+            const hasRedirected = sessionStorage.getItem('oracle_redirected')
+            if (!hasRedirected) {
+                sessionStorage.setItem('oracle_redirected', 'true')
+                // Use window.location to ensure full refresh/state clear if needed, or router
+                window.location.href = '/app/dashboard'
+            }
+        }
+    }, [profile])
 
     const fetchOracles = async () => {
         try {

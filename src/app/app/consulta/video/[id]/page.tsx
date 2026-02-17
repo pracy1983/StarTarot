@@ -99,6 +99,13 @@ export default function VideoConsultationPage() {
                     }
                     hasChargedInitialFee.current = true
                 }
+
+                // CLIENT SIDE: Start regular billing only when Oracle video is received
+                if (profile?.role === 'client') {
+                    // Clear any existing interval to be safe
+                    if (billingInterval.current) clearInterval(billingInterval.current)
+                    startBilling()
+                }
             }
             if (mediaType === 'audio') {
                 user.audioTrack?.play()
@@ -157,10 +164,7 @@ export default function VideoConsultationPage() {
             setJoined(true)
             // No need to play again, it's already playing via preview
 
-            // 4. Start Billing for Clients - WAIT FOR ORACLE TO CHARGE INITIAL FEE
-            if (profile?.role === 'client') {
-                startBilling()
-            }
+            // Billing is now triggered in user-published event
         } catch (err: any) {
             console.error('Error starting call:', err)
             if (err.message.includes('Agora credentials')) {

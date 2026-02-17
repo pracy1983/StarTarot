@@ -122,33 +122,28 @@ export default function OracleSignupPage() {
                         </div>
 
                         {/* Especialidade */}
-                        <div className="space-y-2">
+                        <div className="space-y-3">
                             <label className="text-sm font-bold text-slate-300 flex items-center">
                                 <Star size={16} className="mr-2 text-neon-cyan" />
                                 Especialidade Principal *
                             </label>
-                            <select
-                                value={formData.specialty}
-                                onChange={e => setFormData({ ...formData, specialty: e.target.value })}
-                                className="w-full bg-deep-space border border-white/10 rounded-xl p-3 text-white focus:border-neon-cyan/50 outline-none transition-all"
-                                required
-                            >
-                                <option value="">Selecione...</option>
-                                {specialties.map(s => <option key={s} value={s}>{s}</option>)}
-                            </select>
-
-                            {formData.specialty === 'Outros' && (
-                                <div className="mt-2">
-                                    <input
-                                        type="text"
-                                        value={formData.custom_specialty || ''}
-                                        onChange={e => setFormData({ ...formData, custom_specialty: e.target.value })}
-                                        className="w-full bg-deep-space border border-dashed border-neon-cyan/30 rounded-xl p-3 text-white focus:border-neon-cyan/50 outline-none transition-all placeholder-slate-500"
-                                        placeholder="Digite sua especialidade..."
-                                        required
-                                    />
+                            <div className="relative">
+                                <select
+                                    value={formData.specialty}
+                                    onChange={e => setFormData({ ...formData, specialty: e.target.value })}
+                                    className="w-full appearance-none bg-deep-space border border-white/10 rounded-xl p-4 text-white focus:border-neon-cyan/50 outline-none transition-all cursor-pointer hover:bg-white/5"
+                                    required
+                                >
+                                    <option value="" className="bg-deep-space text-slate-500">Selecione sua especialidade...</option>
+                                    {specialties.map(s => <option key={s} value={s} className="bg-deep-space py-2">{s}</option>)}
+                                </select>
+                                <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                                    <MessageSquare size={16} className="text-slate-500" />
                                 </div>
-                            )}
+                            </div>
+                            <p className="text-xs text-slate-500 px-1">
+                                Escolha a especialidade que melhor define seu atendimento principal. Você poderá mencionar outras habilidades na sua bio.
+                            </p>
                         </div>
 
                         {/* Telefone */}
