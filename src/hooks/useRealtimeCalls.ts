@@ -16,6 +16,7 @@ export function useRealtimeCalls() {
     const { profile } = useAuthStore()
     const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null)
     const [isOnline, setIsOnline] = useState(false)
+    const [isAccepting, setIsAccepting] = useState(false)
     const audioRef = useRef<HTMLAudioElement | null>(null)
 
     // Initial Status Fetch
@@ -134,8 +135,9 @@ export function useRealtimeCalls() {
     }
 
     const acceptCall = async () => {
-        if (!incomingCall) return
+        if (!incomingCall || isAccepting) return null
 
+        setIsAccepting(true)
         stopRing()
         try {
             const { error } = await supabase
@@ -153,6 +155,8 @@ export function useRealtimeCalls() {
         } catch (err) {
             toast.error('Erro ao aceitar chamada')
             return null
+        } finally {
+            setIsAccepting(false)
         }
     }
 
@@ -220,6 +224,7 @@ export function useRealtimeCalls() {
     return {
         isOnline,
         incomingCall,
+        isAccepting,
         acceptCall,
         rejectCall,
         toggleOnline

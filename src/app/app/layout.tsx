@@ -34,7 +34,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const [unreadCount, setUnreadCount] = useState(0)
 
     // Realtime Calls Hook (Global)
-    const { isOnline, incomingCall, acceptCall, rejectCall, toggleOnline } = useRealtimeCalls()
+    const { isOnline, incomingCall, isAccepting, acceptCall, rejectCall, toggleOnline } = useRealtimeCalls()
 
     // Handle Accept Call
     const handleAcceptCall = async () => {
@@ -363,6 +363,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
             <IncomingCallModal
                 call={incomingCall}
+                isAccepting={isAccepting}
                 onAccept={handleAcceptCall}
                 onReject={rejectCall}
             />

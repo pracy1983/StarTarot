@@ -7,11 +7,12 @@ import { IncomingCall } from '@/hooks/useRealtimeCalls'
 
 interface IncomingCallModalProps {
     call: IncomingCall | null
+    isAccepting?: boolean
     onAccept: () => void
     onReject: () => void
 }
 
-export function IncomingCallModal({ call, onAccept, onReject }: IncomingCallModalProps) {
+export function IncomingCallModal({ call, isAccepting = false, onAccept, onReject }: IncomingCallModalProps) {
     const [timeLeft, setTimeLeft] = useState(20)
 
     useEffect(() => {
@@ -70,10 +71,10 @@ export function IncomingCallModal({ call, onAccept, onReject }: IncomingCallModa
                         )}
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
-                            <NeonButton variant="red" size="sm" onClick={onReject}>
+                            <NeonButton variant="red" size="sm" onClick={onReject} disabled={isAccepting}>
                                 Recusar
                             </NeonButton>
-                            <NeonButton variant="green" size="sm" onClick={onAccept}>
+                            <NeonButton variant="green" size="sm" onClick={onAccept} loading={isAccepting}>
                                 Aceitar Agora
                             </NeonButton>
                         </div>

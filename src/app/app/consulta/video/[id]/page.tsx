@@ -41,6 +41,7 @@ export default function VideoConsultationPage() {
 
     // Billing State
     const [duration, setDuration] = useState(0)
+    const durationRef = useRef(0)
     const [currentCost, setCurrentCost] = useState(0)
     const billingInterval = useRef<NodeJS.Timeout | null>(null)
     const clientRef = useRef<IAgoraRTCClient | null>(null)
@@ -102,8 +103,6 @@ export default function VideoConsultationPage() {
 
                 // CLIENT SIDE: Start regular billing only when Oracle video is received
                 if (profile?.role === 'client') {
-                    // Clear any existing interval to be safe
-                    if (billingInterval.current) clearInterval(billingInterval.current)
                     startBilling()
                 }
             }
@@ -176,11 +175,14 @@ export default function VideoConsultationPage() {
     }
 
     const startBilling = () => {
+        if (billingInterval.current) return // Prevent duplicate billing loops
+
         billingInterval.current = setInterval(async () => {
-            setDuration(prev => prev + 1)
+            durationRef.current += 1
+            setDuration(durationRef.current)
 
             // Cobrança a cada minuto (60 segundos)
-            if ((duration + 1) % 60 === 0) {
+            if (durationRef.current > 0 && durationRef.current % 60 === 0) {
                 const success = await processMinuteBilling()
                 if (!success) {
                     toast.error('Saldo esgotado. Chamada encerrada.')

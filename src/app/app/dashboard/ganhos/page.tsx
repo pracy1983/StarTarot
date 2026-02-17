@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Wallet, TrendingUp, History, Calendar, ArrowUpRight, Sparkles } from 'lucide-react'
+import { Wallet, TrendingUp, History, Calendar, ArrowUpRight, Sparkles, Video, Clock, MessageSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { format } from 'date-fns'
@@ -26,30 +26,50 @@ export default function OracleGanhosPage() {
         setLoading(true)
         try {
             // Fetch all earnings transactions
-            // Note: We need to be careful with 'type'. It should be 'earnings' or similar.
-            // Also, we need to ensure we are not double counting if we have other types.
+            // We join with profiles (via metadata.client_id or sender_id)
+            // and consultations (via metadata.consultation_id)
             const { data: transactions, error } = await supabase
                 .from('transactions')
-                .select('*')
+                .select(`
+                    *,
+                    consultation:consultations!transactions_metadata_consultation_id_fkey (
+                        type,
+                        duration_seconds,
+                        total_credits
+                    )
+                `)
                 .eq('user_id', profile!.id)
-                .in('type', ['earnings', 'gift_receive']) // Include gifts if they generate earnings
+                .in('type', ['earnings', 'gift_receive'])
                 .order('created_at', { ascending: false })
 
             if (error) throw error
 
-            // Confirmed = Money in the wallet (or ready to be paid out if configured that way)
-            // Pending = Money waiting for consultation completion or admin approval
+            // Enrichment: Fetch client profile names for those that are not in the join
+            // (transactions metadata often has client_id or sender_id)
+            const enrichedHistory = await Promise.all((transactions || []).map(async (tx: any) => {
+                const clientId = tx.metadata?.client_id || tx.metadata?.sender_id
+                let clientName = 'Consulente'
 
-            // Fix: Ensure we handle string/number conversion safely
+                if (clientId) {
+                    const { data: userData } = await supabase
+                        .from('profiles')
+                        .select('full_name')
+                        .eq('id', clientId)
+                        .single()
+
+                    if (userData) clientName = userData.full_name
+                }
+
+                return { ...tx, clientName }
+            }))
+
             const safeAmount = (amount: any) => Math.abs(Number(amount) || 0)
 
-            const confirmedTransactions = transactions?.filter(t => t.status === 'confirmed') || []
-            const pendingTransactions = transactions?.filter(t => t.status === 'pending') || []
+            const confirmedTransactions = enrichedHistory.filter(t => t.status === 'confirmed')
+            const pendingTransactions = enrichedHistory.filter(t => t.status === 'pending')
 
-            // Total Earned: All time confirmed earnings
             const total = confirmedTransactions.reduce((acc, t) => acc + safeAmount(t.amount), 0)
 
-            // Monthly Earned: Confirmed earnings this month
             const firstDayOfMonth = new Date()
             firstDayOfMonth.setDate(1)
             firstDayOfMonth.setHours(0, 0, 0, 0)
@@ -58,10 +78,6 @@ export default function OracleGanhosPage() {
                 ?.filter(t => new Date(t.created_at) >= firstDayOfMonth)
                 .reduce((acc, t) => acc + safeAmount(t.amount), 0) || 0
 
-            // Pending Payout: Transactions that are pending
-            // Note: If the user meant "Available for Payout", that would be the wallet balance.
-            // But "Pendente Payout" usually means "Money stuck in pending status".
-            // Let's assume the user wants to see what is yet to be confirmed.
             const pending = pendingTransactions.reduce((acc, t) => acc + safeAmount(t.amount), 0)
 
             setStats({
@@ -69,7 +85,7 @@ export default function OracleGanhosPage() {
                 monthlyEarned: monthly,
                 pendingPayout: pending
             })
-            setHistory(transactions || [])
+            setHistory(enrichedHistory)
         } catch (err) {
             console.error('Error fetching gains:', err)
         } finally {
@@ -98,7 +114,7 @@ export default function OracleGanhosPage() {
                         <Wallet size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Total Ganho</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.totalEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.totalEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500 italic">Créditos</span></h3>
                 </GlassCard>
 
                 <GlassCard glowColor="cyan" className="border-white/5">
@@ -106,7 +122,7 @@ export default function OracleGanhosPage() {
                         <TrendingUp size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Este Mês</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.monthlyEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.monthlyEarned.toLocaleString()} <span className="text-sm font-normal text-slate-500 italic">Créditos</span></h3>
                 </GlassCard>
 
                 <GlassCard glowColor="gold" className="border-white/5">
@@ -114,7 +130,7 @@ export default function OracleGanhosPage() {
                         <Sparkles size={20} />
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Pendente Payout</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.pendingPayout.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span></h3>
+                    <h3 className="text-3xl font-bold text-white tracking-tight">{stats.pendingPayout.toLocaleString()} <span className="text-sm font-normal text-slate-500 italic">Créditos</span></h3>
                 </GlassCard>
             </div>
 
@@ -133,35 +149,45 @@ export default function OracleGanhosPage() {
                                 <th className="pb-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Cliente</th>
                                 <th className="pb-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
                                 <th className="pb-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Duração</th>
-                                <th className="pb-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ganhos</th>
+                                <th className="pb-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ganhos Liq.</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {history.map((item) => {
-                                const isGift = item.description?.toLowerCase().includes('presente') || false
+                                const isGift = item.type === 'gift_receive'
+                                const isVideo = item.metadata?.mode === 'video' || item.consultation?.type === 'video'
                                 const amount = Math.abs(Number(item.amount))
+                                const duration = item.consultation?.duration_seconds || item.metadata?.duration_seconds || 0
 
                                 return (
                                     <tr key={item.id} className="group hover:bg-white/[0.02] transition-colors">
-                                        <td className="py-4">
-                                            <div className="flex items-center text-sm text-white">
-                                                <Calendar size={14} className="mr-2 text-slate-500" />
+                                        <td className="py-4 text-xs sm:text-sm">
+                                            <div className="flex items-center text-white">
+                                                <Calendar size={14} className="mr-2 text-slate-500 hidden sm:block" />
                                                 {format(new Date(item.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                                             </div>
                                         </td>
-                                        <td className="py-4 font-medium text-slate-300">
-                                            {isGift ? 'Gift (Consulente)' : 'Consulente'}
+                                        <td className="py-4 font-bold text-slate-300">
+                                            {item.clientName}
                                         </td>
                                         <td className="py-4">
-                                            <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${isGift ? 'bg-neon-gold/10 text-neon-gold' : 'bg-neon-purple/10 text-neon-purple'}`}>
-                                                {isGift ? 'Presente' : 'Consulta'}
-                                            </span>
+                                            <div className="flex items-center space-x-2">
+                                                {isGift ? <Sparkles size={14} className="text-neon-gold" /> : isVideo ? <Video size={14} className="text-neon-cyan" /> : <MessageSquare size={14} className="text-neon-purple" />}
+                                                <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter ${isGift ? 'bg-neon-gold/10 text-neon-gold' : isVideo ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-neon-purple/10 text-neon-purple'}`}>
+                                                    {isGift ? 'Presente' : isVideo ? 'Vídeo' : 'Mensagem'}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td className="py-4 text-sm text-slate-400">
-                                            {isGift ? item.metadata?.gift_name : '-'}
+                                            {isVideo && duration > 0 ? (
+                                                <div className="flex items-center space-x-1">
+                                                    <Clock size={12} />
+                                                    <span>{Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')} min</span>
+                                                </div>
+                                            ) : '-'}
                                         </td>
                                         <td className="py-4 text-right">
-                                            <span className="text-sm font-bold text-neon-gold">+{amount} Créditos</span>
+                                            <span className="text-sm font-bold text-white">+{amount} <span className="text-[10px] text-slate-500 font-normal">Créditos</span></span>
                                         </td>
                                     </tr>
                                 )

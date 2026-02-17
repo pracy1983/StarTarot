@@ -128,7 +128,7 @@ export default function AdminFinanceiroPage() {
                     </div>
                     <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Créditos em Circulação (Total)</p>
                     <h3 className="text-3xl font-bold text-white tracking-tight">
-                        {stats.creditsInCirculation.toLocaleString()} <span className="text-sm font-normal text-slate-500">CR</span>
+                        {stats.creditsInCirculation.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span>
                     </h3>
                 </GlassCard>
 

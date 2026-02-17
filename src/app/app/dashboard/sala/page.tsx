@@ -445,7 +445,7 @@ export default function ServiceRoomPage() {
                                 <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos (Est.)</p>
                                 {/* We can estimate based on duration * rate if exact total isn't available yet */}
                                 <p className="text-xl font-bold text-neon-gold">
-                                    {summaryData?.credits || 0} CR
+                                    {summaryData?.credits || 0} Créditos
                                 </p>
                             </div>
                         </div>
@@ -475,8 +475,25 @@ export default function ServiceRoomPage() {
                         <p className="text-white/60 animate-pulse">Aguardando conexão do cliente...</p>
                         {!joined && (
                             <div className="mt-8">
-                                <NeonButton variant="cyan" onClick={startCall} size="lg">
-                                    <VideoIcon className="mr-2" />
+                                <style jsx>{`
+                                    @keyframes pulse-red {
+                                        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+                                        70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); transform: scale(1.05); }
+                                        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+                                    }
+                                    .pulse-button {
+                                        animation: pulse-red 2s infinite;
+                                        background-color: #ef4444 !important;
+                                        color: white !important;
+                                    }
+                                `}</style>
+                                <NeonButton
+                                    variant="red"
+                                    onClick={startCall}
+                                    size="lg"
+                                    className="pulse-button font-bold px-12 py-6 text-xl uppercase tracking-tighter"
+                                >
+                                    <VideoIcon className="mr-3" size={24} />
                                     Iniciar Atendimento
                                 </NeonButton>
                             </div>

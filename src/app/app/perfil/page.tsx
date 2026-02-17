@@ -122,7 +122,7 @@ export default function PerfilPage() {
                             <Wallet size={18} />
                             <span className="text-sm font-bold uppercase tracking-wider">Sua Carteira</span>
                         </div>
-                        <h3 className="text-3xl font-bold text-white">{profile?.credits || 0} <span className="text-sm font-normal text-slate-500 italic">CR</span></h3>
+                        <h3 className="text-3xl font-bold text-white">{profile?.credits || 0} <span className="text-sm font-normal text-slate-500 italic">Créditos</span></h3>
                         <p className="text-xs text-slate-500 mt-2">Créditos ativos para consultas.</p>
                         <NeonButton variant="gold" fullWidth size="sm" className="mt-4" onClick={() => router.push('/app/carteira')}>Recarregar agora</NeonButton>
                     </GlassCard>
