@@ -114,7 +114,7 @@ export default function ServiceRoomPage() {
     const fetchConsultation = async () => {
         const { data, error } = await supabase
             .from('consultations')
-            .select('*, users:client_id(full_name, avatar_url)')
+            .select('*, client:client_id(full_name, avatar_url)')
             .eq('id', consultationId)
             .single()
 
@@ -146,10 +146,29 @@ export default function ServiceRoomPage() {
         client.on('user-unpublished', (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
         })
+
+        // AUTO-PREVIEW: Start local tracks on init
+        try {
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+            const videoTrack = await AgoraRTC.createCameraVideoTrack()
+
+            setLocalAudioTrack(audioTrack)
+            setLocalVideoTrack(videoTrack)
+
+            // Play local preview immediately
+            videoTrack.play('local-player')
+        } catch (err) {
+            console.error('Error initializing preview:', err)
+            toast.error('Erro ao acessar câmera/microfone. Verifique as permissões.')
+        }
     }
 
     const startCall = async () => {
-        if (!clientRef.current || !consultationId) return
+        if (!clientRef.current || !consultationId || !localVideoTrack || !localAudioTrack) {
+            toast.error('Câmera ou Microfone não inicializados.')
+            return
+        }
 
         try {
             const response = await fetch('/api/agora/token', {
@@ -161,30 +180,29 @@ export default function ServiceRoomPage() {
                     role: 'publisher'
                 })
             })
+
+            if (!response.ok) {
+                const errData = await response.json()
+                throw new Error(errData.error || 'Falha ao obter token de acesso')
+            }
+
             const { token, appId } = await response.json()
 
+            if (!appId) throw new Error('App ID não configurado no servidor')
+
             await clientRef.current.join(appId, consultationId, token, profile!.id)
-
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
-            const videoTrack = await AgoraRTC.createCameraVideoTrack()
-
-            setLocalAudioTrack(audioTrack)
-            setLocalVideoTrack(videoTrack)
-
-            await clientRef.current.publish([audioTrack, videoTrack])
+            await clientRef.current.publish([localAudioTrack, localVideoTrack])
 
             setJoined(true)
-            videoTrack.play('local-player')
 
             // Start Timer
             timerRef.current = setInterval(() => {
                 setDuration(prev => prev + 1)
             }, 1000)
 
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error starting call:', err)
-            toast.error('Erro ao conectar vídeo.')
+            toast.error('Erro ao conectar: ' + err.message)
         }
     }
 
@@ -249,7 +267,7 @@ export default function ServiceRoomPage() {
         // Find next pending consultation for this oracle
         const { data: next, error } = await supabase
             .from('consultations')
-            .select('id, profiles:client_id(full_name)')
+            .select('id, client:client_id(full_name)')
             .eq('oracle_id', profile!.id)
             .eq('status', 'pending')
             .order('created_at', { ascending: true })
@@ -257,7 +275,7 @@ export default function ServiceRoomPage() {
             .single()
 
         if (next) {
-            const nextClient = Array.isArray(next.profiles) ? next.profiles[0] : next.profiles
+            const nextClient = Array.isArray(next.client) ? next.client[0] : next.client
             if (confirm(`Próximo cliente na fila: ${nextClient?.full_name}. Deseja atender agora?`)) {
                 router.push(`/app/dashboard/sala?consultationId=${next.id}`)
                 // Full reload or state reset might be needed
@@ -313,7 +331,7 @@ export default function ServiceRoomPage() {
                 <div className="flex items-center space-x-3">
                     <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
                     <span className="text-white font-bold">Em Atendimento</span>
-                    <span className="text-slate-400 text-sm">| {consultation?.users?.full_name}</span>
+                    <span className="text-slate-400 text-sm">| {consultation?.client?.full_name}</span>
                 </div>
                 <div className="flex items-center gap-4">
                     {queueCount > 0 && (
@@ -345,9 +363,9 @@ export default function ServiceRoomPage() {
                         ) : (
                             <div className="text-center">
                                 <div className="w-24 h-24 rounded-full bg-slate-800 mx-auto mb-4 border-2 border-neon-cyan/30 overflow-hidden">
-                                    <img src={consultation?.users?.avatar_url || ''} className="w-full h-full object-cover" alt="Client" />
+                                    <img src={consultation?.client?.avatar_url || ''} className="w-full h-full object-cover" alt="Client" />
                                 </div>
-                                <h2 className="text-xl font-bold text-white">{consultation?.users?.full_name}</h2>
+                                <h2 className="text-xl font-bold text-white">{consultation?.client?.full_name}</h2>
                                 <p className="text-slate-500 italic mt-2">Aguardando cliente...</p>
                             </div>
                         )}
@@ -358,13 +376,14 @@ export default function ServiceRoomPage() {
                 <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group h-full">
                     <div id="local-player" className="absolute inset-0 flex items-center justify-center">
                         {!joined && (
-                            <div className="text-center space-y-4 z-10">
-                                <div className="p-4 bg-neon-cyan/10 rounded-full text-neon-cyan inline-block">
-                                    <VideoIcon size={32} />
+                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center space-y-4 z-10 p-6 text-center">
+                                <VideoIcon size={48} className="text-neon-cyan animate-pulse" />
+                                <div>
+                                    <h3 className="text-white font-bold text-lg">Câmera Preparada</h3>
+                                    <p className="text-xs text-slate-400 max-w-[200px] mt-1">O cliente já está na sala? Clique abaixo para iniciar.</p>
                                 </div>
-                                <h3 className="text-white font-bold">Sua Câmera</h3>
-                                <NeonButton variant="purple" onClick={startCall}>
-                                    Conectar Agora
+                                <NeonButton variant="green" onClick={startCall} fullWidth>
+                                    Entrar na Consulta
                                 </NeonButton>
                             </div>
                         )}

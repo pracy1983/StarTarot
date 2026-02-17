@@ -108,10 +108,29 @@ export default function VideoConsultationPage() {
         client.on('user-unpublished', (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
         })
+
+        // AUTO-PREVIEW: Start local tracks on init
+        try {
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+            const videoTrack = await AgoraRTC.createCameraVideoTrack()
+
+            setLocalAudioTrack(audioTrack)
+            setLocalVideoTrack(videoTrack)
+
+            // Play local preview immediately
+            videoTrack.play('local-player')
+        } catch (err) {
+            console.error('Error initializing client preview:', err)
+            toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso para continuar.')
+        }
     }
 
     const startCall = async () => {
-        if (!clientRef.current) return
+        if (!clientRef.current || !localVideoTrack || !localAudioTrack) {
+            toast.error('Por favor, autorize o acesso à câmera e microfone primeiro.')
+            return
+        }
 
         try {
             // 1. Get Token from our API
@@ -124,23 +143,23 @@ export default function VideoConsultationPage() {
                     role: profile?.role === 'oracle' ? 'publisher' : 'subscriber'
                 })
             })
+
+            if (!response.ok) {
+                const errData = await response.json()
+                throw new Error(errData.error || 'Falha ao obter canal de vídeo')
+            }
+
             const { token, appId } = await response.json()
+
+            if (!appId) throw new Error('Configuração de vídeo incompleta no servidor')
 
             // 2. Join Channel
             await clientRef.current.join(appId, id as string, token, profile!.id)
 
-            // 3. Create and Publish Tracks
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
-            const videoTrack = await AgoraRTC.createCameraVideoTrack()
-
-            setLocalAudioTrack(audioTrack)
-            setLocalVideoTrack(videoTrack)
-
-            await clientRef.current.publish([audioTrack, videoTrack])
+            // 3. Publish Tracks
+            await clientRef.current.publish([localAudioTrack, localVideoTrack])
 
             setJoined(true)
-            videoTrack.play('local-player')
 
             // 4. Start Billing for Clients - WAIT FOR ORACLE TO CHARGE INITIAL FEE
             if (profile?.role === 'client') {
@@ -243,7 +262,11 @@ export default function VideoConsultationPage() {
             console.error('Error finalizing call:', err)
         }
 
-        setShowFeedback(true)
+        if (duration >= 300) {
+            setShowFeedback(true)
+        } else {
+            router.push(`/app/consulta/resposta/${id}`)
+        }
     }
 
     const handleFeedbackSubmit = async () => {
@@ -383,11 +406,17 @@ export default function VideoConsultationPage() {
                     <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
                         <div id="local-player" className="w-full h-full bg-slate-900">
                             {!joined && (
-                                <div className="absolute inset-0 flex items-center justify-center bg-deep-space/80 z-10">
-                                    <div className="text-center space-y-6">
-                                        <p className="text-white font-bold">Inicie sua conexão</p>
-                                        <NeonButton variant="purple" onClick={startCall}>
-                                            Conectar Câmera e Áudio
+                                <div className="absolute inset-0 flex items-center justify-center bg-black/60 z-10 p-8">
+                                    <div className="text-center space-y-6 max-w-sm">
+                                        <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4 animate-pulse">
+                                            <Video size={40} className="text-neon-purple" />
+                                        </div>
+                                        <div>
+                                            <p className="text-white font-bold text-xl">Tudo Pronto?</p>
+                                            <p className="text-sm text-slate-400 mt-2">Sua câmera já está ativa. Clique abaixo para entrar na sala e iniciar o atendimento.</p>
+                                        </div>
+                                        <NeonButton variant="purple" fullWidth size="lg" onClick={startCall}>
+                                            Entrar na Consulta
                                         </NeonButton>
                                     </div>
                                 </div>

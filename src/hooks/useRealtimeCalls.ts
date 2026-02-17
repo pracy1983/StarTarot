@@ -7,7 +7,6 @@ export type IncomingCall = {
     id: string
     client_id: string
     client_name?: string
-    topic?: string
     created_at: string
     is_using_bonus?: boolean
 }
@@ -36,9 +35,8 @@ export function useRealtimeCalls() {
                 .select(`
                     id, 
                     client_id, 
-                    topic, 
                     created_at,
-                    users:client_id (full_name)
+                    client:client_id (full_name)
                 `)
                 .eq('oracle_id', profile.id)
                 .eq('status', 'pending')
@@ -51,8 +49,7 @@ export function useRealtimeCalls() {
                 setIncomingCall({
                     id: data.id,
                     client_id: data.client_id,
-                    client_name: (data as any).users?.full_name || 'Cliente',
-                    topic: data.topic,
+                    client_name: (data as any).client?.full_name || 'Cliente',
                     created_at: data.created_at
                 })
             }
@@ -88,7 +85,6 @@ export function useRealtimeCalls() {
                             id: payload.new.id,
                             client_id: payload.new.client_id,
                             client_name: userData?.full_name || 'Cliente',
-                            topic: payload.new.topic,
                             created_at: payload.new.created_at
                         })
                         playRing()

@@ -63,11 +63,6 @@ export function IncomingCallModal({ call, onAccept, onReject }: IncomingCallModa
                             <p className="text-sm text-slate-400">quer iniciar uma consulta</p>
                         </div>
 
-                        {call.topic && (
-                            <div className="bg-white/5 rounded-lg p-2 text-xs text-slate-300 italic">
-                                "{call.topic}"
-                            </div>
-                        )}
 
                         <div className="grid grid-cols-2 gap-3 pt-2">
                             <NeonButton variant="red" size="sm" onClick={onReject}>
