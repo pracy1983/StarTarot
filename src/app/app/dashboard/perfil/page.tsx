@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -19,6 +19,7 @@ export default function OracleProfilePage() {
     const [saving, setSaving] = useState(false)
     const [showDeleteModal, setShowDeleteModal] = useState(false)
     const [deleteLoading, setDeleteLoading] = useState(false)
+    const [deleteStep, setDeleteStep] = useState<'options' | 'confirm_oracle' | 'confirm_account'>('options')
 
     // Avatar Crop States
     const [imageSource, setImageSource] = useState<string | null>(null)
@@ -27,7 +28,8 @@ export default function OracleProfilePage() {
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
     const [showCropModal, setShowCropModal] = useState(false)
     const [specialtiesList, setSpecialtiesList] = useState<any[]>([])
-    const [isAddingCategory, setIsAddingCategory] = useState(false)
+
+    // ... (rest of states) ... 
     const [newCategoryName, setNewCategoryName] = useState('')
 
     const [formData, setFormData] = useState({
@@ -63,30 +65,6 @@ export default function OracleProfilePage() {
         if (data) setSpecialtiesList(data)
     }
 
-    const handleAddCategory = async () => {
-        if (!newCategoryName.trim()) return
-        setSaving(true)
-        try {
-            const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
-            const { data, error } = await supabase.from('specialties').insert({
-                name: newCategoryName,
-                slug,
-                active: true
-            }).select().single()
-
-            if (error) throw error
-            setSpecialtiesList(prev => [...prev, data].sort((a, b) => a.name.localeCompare(b.name)))
-            setFormData(prev => ({ ...prev, specialty: data.name }))
-            setNewCategoryName('')
-            setIsAddingCategory(false)
-            toast.success('Categoria adicionada!')
-        } catch (err: any) {
-            toast.error('Erro ao adicionar categoria: ' + err.message)
-        } finally {
-            setSaving(false)
-        }
-    }
-
     useEffect(() => {
         if (profile) {
             setFormData({
@@ -109,6 +87,7 @@ export default function OracleProfilePage() {
             })
         }
     }, [profile])
+
 
     const handlePriceChange = (field: 'price_brl_per_minute' | 'initial_fee_brl', value: string) => {
         setPriceInputs(prev => ({ ...prev, [field]: value }))
@@ -252,6 +231,30 @@ export default function OracleProfilePage() {
             router.push('/')
         } catch (err: any) {
             toast.error('Erro ao deletar conta: ' + err.message)
+        } finally {
+            setDeleteLoading(false)
+        }
+    }
+
+    const handleRevertToClient = async () => {
+        setDeleteLoading(true)
+        try {
+            const { error } = await supabase
+                .from('profiles')
+                .update({
+                    role: 'client',
+                    application_status: null,
+                    is_oracle: false
+                })
+                .eq('id', profile!.id)
+
+            if (error) throw error
+
+            setProfile({ ...profile!, role: 'client', application_status: 'rejected', is_oracle: false })
+            toast.success('Você agora é apenas Cliente.')
+            router.push('/app')
+        } catch (err: any) {
+            toast.error('Erro ao reverter perfil: ' + err.message)
         } finally {
             setDeleteLoading(false)
         }
@@ -637,56 +640,129 @@ export default function OracleProfilePage() {
                     </div>
                 )}
             </AnimatePresence>
+            {/* Danger Zone - Compact & High Contrast */}
             <div className="pt-10 border-t border-white/5">
-                <GlassCard className="border-red-500/20 bg-red-500/5 p-6 flex flex-col md:flex-row items-center justify-between gap-6" hover={false}>
+                <div className="bg-red-950/20 border border-red-900/50 rounded-xl p-4 flex flex-col items-start gap-3 md:flex-row md:items-center md:justify-between">
                     <div>
-                        <h3 className="text-lg font-bold text-white mb-1">Zona de Perigo</h3>
-                        <p className="text-sm text-slate-400">Ao deletar sua conta, todos os seus dados e créditos serão removidos permanentemente.</p>
+                        <h3 className="text-sm font-bold text-red-400 flex items-center gap-2">
+                            <AlertTriangle size={16} />
+                            Zona de Perigo
+                        </h3>
+                        <p className="text-xs text-red-300 mt-1 opacity-80">
+                            Ações irreversíveis para sua conta e dados.
+                        </p>
                     </div>
-                    <NeonButton variant="purple" className="bg-red-500 hover:bg-red-600 border-red-500" onClick={() => setShowDeleteModal(true)}>
-                        Deletar Minha Conta
-                    </NeonButton>
-                </GlassCard>
+                    <button
+                        onClick={() => {
+                            setDeleteStep('options')
+                            setShowDeleteModal(true)
+                        }}
+                        className="text-xs font-bold text-red-500 border border-red-500/30 px-4 py-2 rounded-lg hover:bg-red-500/10 transition-colors uppercase tracking-wider"
+                    >
+                        Gerenciar Exclusão
+                    </button>
+                </div>
             </div>
 
             <AnimatePresence>
                 {showDeleteModal && (
-                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="w-full max-w-md"
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-md bg-deep-space border border-white/10 rounded-2xl shadow-2xl overflow-hidden"
                         >
-                            <GlassCard className="border-red-500/50 p-8" hover={false} glowColor="none">
-                                <div className="text-center space-y-4">
-                                    <div className="w-16 h-16 bg-red-500/10 text-red-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                        <AlertTriangle size={32} />
-                                    </div>
-                                    <h2 className="text-2xl font-bold text-white">Tem certeza absoluta?</h2>
-                                    <p className="text-slate-400 leading-relaxed">
-                                        Esta ação é irreversível. Seu perfil de oraculista será removido e <span className="text-white font-bold">Ao deletar a conta seus créditos não serão devolvidos, tem certeza?</span>
-                                    </p>
+                            <div className="p-6">
+                                {/* Create a header with a close button */}
+                                <div className="flex justify-between items-center mb-6">
+                                    <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                                        <AlertTriangle className="text-red-500" size={24} />
+                                        Excluir Dados
+                                    </h2>
+                                    <button onClick={() => setShowDeleteModal(false)} className="text-slate-500 hover:text-white">
+                                        <X size={20} />
+                                    </button>
+                                </div>
 
-                                    <div className="flex flex-col gap-3 pt-6">
-                                        <NeonButton
-                                            variant="purple"
-                                            fullWidth
-                                            loading={deleteLoading}
-                                            onClick={handleDeleteAccount}
-                                            className="bg-red-500 hover:bg-red-600 border-red-500"
-                                        >
-                                            Sim, Deletar Permanentemente
-                                        </NeonButton>
+                                {deleteStep === 'options' && (
+                                    <div className="space-y-4">
+                                        <p className="text-sm text-slate-300">
+                                            O que você deseja fazer? Selecione uma opção abaixo:
+                                        </p>
+
                                         <button
-                                            onClick={() => setShowDeleteModal(false)}
-                                            className="text-sm text-slate-500 hover:text-white transition-colors py-2"
+                                            onClick={() => setDeleteStep('confirm_oracle')}
+                                            className="w-full text-left p-4 rounded-xl border border-white/10 bg-white/5 hover:bg-white/10 hover:border-neon-purple/50 transition-all group"
                                         >
-                                            Cancelar e Voltar
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-bold text-white group-hover:text-neon-purple">Deixar de ser Oraculista</span>
+                                                <Sparkles size={16} className="text-slate-500 group-hover:text-neon-purple" />
+                                            </div>
+                                            <p className="text-xs text-slate-400">
+                                                Remove seu perfil profissional, avaliações e histórico de vendas. Você continua com acesso ao app como cliente.
+                                            </p>
+                                        </button>
+
+                                        <button
+                                            onClick={() => setDeleteStep('confirm_account')}
+                                            className="w-full text-left p-4 rounded-xl border border-red-500/20 bg-red-500/5 hover:bg-red-500/10 hover:border-red-500/50 transition-all group"
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <span className="font-bold text-red-400 group-hover:text-red-300">Excluir Conta Completamente</span>
+                                                <User size={16} className="text-red-900 group-hover:text-red-500" />
+                                            </div>
+                                            <p className="text-xs text-red-300/70">
+                                                Apaga TUDO: dados de cliente, oraculista, créditos e histórico. Irreversível.
+                                            </p>
                                         </button>
                                     </div>
-                                </div>
-                            </GlassCard>
+                                )}
+
+                                {deleteStep === 'confirm_oracle' && (
+                                    <div className="space-y-4">
+                                        <div className="p-4 bg-neon-purple/10 border border-neon-purple/30 rounded-xl text-sm text-slate-200">
+                                            <p className="font-bold text-neon-purple mb-2">Atenção!</p>
+                                            Ao voltar a ser apenas cliente, você perderá sua fila de espera, avaliações e não poderá mais atender. Seus créditos de cliente e histórico de compras serão mantidos.
+                                        </div>
+                                        <div className="pt-4 flex flex-col gap-3">
+                                            <button
+                                                onClick={handleRevertToClient}
+                                                disabled={deleteLoading}
+                                                className="w-full py-3 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold transition-all flex items-center justify-center gap-2"
+                                            >
+                                                {deleteLoading ? <Loader2 className="animate-spin" /> : 'Confirmar: Quero ser apenas Cliente'}
+                                            </button>
+                                            <button onClick={() => setDeleteStep('options')} className="text-xs text-slate-500 hover:text-white py-2">Voltar</button>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {deleteStep === 'confirm_account' && (
+                                    <div className="space-y-4 text-center">
+                                        <div className="p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
+                                            <h3 className="text-red-500 font-bold text-lg mb-2">PERDA TOTAL DE DADOS</h3>
+                                            <p className="text-sm text-red-200 mb-4">
+                                                Ao excluir sua conta, <span className="font-bold underline">seus Créditos NÃO SERÃO REEMBOLSADOS</span>. Você perderá acesso a tudo permanentemente.
+                                            </p>
+                                            <div className="text-left bg-black/40 p-3 rounded border border-red-900/50 text-xs text-red-300 font-mono">
+                                                Esta ação não pode ser desfeita.
+                                            </div>
+                                        </div>
+
+                                        <div className="pt-4 flex flex-col gap-3">
+                                            <button
+                                                onClick={handleDeleteAccount}
+                                                disabled={deleteLoading}
+                                                className="w-full py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold shadow-lg shadow-red-900/50 transition-all flex items-center justify-center gap-2"
+                                            >
+                                                {deleteLoading ? <Loader2 className="animate-spin" /> : 'Estou ciente. EXCLUIR TUDO.'}
+                                            </button>
+                                            <button onClick={() => setDeleteStep('options')} className="text-xs text-slate-500 hover:text-white py-2">Cancelar e Voltar</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
                         </motion.div>
                     </div>
                 )}
