@@ -196,11 +196,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const navItems = isAdminView ? adminNav : isOracleView ? oracleNav : clientNav
 
+    // Auto-offline on Window Close
+    useEffect(() => {
+        if (!profile?.id || profile.role !== 'oracle') return
+
+        const handleUnload = () => {
+            // Using sendBeacon for reliability when closing tab
+            const data = JSON.stringify({ userId: profile.id })
+            navigator.sendBeacon('/api/oracle/offline', data)
+        }
+
+        window.addEventListener('beforeunload', handleUnload)
+        return () => window.removeEventListener('beforeunload', handleUnload)
+    }, [profile?.id, profile?.role])
+
     return (
         <div className={`flex min-h-screen bg-deep-space relative flex-col ${isAdminView ? 'theme-owner' : isOracleView ? 'theme-oracle' : 'theme-client'}`}>
             <div className={`stars-overlay ${isOracleView ? 'opacity-30' : 'opacity-20'}`} />
 
-            {/* Top Banner / Search */}
+            {/* Top Header */}
             <header className="h-20 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass sticky top-0 z-40">
                 <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard' : '/app')}>
                     <div className="w-10 h-10 relative">
@@ -212,15 +226,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </span>
                 </div>
 
-                <div className="flex-1 max-w-md mx-8 hidden md:block">
-                    <div className="relative group">
-                        <Search className={`absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-${themeColor} transition-colors`} size={18} />
-                        <input
-                            type="text"
-                            placeholder={isOracleView ? "Ver atendimentos ou ganhos..." : "Buscar por oraculista ou oráculo..."}
-                            className="w-full bg-white/5 border border-white/10 rounded-full py-2.5 pl-12 pr-4 text-sm text-white focus:border-neon-purple/50 outline-none transition-all"
-                        />
-                    </div>
+                <div className="flex-1 max-w-md mx-8 hidden md:flex items-center">
+                    <h2 className="text-xl font-bold text-white flex items-center">
+                        <Sparkles className={`mr-3 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={20} />
+                        Bem-vinde, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
+                            {(isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]) || 'Viajante'}
+                        </span>!
+                    </h2>
                 </div>
 
                 <div className="flex items-center space-x-2 sm:space-x-4">
@@ -258,26 +270,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </button>
                 </div>
             </header>
-            {/* Welcome Banner */}
-            <div className={`px-4 md:px-8 pt-6 pb-2`}>
-                <div className={`relative overflow-hidden rounded-2xl p-6 border border-white/10 bg-gradient-to-r ${isOracleView ? 'from-neon-purple/20' : 'from-neon-cyan/20'} to-transparent backdrop-blur-md`}>
-                    <div className="relative z-10 flex items-center justify-between">
-                        <div>
-                            <h2 className="text-xl md:text-2xl font-black text-white flex items-center">
-                                <Sparkles className={`mr-3 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={24} />
-                                Bem-vinde, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
-                                    {(isOracleView ? profile?.name_fantasy : null) || profile?.full_name?.split(' ')[0] || 'Viajante'}
-                                </span>!
-                            </h2>
-                            <p className="text-sm text-slate-400 mt-1 font-medium">
-                                {isOracleView ? 'Seu santuário de luz está pronto para guiar almas.' : 'O cosmos preparou revelações especiais para você hoje.'}
-                            </p>
-                        </div>
-                    </div>
-                    {/* Abstract background element */}
-                    <div className={`absolute top-0 right-0 w-64 h-full bg-gradient-to-l ${isOracleView ? 'from-neon-purple/10' : 'from-neon-cyan/10'} to-transparent`} />
-                </div>
-            </div>
 
             <div className="flex flex-1 relative">
                 {/* Desktop Sidebar */}
@@ -375,6 +367,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 onReject={rejectCall}
             />
             <AuthModal />
-        </div>
+        </div >
     )
 }
