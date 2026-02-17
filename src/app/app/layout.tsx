@@ -110,6 +110,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }, [profile?.id, pathname]) // Re-run on pathname change to update badge if needed
 
     useEffect(() => {
+        if (profile?.credits !== undefined) {
+            setWalletBalance(profile.credits)
+        }
+    }, [profile?.credits])
+
+    useEffect(() => {
         if (profile?.id) {
             // Initial fetch
             const fetchBalance = async () => {
@@ -135,11 +141,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     },
                     (payload) => {
                         if (payload.new) {
-                            setWalletBalance((payload.new as any).balance)
+                            const newBalance = (payload.new as any).balance
+                            setWalletBalance(newBalance)
                             // Also update store to keep in sync
                             useAuthStore.getState().setProfile({
                                 ...profile,
-                                credits: (payload.new as any).balance
+                                credits: newBalance
                             })
                         }
                     }
@@ -250,7 +257,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         </div>
                     )}
 
-                    <div className="flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                    <motion.div
+                        key={walletBalance}
+                        initial={{ scale: 1 }}
+                        animate={{ scale: [1, 1.1, 1] }}
+                        transition={{ duration: 0.3 }}
+                        className="flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10"
+                    >
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
                             {isOracleView ? 'Ganhos' : 'Saldo'}
                         </span>
@@ -258,7 +271,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             <Sparkles size={12} className="mr-1" />
                             {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">Créditos</span>
                         </span>
-                    </div>
+                    </motion.div>
 
                     <button
                         onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard/perfil' : '/app/perfil')}
