@@ -22,6 +22,7 @@ import {
     RefreshCcw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
+import { motion, AnimatePresence } from 'framer-motion'
 
 import { useSearchParams } from 'next/navigation'
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
@@ -31,7 +32,7 @@ function RemotePlayer({ user }: { user: any }) {
 
     React.useEffect(() => {
         if (user.videoTrack && containerRef.current) {
-            user.videoTrack.play(containerRef.current)
+            user.videoTrack.play(containerRef.current, { fit: 'cover' })
         }
     }, [user.videoTrack])
 
@@ -265,8 +266,10 @@ export default function ServiceRoomPage() {
                 }
             })
 
-            client.on('user-unpublished', (user) => {
-                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+            client.on('user-unpublished', (user, mediaType) => {
+                if (mediaType === 'video') {
+                    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+                }
             })
 
             client.on('connection-state-change', (curState, prevState) => {
@@ -305,7 +308,7 @@ export default function ServiceRoomPage() {
 
             setJoined(true)
             if (localPlayerRef.current) {
-                videoTrack.play(localPlayerRef.current)
+                videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
 
             // Update status to 'active' if not already
@@ -504,22 +507,29 @@ export default function ServiceRoomPage() {
 
             {/* Local Video (Floating PiP) */}
             {joined && (
-                <div
-                    className="absolute bottom-32 right-4 w-32 h-48 md:w-48 md:h-64 bg-black rounded-xl border-2 border-white/20 shadow-2xl overflow-hidden z-20 group transition-all hover:scale-105"
+                <motion.div
+                    drag
+                    dragConstraints={{ left: -300, right: 300, top: -500, bottom: 500 }}
+                    initial={{ x: 20, y: 20 }}
+                    className="absolute right-4 bottom-32 w-32 h-44 sm:w-48 sm:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
                 >
-                    <div ref={localPlayerRef} className="w-full h-full bg-slate-800" />
+                    <div ref={localPlayerRef} className="w-full h-full bg-slate-900 overflow-hidden" />
 
-                    {/* Switch Camera Button (Mobile/Tablet) */}
+                    <div className="absolute bottom-2 left-2 flex items-center space-x-1 bg-black/40 px-2 py-0.5 rounded-lg backdrop-blur-md">
+                        <UserIcon size={10} className="text-neon-cyan" />
+                        <span className="text-[8px] text-white">Você</span>
+                    </div>
+
+                    {/* Switch Camera Overlay Button */}
                     {cameras.length > 1 && (
                         <button
-                            onClick={switchCamera}
-                            title="Trocar Câmera"
-                            className="absolute top-2 right-2 p-3 bg-black/60 rounded-full text-neon-cyan hover:bg-neon-cyan hover:text-black border border-neon-cyan/30 backdrop-blur-md transition-all z-30"
+                            onClick={(e) => { e.stopPropagation(); switchCamera(); }}
+                            className="absolute top-2 right-2 p-1.5 bg-black/40 rounded-full text-white hover:bg-black/60 transition-all z-30"
                         >
-                            <RefreshCcw size={20} />
+                            <RefreshCcw size={14} />
                         </button>
                     )}
-                </div>
+                </motion.div>
             )}
 
             {/* Top Bar - Info */}

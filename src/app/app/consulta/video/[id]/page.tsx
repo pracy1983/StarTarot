@@ -13,8 +13,12 @@ import {
     Clock,
     AlertCircle,
     Maximize2,
-    MessageSquare
+    MessageSquare,
+    RefreshCw,
+    Camera,
+    User
 } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -43,6 +47,8 @@ export default function VideoConsultationPage() {
     const [duration, setDuration] = useState(0)
     const durationRef = useRef(0)
     const [currentCost, setCurrentCost] = useState(0)
+    const [currentCameraId, setCurrentCameraId] = useState<string>('')
+    const [cameras, setCameras] = useState<MediaDeviceInfo[]>([])
     const billingInterval = useRef<NodeJS.Timeout | null>(null)
     const clientRef = useRef<IAgoraRTCClient | null>(null)
     const hasChargedInitialFee = useRef(false)
@@ -111,8 +117,10 @@ export default function VideoConsultationPage() {
             }
         })
 
-        client.on('user-unpublished', (user) => {
-            setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+        client.on('user-unpublished', (user, mediaType) => {
+            if (mediaType === 'video') {
+                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+            }
         })
 
         // AUTO-PREVIEW: Start local tracks on init
@@ -123,14 +131,35 @@ export default function VideoConsultationPage() {
             setLocalAudioTrack(audioTrack)
             setLocalVideoTrack(videoTrack)
 
+            // Get available cameras
+            const devices = await AgoraRTC.getCameras()
+            setCameras(devices)
+            setCurrentCameraId(videoTrack.getMediaStreamTrack().getSettings().deviceId || '')
+
             // Play local preview immediately if container exists
             const playerContainer = document.getElementById('local-player')
             if (playerContainer) {
-                videoTrack.play(playerContainer)
+                videoTrack.play(playerContainer, { fit: 'cover' })
             }
         } catch (err) {
             console.error('Error initializing client preview:', err)
             toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso.')
+        }
+    }
+
+    const switchCamera = async () => {
+        if (!localVideoTrack || cameras.length < 2) return
+
+        const currentIdx = cameras.findIndex(c => c.deviceId === currentCameraId)
+        const nextIdx = (currentIdx + 1) % cameras.length
+        const nextDevice = cameras[nextIdx]
+
+        try {
+            await localVideoTrack.setDevice(nextDevice.deviceId)
+            setCurrentCameraId(nextDevice.deviceId)
+            toast.success('Câmera alterada')
+        } catch (err) {
+            toast.error('Erro ao trocar câmera')
         }
     }
 
@@ -390,43 +419,56 @@ export default function VideoConsultationPage() {
             </div>
 
             {/* Video Grid */}
-            <div className="flex-1 relative container mx-auto px-4 flex items-center justify-center py-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full h-full max-h-[70vh]">
-                    {/* Remote Player */}
-                    <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
-                        <div id="remote-player" className="w-full h-full bg-slate-900 flex items-center justify-center">
-                            {remoteUsers.length > 0 ? (
-                                <RemotePlayer user={remoteUsers[0]} />
-                            ) : (
-                                <div className="text-center space-y-4">
-                                    <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                                        <Video size={40} className="text-neon-purple" />
-                                    </div>
-                                    <p className="text-slate-500 italic">Aguardando {oracle?.full_name}...</p>
+            <div className="flex-1 relative container mx-auto px-4 flex items-center justify-center py-6 overflow-hidden">
+                {/* Main View (Remote User / Oracle) */}
+                <div className="relative w-full h-full max-h-[80vh] bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
+                    <div id="remote-player" className="w-full h-full bg-slate-900 flex items-center justify-center">
+                        {remoteUsers.length > 0 ? (
+                            <RemotePlayer user={remoteUsers[0]} />
+                        ) : (
+                            <div className="text-center space-y-4">
+                                <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
+                                    <Video size={40} className="text-neon-purple" />
                                 </div>
-                            )}
-                        </div>
+                                <p className="text-slate-500 italic">Aguardando {oracle?.full_name}...</p>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Local Player */}
-                    <div className="relative bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
-                        <div id="local-player" className="w-full h-full bg-slate-900">
+                    {/* Draggable Local View (PiP) */}
+                    <motion.div
+                        drag
+                        dragConstraints={{ left: -300, right: 300, top: -500, bottom: 500 }}
+                        initial={{ x: 20, y: 20 }}
+                        className="absolute right-4 top-4 w-32 h-44 sm:w-48 sm:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
+                    >
+                        <div id="local-player" className="w-full h-full bg-slate-900 overflow-hidden">
                             {!joined && (
-                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                    <div className="text-center space-y-6 pointer-events-auto bg-black/40 p-6 rounded-2xl backdrop-blur-sm border border-white/10">
-                                        <p className="text-white font-bold text-lg drop-shadow-md">Sua câmera está funcionando?</p>
-                                        <NeonButton variant="purple" onClick={startCall} className="shadow-lg hover:scale-105 transition-transform">
-                                            Sim, Entrar na Consulta
-                                        </NeonButton>
+                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none p-2">
+                                    <div className="text-center space-y-2 pointer-events-auto bg-black/60 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+                                        <p className="text-white font-bold text-[10px]">Câmera OK?</p>
+                                        <button onClick={startCall} className="bg-neon-purple px-3 py-1 rounded-full text-[10px] text-white font-bold hover:bg-neon-purple/80 transition-all">
+                                            Entrar
+                                        </button>
                                     </div>
                                 </div>
                             )}
                         </div>
-                        <div className="absolute bottom-4 left-4 flex items-center space-x-2 bg-black/40 px-3 py-1 rounded-lg backdrop-blur-md">
-                            <User size={14} className="text-neon-cyan" />
-                            <span className="text-xs text-white">Você (Local)</span>
+                        <div className="absolute bottom-2 left-2 flex items-center space-x-1 bg-black/40 px-2 py-0.5 rounded-lg backdrop-blur-md">
+                            <User size={10} className="text-neon-cyan" />
+                            <span className="text-[8px] text-white">Você</span>
                         </div>
-                    </div>
+
+                        {/* Switch Camera Overlay Button */}
+                        {cameras.length > 1 && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); switchCamera(); }}
+                                className="absolute top-2 right-2 p-1.5 bg-black/40 rounded-full text-white hover:bg-black/60 transition-all"
+                            >
+                                <RefreshCw size={14} />
+                            </button>
+                        )}
+                    </motion.div>
                 </div>
             </div>
 
@@ -436,6 +478,7 @@ export default function VideoConsultationPage() {
                     <button
                         onClick={toggleAudio}
                         className={`p-4 rounded-full transition-all ${audioEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}
+                        title={audioEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
                     >
                         {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
                     </button>
@@ -443,6 +486,7 @@ export default function VideoConsultationPage() {
                     <button
                         onClick={endCall}
                         className="p-6 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all transform hover:scale-110 shadow-2xl"
+                        title="Encerrar Consulta"
                     >
                         <PhoneOff size={32} />
                     </button>
@@ -450,9 +494,20 @@ export default function VideoConsultationPage() {
                     <button
                         onClick={toggleVideo}
                         className={`p-4 rounded-full transition-all ${videoEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}
+                        title={videoEnabled ? 'Desativar Câmera' : 'Ativar Câmera'}
                     >
                         {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
                     </button>
+
+                    {cameras.length > 1 && (
+                        <button
+                            onClick={switchCamera}
+                            className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all sm:hidden"
+                            title="Inverter Câmera"
+                        >
+                            <RefreshCw size={24} />
+                        </button>
+                    )}
                 </div>
             </div>
         </div>
@@ -483,29 +538,9 @@ function RemotePlayer({ user }: { user: any }) {
 
     useEffect(() => {
         if (user.videoTrack && containerRef.current) {
-            user.videoTrack.play(containerRef.current)
+            user.videoTrack.play(containerRef.current, { fit: 'cover' })
         }
     }, [user.videoTrack])
 
     return <div ref={containerRef} className="w-full h-full" />
-}
-
-function User(props: any) {
-    return (
-        <svg
-            {...props}
-            xmlns="http://www.w3.org/2000/svg"
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-        >
-            <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
-            <circle cx="12" cy="7" r="4" />
-        </svg>
-    )
 }
