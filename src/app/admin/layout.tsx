@@ -11,7 +11,9 @@ import {
     Sparkles,
     LayoutDashboard,
     Wallet,
-    Ticket
+    Ticket,
+    Menu,
+    X
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
@@ -22,6 +24,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const { profile, logout } = useAuthStore()
     const router = useRouter()
     const [ownerBalance, setOwnerBalance] = useState<number | null>(null)
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
     useEffect(() => {
         if (profile?.id) {
@@ -56,9 +59,27 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         <div className="flex min-h-screen bg-deep-space relative">
             <div className="stars-overlay opacity-10" />
 
+            {/* Mobile Overlay */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
-            <aside className="w-64 glass border-r border-white/5 flex flex-col z-20">
-                <div className="p-8">
+            <aside className={`
+                fixed inset-y-0 left-0 z-50 w-64 glass border-r border-white/5 flex flex-col transition-transform duration-300 md:translate-x-0 md:static md:flex
+                ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
+            `}>
+                <div className="p-8 relative">
+                    <button
+                        onClick={() => setIsMobileMenuOpen(false)}
+                        className="absolute top-4 right-4 md:hidden text-slate-400 hover:text-white"
+                    >
+                        <X size={24} />
+                    </button>
+
                     <div className="flex items-center space-x-3 mb-10 cursor-pointer" onClick={() => router.push('/admin')}>
                         <div className="w-8 h-8 relative">
                             <div className="absolute inset-0 bg-neon-gold blur-md opacity-30 shadow-[0_0_15px_rgba(251,191,36,0.3)] animate-pulse" />
@@ -71,7 +92,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                         {navItems.map((item) => (
                             <button
                                 key={item.label}
-                                onClick={() => router.push(item.href)}
+                                onClick={() => {
+                                    router.push(item.href)
+                                    setIsMobileMenuOpen(false)
+                                }}
                                 className="w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 transition-all group"
                             >
                                 <span className="group-hover:text-neon-gold transition-colors">{item.icon}</span>
@@ -105,16 +129,26 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto relative z-10">
+            <main className="flex-1 overflow-y-auto relative z-10 w-full">
                 {/* Header Superior */}
-                <header className="h-16 border-b border-white/5 px-8 flex items-center justify-between glass sticky top-0 z-30">
-                    <div className="flex items-center text-slate-400 text-xs">
-                        <Sparkles size={14} className="mr-2 text-neon-gold" />
-                        Conexão Estelar Estabelecida
+                <header className="h-16 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass sticky top-0 z-30">
+                    <div className="flex items-center gap-4">
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="md:hidden text-slate-400 hover:text-white"
+                        >
+                            <Menu size={24} />
+                        </button>
+
+                        <div className="flex items-center text-slate-400 text-xs hidden md:flex">
+                            <Sparkles size={14} className="mr-2 text-neon-gold" />
+                            Conexão Estelar Estabelecida
+                        </div>
                     </div>
+
                     <div className="flex items-center space-x-4">
                         <RoleSwitcher />
-                        <div className="h-4 w-px bg-white/10" />
+                        <div className="h-4 w-px bg-white/10 hidden md:block" />
                         <div className="flex items-center text-sm font-bold text-neon-gold">
                             <Sparkles size={16} className="mr-2" />
                             {ownerBalance !== null ? `${ownerBalance} Créditos` : '...'}

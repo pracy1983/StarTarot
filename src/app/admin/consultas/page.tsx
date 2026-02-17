@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Search, Filter, Download, Eye, Sparkles, Calendar, Trash2 } from 'lucide-react'
+import { Search, Filter, Download, Eye, Sparkles, Calendar, Trash2, Video, MessageSquare } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -14,7 +14,8 @@ export default function AdminConsultationsPage() {
     // Filtros
     const [searchTerm, setSearchTerm] = useState('')
     const [selectedOracle, setSelectedOracle] = useState('')
-    const [selectedType, setSelectedType] = useState('') // 'ai' ou 'human'
+    const [selectedType, setSelectedType] = useState('') // 'video' ou 'message'
+    const [statusFilter, setStatusFilter] = useState('')
     const [minCredits, setMinCredits] = useState('')
     const [maxCredits, setMaxCredits] = useState('')
     const [startDate, setStartDate] = useState('')
@@ -32,7 +33,7 @@ export default function AdminConsultationsPage() {
     const fetchData = async () => {
         try {
             // Buscar consultas com dados do cliente e oracle
-            const { data: consultationsData } = await supabase
+            const { data: consultationsData, error } = await supabase
                 .from('consultations')
                 .select(`
                     *,
@@ -40,6 +41,8 @@ export default function AdminConsultationsPage() {
                     oracle:profiles!consultations_oracle_id_fkey(id, full_name, is_ai, oracle_type)
                 `)
                 .order('created_at', { ascending: false })
+
+            if (error) throw error
 
             setConsultations(consultationsData || [])
 
@@ -53,6 +56,7 @@ export default function AdminConsultationsPage() {
             setOracles(oraclesData || [])
         } catch (err) {
             console.error('Error fetching consultations:', err)
+            toast.error('Erro ao carregar consultas')
         } finally {
             setLoading(false)
         }
@@ -69,22 +73,55 @@ export default function AdminConsultationsPage() {
         setSelectedConsultation(consultation)
     }
 
-    const handleDeleteConsultation = async (id: string) => {
-        if (!confirm('Tem certeza que deseja excluir esta consulta permanentemente? Esta ação não pode ser desfeita.')) return
+    const handleDeleteConsultation = async (consultation: any) => {
+        const confirmMessage = consultation.total_credits > 0
+            ? `ATENÇÃO: Esta consulta custou ${consultation.total_credits} créditos.\nAo excluir, o valor será ESTORNADO para o cliente.\n\nDeseja continuar?`
+            : 'Tem certeza que deseja excluir esta consulta permanentemente?';
+
+        if (!confirm(confirmMessage)) return
 
         try {
+            // 1. Reembolsar se necessário
+            if (consultation.total_credits > 0 && consultation.client?.id) {
+                // Buscar créditos atuais
+                const { data: profile } = await supabase
+                    .from('profiles')
+                    .select('credits')
+                    .eq('id', consultation.client.id)
+                    .single()
+
+                if (profile) {
+                    // Update credits
+                    await supabase
+                        .from('profiles')
+                        .update({ credits: (profile.credits || 0) + consultation.total_credits })
+                        .eq('id', consultation.client.id)
+
+                    // Register transaction
+                    await supabase
+                        .from('credit_transactions')
+                        .insert({
+                            user_id: consultation.client.id,
+                            amount: consultation.total_credits,
+                            type: 'refund',
+                            description: `Reembolso: Consulta #${consultation.id.slice(0, 8)} excluída pelo suporte`
+                        })
+                }
+            }
+
+            // 2. Excluir consulta
             const { error } = await supabase
                 .from('consultations')
                 .delete()
-                .eq('id', id)
+                .eq('id', consultation.id)
 
             if (error) throw error
 
-            setConsultations(prev => prev.filter(c => c.id !== id))
-            toast.success('Consulta excluída com sucesso!')
-        } catch (err) {
+            setConsultations(prev => prev.filter(c => c.id !== consultation.id))
+            toast.success('Consulta excluída e créditos reembolsados (se aplicável).')
+        } catch (err: any) {
             console.error('Error deleting consultation:', err)
-            toast.error('Erro ao excluir consulta')
+            toast.error('Erro ao excluir: ' + err.message)
         }
     }
 
@@ -103,7 +140,6 @@ export default function AdminConsultationsPage() {
 
             toast.success('Respostas regeneradas com sucesso!')
 
-            // Atualizar o modal se ele ainda estiver aberto para a mesma consulta
             const { data: questions } = await supabase
                 .from('consultation_questions')
                 .select('*')
@@ -121,17 +157,23 @@ export default function AdminConsultationsPage() {
 
     const handleExportCSV = () => {
         const csv = [
-            ['Cliente', 'Email', 'Oraculista', 'Tipo', 'Mensagens', 'Créditos', 'Status', 'Data'].join(','),
-            ...filteredConsultations.map(c => [
-                c.client.full_name,
-                c.client.email,
-                c.oracle.full_name,
-                c.oracle.is_ai || c.oracle.oracle_type === 'ai' ? 'IA' : 'Humano',
-                c.total_questions, // Mensagens
-                c.total_credits,
-                c.status === 'answered' ? 'Respondida' : c.status === 'processing' ? 'Processando' : 'Pendente',
-                new Date(c.created_at).toLocaleDateString('pt-BR')
-            ].join(','))
+            ['Cliente', 'Email', 'Oraculista', 'Canal', 'Tipo', 'Detalhes', 'Créditos', 'Status', 'Data'].join(','),
+            ...filteredConsultations.map(c => {
+                const status = getStatusInfo(c).label
+                const type = c.type === 'video' ? 'Vídeo' : 'Chat'
+                const details = c.type === 'video' ? formatDuration(c.duration_seconds) : `${c.total_questions} msgs`
+                return [
+                    c.client?.full_name || 'N/A',
+                    c.client?.email || 'N/A',
+                    c.oracle?.full_name || 'N/A',
+                    type,
+                    c.oracle?.is_ai ? 'IA' : 'Humano',
+                    details,
+                    c.total_credits,
+                    status,
+                    new Date(c.created_at).toLocaleDateString('pt-BR')
+                ].join(',')
+            })
         ].join('\n')
 
         const blob = new Blob([csv], { type: 'text/csv' })
@@ -143,15 +185,56 @@ export default function AdminConsultationsPage() {
         toast.success('CSV exportado com sucesso!')
     }
 
+    const getStatusInfo = (c: any) => {
+        if (c.status === 'cancelled') return { label: 'Cancelada', color: 'bg-red-500/10 text-red-400', border: 'border-red-500/20' }
+        if (c.status === 'active') return { label: 'Em Andamento', color: 'bg-green-500/10 text-green-400 animate-pulse', border: 'border-green-500/20' }
+
+        if (c.status === 'completed' || c.status === 'ended' || c.status === 'finished') {
+            if (c.type === 'video') {
+                if (!c.duration_seconds || c.duration_seconds < 10) { // Assume < 10s is failed/dropped
+                    return { label: 'Falhou (Conexão)', color: 'bg-red-500/10 text-red-400', border: 'border-red-500/20' }
+                }
+                return { label: 'Concluída', color: 'bg-green-500/10 text-green-400', border: 'border-green-500/20' }
+            }
+            return { label: 'Concluída', color: 'bg-green-500/10 text-green-400', border: 'border-green-500/20' }
+        }
+
+        // Default to pending
+        if (c.status === 'pending') {
+            // Check age. If older than 24h still pending, maybe failed?
+            const hours = (new Date().getTime() - new Date(c.created_at).getTime()) / (1000 * 60 * 60)
+            if (hours > 24) return { label: 'Expirada/Abandonada', color: 'bg-red-900/10 text-red-500', border: 'border-red-900/20' }
+            return { label: 'Pendente', color: 'bg-slate-500/10 text-slate-400', border: 'border-slate-500/20' }
+        }
+
+        return { label: c.status, color: 'bg-slate-500/10 text-slate-400', border: 'border-slate-500/20' }
+    }
+
+    const formatDuration = (seconds: number) => {
+        if (!seconds) return '00:00'
+        const m = Math.floor(seconds / 60)
+        const s = seconds % 60
+        return `${m}:${s.toString().padStart(2, '0')}`
+    }
+
     const filteredConsultations = consultations.filter(c => {
         if (searchTerm && !(
-            c.client.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.client.email?.toLowerCase().includes(searchTerm.toLowerCase())
+            c.client?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            c.client?.email?.toLowerCase().includes(searchTerm.toLowerCase())
         )) return false
 
         if (selectedOracle && c.oracle_id !== selectedOracle) return false
-        if (selectedType === 'ai' && !(c.oracle.is_ai || c.oracle.oracle_type === 'ai')) return false
-        if (selectedType === 'human' && (c.oracle.is_ai || c.oracle.oracle_type === 'ai')) return false
+
+        if (selectedType) {
+            if (selectedType === 'video' && c.type !== 'video') return false
+            if (selectedType === 'message' && c.type !== 'message') return false
+        }
+
+        if (statusFilter) {
+            const info = getStatusInfo(c)
+            if (!info.label.toLowerCase().includes(statusFilter.toLowerCase())) return false
+        }
+
         if (minCredits && c.total_credits < parseInt(minCredits)) return false
         if (maxCredits && c.total_credits > parseInt(maxCredits)) return false
         if (startDate && new Date(c.created_at) < new Date(startDate)) return false
@@ -161,7 +244,7 @@ export default function AdminConsultationsPage() {
     })
 
     return (
-        <div className="p-8 space-y-8">
+        <div className="p-4 md:p-8 space-y-8">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-2xl font-bold font-raleway flex items-center text-white">
@@ -172,6 +255,13 @@ export default function AdminConsultationsPage() {
                         {filteredConsultations.length} consulta(s) encontrada(s)
                     </p>
                 </div>
+                <button
+                    onClick={fetchData}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white/5 text-white rounded-xl text-sm font-bold hover:bg-white/10 transition-colors"
+                >
+                    <Filter size={18} />
+                    <span>Atualizar</span>
+                </button>
                 <button
                     onClick={handleExportCSV}
                     className="flex items-center space-x-2 px-4 py-2 bg-green-500/10 text-green-400 rounded-xl text-sm font-bold hover:bg-green-500/20 transition-colors"
@@ -211,9 +301,9 @@ export default function AdminConsultationsPage() {
                         onChange={(e) => setSelectedType(e.target.value)}
                         className="bg-white/5 border border-white/10 rounded-lg py-2 px-3 text-sm text-white focus:border-neon-purple/50 outline-none"
                     >
-                        <option value="">Todos os tipos</option>
-                        <option value="ai">IA</option>
-                        <option value="human">Humano</option>
+                        <option value="">Todos os canais</option>
+                        <option value="video">Vídeo</option>
+                        <option value="message">Chat/Mensagem</option>
                     </select>
 
                     <div className="flex space-x-2">
@@ -263,8 +353,8 @@ export default function AdminConsultationsPage() {
                                 <tr className="border-b border-white/5">
                                     <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Cliente</th>
                                     <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Oraculista</th>
-                                    <th className="text-left px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Tipo</th>
-                                    <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Mensagens</th>
+                                    <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Canal</th>
+                                    <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Detalhes</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Créditos</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                     <th className="text-center px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
@@ -272,59 +362,71 @@ export default function AdminConsultationsPage() {
                                 </tr>
                             </thead>
                             <tbody>
-                                {filteredConsultations.map(c => (
-                                    <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors text-white">
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <p className="text-sm font-bold">{c.client.full_name}</p>
-                                                <p className="text-xs text-slate-500">{c.client.email}</p>
-                                            </div>
-                                        </td>
-                                        <td className="px-6 py-4 text-sm">{c.oracle.full_name}</td>
-                                        <td className="px-6 py-4">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${c.oracle.is_ai || c.oracle.oracle_type === 'ai'
-                                                ? 'bg-neon-purple/10 text-neon-purple'
-                                                : 'bg-neon-cyan/10 text-neon-cyan'
-                                                }`}>
-                                                {c.oracle.is_ai || c.oracle.oracle_type === 'ai' ? 'IA' : 'Humano'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center text-sm">{c.total_questions}</td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className="text-sm font-bold text-neon-gold flex items-center justify-center">
-                                                <Sparkles size={14} className="mr-1" />
-                                                {c.total_credits}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center">
-                                            <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${c.status === 'answered' ? 'bg-green-500/10 text-green-400' :
-                                                c.status === 'processing' ? 'bg-yellow-500/10 text-yellow-400' :
-                                                    'bg-slate-500/10 text-slate-400'
-                                                }`}>
-                                                {c.status === 'answered' ? '✓ Respondida' : c.status === 'processing' ? '⏳ Processando' : '⏸ Pendente'}
-                                            </span>
-                                        </td>
-                                        <td className="px-6 py-4 text-center text-sm text-slate-400">
-                                            {new Date(c.created_at).toLocaleDateString('pt-BR')}
-                                        </td>
-                                        <td className="px-6 py-4 text-right">
-                                            <button
-                                                onClick={() => handleViewDetails(c)}
-                                                className="p-2 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-colors"
-                                                title="Ver detalhes"
-                                            >
-                                                <Eye size={16} />
-                                            </button>
-                                            <button
-                                                onClick={() => handleDeleteConsultation(c.id)}
-                                                className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors ml-1"
-                                                title="Excluir permanentemente"
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))}
+                                {filteredConsultations.map(c => {
+                                    const statusInfo = getStatusInfo(c)
+                                    return (
+                                        <tr key={c.id} className="border-b border-white/5 hover:bg-white/5 transition-colors text-white">
+                                            <td className="px-6 py-4">
+                                                <div>
+                                                    <p className="text-sm font-bold">{c.client?.full_name || 'Desconhecido'}</p>
+                                                    <p className="text-xs text-slate-500">{c.client?.email}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-sm">
+                                                <div className="flex items-center gap-2">
+                                                    <span>{c.oracle?.full_name || 'Desconhecido'}</span>
+                                                    {c.oracle?.is_ai && <span className="text-[10px] bg-neon-purple/20 text-neon-purple px-1 rounded">IA</span>}
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <div className="flex items-center justify-center">
+                                                    <span className={`text-xs px-2 py-1 rounded border uppercase font-bold tracking-wider flex items-center gap-1 ${c.type === 'video'
+                                                            ? 'border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan'
+                                                            : 'border-fuchsia-400/30 bg-fuchsia-400/5 text-fuchsia-400'
+                                                        }`}>
+                                                        {c.type === 'video' ? <Video size={10} /> : <MessageSquare size={10} />}
+                                                        {c.type === 'video' ? 'VÍDEO' : 'CHAT'}
+                                                    </span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4 text-center text-sm font-mono text-slate-400">
+                                                {c.type === 'video' ? formatDuration(c.duration_seconds) : `${c.total_questions} msgs`}
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className="text-sm font-bold text-neon-gold flex items-center justify-center">
+                                                    <Sparkles size={14} className="mr-1" />
+                                                    {c.total_credits}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`text-xs px-2 py-0.5 rounded-full font-bold border ${statusInfo.color} ${statusInfo.border}`}>
+                                                    {statusInfo.label}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-4 text-center text-sm text-slate-400">
+                                                {new Date(c.created_at).toLocaleDateString('pt-BR')}
+                                            </td>
+                                            <td className="px-6 py-4 text-right">
+                                                <div className="flex items-center justify-end gap-1">
+                                                    <button
+                                                        onClick={() => handleViewDetails(c)}
+                                                        className="p-2 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-colors"
+                                                        title="Ver detalhes"
+                                                    >
+                                                        <Eye size={16} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteConsultation(c)}
+                                                        className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-colors"
+                                                        title="Excluir e reembolsar"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    )
+                                })}
                                 {filteredConsultations.length === 0 && (
                                     <tr>
                                         <td colSpan={8} className="text-center py-8 text-slate-500 text-sm">
@@ -347,7 +449,7 @@ export default function AdminConsultationsPage() {
                                 <h3 className="text-xl font-bold text-white">Detalhes da Consulta</h3>
                                 <p className="text-xs text-slate-500 mt-1 uppercase tracking-widest font-mono">ID: {selectedConsultation.id}</p>
                             </div>
-                            {(selectedConsultation.oracle?.is_ai || selectedConsultation.oracle?.oracle_type === 'ai' || selectedConsultation.oracle?.role === 'ai') && (
+                            {(selectedConsultation.oracle?.is_ai || selectedConsultation.oracle?.oracle_type === 'ai') && (
                                 <button
                                     onClick={() => handleRegenerate(selectedConsultation.id)}
                                     disabled={isRegenerating}
@@ -362,14 +464,31 @@ export default function AdminConsultationsPage() {
                             )}
                         </div>
                         <div className="space-y-6">
-                            {modalQuestions.map((q, idx) => (
-                                <div key={q.id} className="border-b border-white/5 pb-6 last:border-0">
-                                    <p className="text-sm font-bold text-neon-purple mb-2">Mensagem {idx + 1}:</p>
-                                    <p className="text-white mb-4">{q.question_text}</p>
-                                    <p className="text-sm font-bold text-neon-gold mb-2">Resposta:</p>
-                                    <p className="text-slate-300 whitespace-pre-wrap">{q.answer_text || 'Sem resposta ainda'}</p>
+                            {selectedConsultation.type === 'video' ? (
+                                <div className="text-center p-8 bg-white/5 rounded-2xl">
+                                    <p className="text-lg font-bold text-white mb-2">Consulta por Vídeo</p>
+                                    <p className="text-slate-400 mb-4">Duração: {formatDuration(selectedConsultation.duration_seconds)}</p>
+                                    <p className="items-center justify-center flex gap-2 text-neon-gold font-bold">
+                                        <Sparkles size={16} /> {selectedConsultation.total_credits} Créditos
+                                    </p>
+
+                                    {selectedConsultation.video_end_reason && (
+                                        <p className="text-xs text-slate-500 mt-4">Motivo Fim: {selectedConsultation.video_end_reason}</p>
+                                    )}
                                 </div>
-                            ))}
+                            ) : (
+                                modalQuestions.map((q, idx) => (
+                                    <div key={q.id} className="border-b border-white/5 pb-6 last:border-0">
+                                        <p className="text-sm font-bold text-neon-purple mb-2">Mensagem {idx + 1}:</p>
+                                        <p className="text-white mb-4">{q.question_text}</p>
+                                        <p className="text-sm font-bold text-neon-gold mb-2">Resposta:</p>
+                                        <p className="text-slate-300 whitespace-pre-wrap">{q.answer_text || 'Sem resposta ainda'}</p>
+                                    </div>
+                                ))
+                            )}
+                            {selectedConsultation.type !== 'video' && modalQuestions.length === 0 && (
+                                <p className="text-center text-slate-500 py-4">Nenhuma mensagem trocada.</p>
+                            )}
                         </div>
                         <button
                             onClick={() => setSelectedConsultation(null)}

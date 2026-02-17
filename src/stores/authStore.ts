@@ -46,6 +46,7 @@ interface Profile {
   price_per_message?: number
   allows_video?: boolean
   allows_text?: boolean
+  whatsapp_notification_enabled?: boolean
   metadata?: any
 }
 

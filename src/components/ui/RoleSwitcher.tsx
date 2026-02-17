@@ -7,7 +7,7 @@ import { useAuthStore } from '@/stores/authStore'
 
 const views = [
     { id: 'owner', label: 'Painel Owner', icon: <Crown size={14} />, href: '/admin', color: 'text-neon-gold' },
-    { id: 'client', label: 'Visão Cliente', icon: <User size={14} />, href: '/app', color: 'text-neon-cyan' },
+    { id: 'client', label: 'Visão Cliente', icon: <User size={14} />, href: '/app?view=client', color: 'text-neon-cyan' },
     { id: 'oracle', label: 'Visão do Oraculista', icon: <Sparkles size={14} />, href: '/app/dashboard', color: 'text-neon-purple' },
 ]
 

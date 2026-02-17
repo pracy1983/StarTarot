@@ -44,7 +44,8 @@ export default function OracleProfilePage() {
         initial_fee_brl: 0.00,
         price_per_message: 10,
         requires_birthdate: false,
-        requires_birthtime: false
+        requires_birthtime: false,
+        whatsapp_notification_enabled: false
     })
 
     const [priceInputs, setPriceInputs] = useState({
@@ -79,7 +80,8 @@ export default function OracleProfilePage() {
                 initial_fee_brl: profile.initial_fee_brl || 0.00,
                 price_per_message: profile.price_per_message || 10,
                 requires_birthdate: profile.requires_birthdate || false,
-                requires_birthtime: profile.requires_birthtime || false
+                requires_birthtime: profile.requires_birthtime || false,
+                whatsapp_notification_enabled: profile.whatsapp_notification_enabled || false
             })
             setPriceInputs({
                 price_brl_per_minute: (profile.price_brl_per_minute || 5.00).toString(),
@@ -119,7 +121,8 @@ export default function OracleProfilePage() {
                     initial_fee_credits,
                     price_per_message: formData.price_per_message,
                     requires_birthdate: formData.requires_birthdate,
-                    requires_birthtime: formData.requires_birthtime
+                    requires_birthtime: formData.requires_birthtime,
+                    whatsapp_notification_enabled: formData.whatsapp_notification_enabled
                 })
                 .eq('id', profile!.id)
 
@@ -527,6 +530,22 @@ export default function OracleProfilePage() {
                                 onChange={e => setFormData({ ...formData, phone: e.target.value })}
                                 placeholder="(00) 00000-0000"
                             />
+
+                            <div
+                                onClick={() => setFormData(prev => ({ ...prev, whatsapp_notification_enabled: !prev.whatsapp_notification_enabled }))}
+                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${formData.whatsapp_notification_enabled ? 'bg-green-500/10 border-green-500/30' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                            >
+                                <div className="flex items-center space-x-3">
+                                    <div className={`p-2 rounded-lg ${formData.whatsapp_notification_enabled ? 'text-green-400 bg-green-500/20' : 'text-slate-500 bg-white/5'}`}>
+                                        <MessageSquare size={18} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-sm font-bold ${formData.whatsapp_notification_enabled ? 'text-white' : 'text-slate-400'}`}>Notificações do Sistema</p>
+                                        <p className="text-[10px] text-slate-500">Receba aviso imediato no WhatsApp: "Alguém quer fazer uma consulta"</p>
+                                    </div>
+                                </div>
+                                {formData.whatsapp_notification_enabled ? <ToggleRight className="text-green-400" size={24} /> : <ToggleLeft className="text-slate-600" size={24} />}
+                            </div>
 
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium text-slate-400 ml-1 flex items-center">

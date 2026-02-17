@@ -74,6 +74,15 @@ https://startarot.netlify.app/app/mensagens
     }
 
     /**
+     * Notifica o oráculo sobre nova consulta pendente
+     */
+    async sendNewConsultationNotificationToOracle(phone: string): Promise<boolean> {
+        const message = `Alguém quer fazer uma consulta. Responda agora:
+https://startarot.netlify.app/app/dashboard`
+        return this.sendTextMessage({ phone, message })
+    }
+
+    /**
      * Formata número de telefone para padrão internacional
      * Aceita: (11) 98765-4321, 11987654321, +5511987654321
      * Retorna: 5511987654321

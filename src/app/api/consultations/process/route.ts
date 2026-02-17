@@ -145,6 +145,15 @@ export async function POST(req: Request) {
                 }
             ])
 
+            // Notificar WhatsApp se habilitado
+            if (oracle.whatsapp_notification_enabled && oracle.phone) {
+                try {
+                    await whatsappService.sendNewConsultationNotificationToOracle(oracle.phone)
+                } catch (waErr) {
+                    console.error('Error sending WA to oracle:', waErr)
+                }
+            }
+
             return NextResponse.json({ success: true, message: 'Consulta humana encaminhada' })
         }
 

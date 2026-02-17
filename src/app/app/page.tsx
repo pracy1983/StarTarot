@@ -5,11 +5,13 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { OracleCard } from '@/components/client/OracleCard'
 import { supabase } from '@/lib/supabase'
 import { Sparkles, Filter, Search, Moon, Sun, Star } from 'lucide-react'
+import { useSearchParams } from 'next/navigation'
 
 import { useAuthStore } from '@/stores/authStore'
 
 export default function MarketplacePage() {
     const { profile } = useAuthStore()
+    const searchParams = useSearchParams()
     const [oracles, setOracles] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
@@ -18,15 +20,27 @@ export default function MarketplacePage() {
     const [filterVideo, setFilterVideo] = useState(false)
     const [filterMessage, setFilterMessage] = useState(false)
 
-    // Derived from DB or Static
     const specialties = ['Tarot', 'Astrologia', 'Búzios', 'Numerologia', 'Reiki', 'Vidência']
 
     useEffect(() => {
         fetchOracles()
+        // Load persistency
+        const v = localStorage.getItem('pref_filter_video') === 'true'
+        const m = localStorage.getItem('pref_filter_message') === 'true'
+        if (v) setFilterVideo(true)
+        if (m) setFilterMessage(true)
     }, [])
+
+    useEffect(() => {
+        localStorage.setItem('pref_filter_video', String(filterVideo))
+        localStorage.setItem('pref_filter_message', String(filterMessage))
+    }, [filterVideo, filterMessage])
 
     // AUTO-REDIRECT FOR ORACLES
     useEffect(() => {
+        // If explicitly viewing as client, do not redirect
+        if (searchParams.get('view') === 'client') return
+
         if (profile?.role === 'oracle' && profile?.application_status === 'approved') {
             // Check if user explicitly wants to stay (e.g. clicked "View as Client")
             // We can simple check if they are already on the right page? No this is the client page.
@@ -45,7 +59,7 @@ export default function MarketplacePage() {
                 window.location.href = '/app/dashboard'
             }
         }
-    }, [profile])
+    }, [profile, searchParams])
 
     const fetchOracles = async () => {
         try {
@@ -60,14 +74,17 @@ export default function MarketplacePage() {
 
             if (pError) throw pError
 
+            // Filter out unavailable oracles (neither video nor text)
+            const activeProfiles = profiles.filter(p => p.allows_video || p.allows_text)
+
             // 2. Busca todos os horários para esses oraculistas
             const { data: schedules } = await supabase
                 .from('schedules')
                 .select('*')
-                .in('oracle_id', profiles.map(p => p.id))
+                .in('oracle_id', activeProfiles.map(p => p.id))
 
             // 3. Mapeia horários para cada perfil
-            const oraclesWithSchedules = profiles.map(p => ({
+            const oraclesWithSchedules = activeProfiles.map(p => ({
                 ...p,
                 schedules: schedules?.filter(s => s.oracle_id === p.id) || []
             }))
