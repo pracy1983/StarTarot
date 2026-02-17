@@ -268,6 +268,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   logout: async () => {
+    const profile = useAuthStore.getState().profile
+    if (profile?.id && (profile.role === 'oracle' || profile.role === 'owner')) {
+      await supabase.from('profiles').update({ is_online: false }).eq('id', profile.id)
+    }
     await supabase.auth.signOut()
     set({ profile: null, isAuthenticated: false })
   },

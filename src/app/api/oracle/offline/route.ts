@@ -14,9 +14,7 @@ export async function POST(req: Request) {
         const { error } = await supabaseAdmin
             .from('profiles')
             .update({
-                is_online: false,
-                allows_video: false,
-                allows_text: false
+                is_online: false
             })
             .eq('id', userId)
 

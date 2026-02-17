@@ -142,8 +142,8 @@ export default function LandingPage() {
           </div>
 
           <div className="md:hidden">
-            <button onClick={() => openAuth('client', false)} className="text-neon-purple">
-              <LogIn size={24} />
+            <button onClick={() => openAuth('client', false)} className="text-neon-purple p-2">
+              <User size={24} />
             </button>
           </div>
         </div>
