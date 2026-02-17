@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare, Star, Heart, Award } from 'lucide-react'
+import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare, Star, Heart, Award, Video } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -336,6 +336,30 @@ export default function ConsultationResponsePage() {
                 ))}
             </div>
 
+            {/* Video Call Summary (If video) */}
+            {consultation.type === 'video' && (
+                <GlassCard className="border-neon-cyan/20 bg-neon-cyan/5" hover={false}>
+                    <div className="text-center py-4 space-y-4">
+                        <div className="w-16 h-16 bg-neon-cyan/10 rounded-full flex items-center justify-center mx-auto">
+                            <Video className="text-neon-cyan" size={32} />
+                        </div>
+                        <h3 className="text-xl font-bold text-white uppercase tracking-widest">Resumo da Chamada</h3>
+                        <div className="grid grid-cols-2 gap-4 max-w-sm mx-auto">
+                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Tempo Online</p>
+                                <p className="text-lg font-bold text-white">
+                                    {Math.floor((consultation.duration_seconds || 0) / 60)}:{(consultation.duration_seconds % 60 || 0).toString().padStart(2, '0')}
+                                </p>
+                            </div>
+                            <div className="bg-black/20 p-3 rounded-xl border border-white/5">
+                                <p className="text-[10px] text-slate-500 uppercase font-bold">Créditos Utilizados</p>
+                                <p className="text-lg font-bold text-neon-gold">{consultation.total_credits} CR</p>
+                            </div>
+                        </div>
+                    </div>
+                </GlassCard>
+            )}
+
             {/* Gifts Section */}
             <GlassCard className="border-neon-gold/20 bg-neon-gold/5" hover={false}>
                 <div className="text-center space-y-4">
@@ -389,7 +413,7 @@ export default function ConsultationResponsePage() {
             </GlassCard>
 
             {/* Rating Section */}
-            {!hasRated ? (
+            {!hasRated && (consultation.type !== 'video' || (consultation.duration_seconds || 0) >= 300) ? (
                 <GlassCard className="border-neon-purple/20 bg-neon-purple/5" hover={false}>
                     <div className="text-center space-y-6 py-4">
                         <div className="space-y-2">

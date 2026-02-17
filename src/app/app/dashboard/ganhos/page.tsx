@@ -138,7 +138,7 @@ export default function OracleGanhosPage() {
                         </thead>
                         <tbody className="divide-y divide-white/5">
                             {history.map((item) => {
-                                const isGift = item.description.toLowerCase().includes('presente')
+                                const isGift = item.description?.toLowerCase().includes('presente') || false
                                 const amount = Math.abs(Number(item.amount))
 
                                 return (

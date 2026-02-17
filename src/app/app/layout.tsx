@@ -250,7 +250,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         </div>
                     )}
 
-                    <div className="hidden sm:flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
+                    <div className="flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10">
                         <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
                             {isOracleView ? 'Ganhos' : 'Saldo'}
                         </span>

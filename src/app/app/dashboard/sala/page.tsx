@@ -18,7 +18,8 @@ import {
     PhoneIncoming,
     AlertTriangle,
     User as UserIcon,
-    Power
+    Power,
+    RefreshCcw
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 
@@ -54,6 +55,8 @@ export default function ServiceRoomPage() {
     const [localVideoTrack, setLocalVideoTrack] = React.useState<ICameraVideoTrack | null>(null)
     const [localAudioTrack, setLocalAudioTrack] = React.useState<IMicrophoneAudioTrack | null>(null)
 
+    const localPlayerRef = React.useRef<HTMLDivElement>(null)
+
     const [videoEnabled, setVideoEnabled] = React.useState(true)
     const [audioEnabled, setAudioEnabled] = React.useState(true)
     const clientRef = React.useRef<IAgoraRTCClient | null>(null)
@@ -67,6 +70,12 @@ export default function ServiceRoomPage() {
     // Summary/Termination
     const [showSummary, setShowSummary] = useState(false)
     const [summaryData, setSummaryData] = useState<any>(null)
+
+    useEffect(() => {
+        if (localVideoTrack && localPlayerRef.current) {
+            localVideoTrack.play(localPlayerRef.current)
+        }
+    }, [localVideoTrack, joined])
 
     useEffect(() => {
         if (!consultationId) {
@@ -173,6 +182,7 @@ export default function ServiceRoomPage() {
     const getCameras = async () => {
         try {
             const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+            // Request permission first if not granted, or just try listing
             const cams = await AgoraRTC.getCameras()
             setCameras(cams)
             if (cams.length > 0) {
@@ -294,7 +304,9 @@ export default function ServiceRoomPage() {
             await client.publish([audioTrack, videoTrack])
 
             setJoined(true)
-            videoTrack.play('local-player')
+            if (localPlayerRef.current) {
+                videoTrack.play(localPlayerRef.current)
+            }
 
             // Update status to 'active' if not already
             if (consultation?.status === 'pending') {
@@ -362,9 +374,16 @@ export default function ServiceRoomPage() {
 
             if (error) throw error
 
+            // Re-fetch to get final total_credits from DB
+            const { data: updatedCons } = await supabase
+                .from('consultations')
+                .select('total_credits')
+                .eq('id', consultationId)
+                .single()
+
             setSummaryData({
                 duration: duration,
-                credits: consultation.total_credits // Or fetch updated
+                credits: updatedCons?.total_credits || Math.floor((duration / 60) * (profile?.credits_per_minute || 0))
             })
 
             await leaveCall()
@@ -426,7 +445,7 @@ export default function ServiceRoomPage() {
                                 <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos (Est.)</p>
                                 {/* We can estimate based on duration * rate if exact total isn't available yet */}
                                 <p className="text-xl font-bold text-neon-gold">
-                                    {Math.floor((duration / 60) * (consultation?.credits_per_minute || 0))} CR
+                                    {summaryData?.credits || 0} CR
                                 </p>
                             </div>
                         </div>
@@ -471,15 +490,16 @@ export default function ServiceRoomPage() {
                 <div
                     className="absolute bottom-32 right-4 w-32 h-48 md:w-48 md:h-64 bg-black rounded-xl border-2 border-white/20 shadow-2xl overflow-hidden z-20 group transition-all hover:scale-105"
                 >
-                    <div id="local-player" className="w-full h-full bg-slate-800" />
+                    <div ref={localPlayerRef} className="w-full h-full bg-slate-800" />
 
-                    {/* Switch Camera Button (Mobile) */}
+                    {/* Switch Camera Button (Mobile/Tablet) */}
                     {cameras.length > 1 && (
                         <button
                             onClick={switchCamera}
-                            className="absolute top-2 right-2 p-2 bg-black/50 rounded-full text-white hover:bg-white/20 backdrop-blur-sm"
+                            title="Trocar Câmera"
+                            className="absolute top-2 right-2 p-3 bg-black/60 rounded-full text-neon-cyan hover:bg-neon-cyan hover:text-black border border-neon-cyan/30 backdrop-blur-md transition-all z-30"
                         >
-                            <Loader2 size={16} className={loading ? 'animate-spin' : ''} />
+                            <RefreshCcw size={20} />
                         </button>
                     )}
                 </div>
