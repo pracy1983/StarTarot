@@ -26,7 +26,7 @@ export async function POST(req: Request) {
         // 2. Buscar consulta
         const { data: consultation, error: consultationError } = await supabaseAdmin
             .from('consultations')
-            .select('*, oracle:profiles!consultations_oracle_id_fkey(*)')
+            .select('*, oracle:profiles!consultations_oracle_id_fkey(*), client:profiles!consultations_client_id_fkey(*)')
             .eq('id', consultationId)
             .single()
 
@@ -35,8 +35,18 @@ export async function POST(req: Request) {
         }
 
         const oracle = consultation.oracle
+        const client = consultation.client
 
-        // 3. Resetar status e perguntas (limpar respostas de erro)
+        // 3. Buscar Master Prompt e Configurações Globais
+        const { data: globalSettings } = await supabaseAdmin
+            .from('global_settings')
+            .select('value')
+            .eq('key', 'master_ai_prompt')
+            .maybeSingle()
+
+        const masterPrompt = globalSettings?.value || ''
+
+        // 4. Resetar status
         await supabaseAdmin
             .from('consultations')
             .update({ status: 'processing' })
@@ -48,29 +58,60 @@ export async function POST(req: Request) {
             .eq('consultation_id', consultationId)
             .order('question_order', { ascending: true })
 
-        if (!questions) throw new Error('Nenhuma pergunta encontrada')
+        if (!questions || questions.length === 0) throw new Error('Nenhuma pergunta encontrada')
 
-        // 4. Lógica de IA (DeepSeek) - Processamento Paralelo
+        // 5. Lógica de IA (DeepSeek)
         const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
+        if (!apiKey) throw new Error('DEEPSEEK_API_KEY não configurada')
 
         const subjectContext = consultation.subject_name
-            ? `\n\nEsta consulta é sobre: ${consultation.subject_name}${consultation.subject_birthdate ? `, nascido(a) em ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
+            ? `\n\nSOBRE O TEMA DA CONSULTA (OUTRA PESSOA):\nNome: ${consultation.subject_name}${consultation.subject_birthdate ? `\nData de Nascimento: ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
             : ''
 
+        const clientBirthInfo = `
+DADOS DO CONSULENTE (VOCÊ):
+Nome Completo: ${client.full_name}
+Data de Nascimento: ${client.birth_date ? new Date(client.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
+Hora de Nascimento: ${client.birth_time || 'Não informado'}
+Local de Nascimento: ${client.birth_place || 'Não informado'}
+${subjectContext}
+`.trim()
+
         const systemMessage = `
+${masterPrompt}
+
+DADOS PARA A LEITURA:
+${clientBirthInfo}
+
+---
+PERSONA DO ORACULISTA:
 Você é ${oracle.full_name}, um(a) especialista em ${oracle.specialty}.
-SOBRE VOCÊ: ${oracle.bio || 'Místico experiente.'}
-ESTILO: ${oracle.personality || 'Direto e acolhedor.'}
-INSTRUÇÕES: Respondas as perguntas do consulente de forma mística, profunda e direta.${subjectContext}
-        `.trim()
 
-        // Processamento paralelo com controle
-        const results = await Promise.all(questions.map(async (q) => {
+SOBRE VOCÊ:
+${oracle.bio || 'Um guia espiritual experiente.'}
+
+SUA PERSONALIDADE E ESTILO:
+${oracle.personality || 'Acolhedor, místico e direto.'}
+
+REGRAS CRÍTICAS DE PERSONA (O QUE VOCÊ É E NÃO É):
+1. VOCÊ NÃO É UMA IA: Jamais, em hipótese alguma, diga que é uma Inteligência Artificial, um modelo de linguagem ou um assistente virtual. Fale como um ser humano.
+2. SE PERGUNTAREM SE É ROBÔ: Leve na brincadeira, tire um sarro leve.
+3. FALA DIRETA: Fale sempre diretamente para o consulente.
+
+REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
+1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações ou gestos (ex: NÃO use "*embaralha as cartas*").
+2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura".
+3. SEM EMOJIS EM EXCESSO: Respeite o Master Prompt sobre formatação e ícones.
+
+INSTRUÇÕES DO SEU MÉTODO DE LEITURA (PROMPT ESPECÍFICO):
+${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
+`.trim()
+
+        const conversationHistory: any[] = []
+
+        // Processamento sequencial para manter o histórico entre as perguntas da mesma consulta
+        for (const q of questions) {
             try {
-                // Timeout manual de 45 segundos para cada chamada
-                const controller = new AbortController()
-                const timeoutId = setTimeout(() => controller.abort(), 45000)
-
                 const response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
                     headers: {
@@ -81,39 +122,39 @@ INSTRUÇÕES: Respondas as perguntas do consulente de forma mística, profunda e
                         model: 'deepseek-chat',
                         messages: [
                             { role: 'system', content: systemMessage },
+                            ...conversationHistory,
                             { role: 'user', content: q.question_text }
                         ],
                         temperature: 0.7,
                         max_tokens: 1000
-                    }),
-                    signal: controller.signal
+                    })
                 })
-
-                clearTimeout(timeoutId)
 
                 if (response.ok) {
                     const data = await response.json()
                     const answer = data.choices[0].message.content
 
+                    if (!answer) throw new Error('AI retornou resposta vazia')
+
+                    // Alimentar o histórico
+                    conversationHistory.push({ role: 'user', content: q.question_text })
+                    conversationHistory.push({ role: 'assistant', content: answer })
+
                     await supabaseAdmin
                         .from('consultation_questions')
                         .update({ answer_text: answer })
                         .eq('id', q.id)
-
-                    return { id: q.id, success: true }
                 } else {
                     const errorMsg = await response.text()
                     throw new Error(`DeepSeek Error: ${response.status} - ${errorMsg}`)
                 }
             } catch (e: any) {
                 console.error(`Erro ao regenerar pergunta ${q.id}:`, e.message)
-                return { id: q.id, success: false, error: e.message }
+                await supabaseAdmin
+                    .from('consultation_questions')
+                    .update({ answer_text: 'Erro ao regenerar resposta.' })
+                    .eq('id', q.id)
             }
-        }))
-
-        const allFailed = results.every(r => !r.success)
-        if (allFailed) {
-            throw new Error('Todas as tentativas de regeneração falharam.')
         }
 
         // 5. Finalizar
