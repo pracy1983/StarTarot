@@ -10,15 +10,21 @@ import { useAuthStore } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
 import toast from 'react-hot-toast'
 
+// Gift Images
+import HeartImg from '@/img/coracao.png'
+import FlowersImg from '@/img/buque.png'
+import BearImg from '@/img/urso.png'
+import MoonImg from '@/img/lua.png'
+
 const REWARD_STARS = 5
 const REWARD_TESTIMONIAL = 15
 const MIN_WORDS_FOR_REWARD = 10
 
 const GIFTS = [
-    { id: 'heart', name: 'Coração GIF', icon: '❤️', credits: 5 },
-    { id: 'flowers', name: 'Buquê de Flores', icon: '💐', credits: 15 },
-    { id: 'bear', name: 'Urso de Pelúcia', icon: '🧸', credits: 50 },
-    { id: 'moon', name: 'Lua Cheia com Laço', icon: '🌕', credits: 150 },
+    { id: 'heart', name: 'Coração', image: HeartImg.src || HeartImg, credits: 5 },
+    { id: 'flowers', name: 'Buquê de Flores', image: FlowersImg.src || FlowersImg, credits: 15 },
+    { id: 'bear', name: 'Urso de Pelúcia', image: BearImg.src || BearImg, credits: 50 },
+    { id: 'moon', name: 'Lua de Cristal', image: MoonImg.src || MoonImg, credits: 150 },
 ]
 
 export default function ConsultationResponsePage() {
@@ -332,9 +338,13 @@ export default function ConsultationResponsePage() {
                                         : 'bg-white/5 border-white/10 hover:border-neon-gold/50 hover:bg-neon-gold/10'
                                         }`}
                                 >
-                                    <span className="text-4xl group-hover:scale-110 transition-transform">
-                                        {gift.icon}
-                                    </span>
+                                    <div className="w-16 h-16 group-hover:scale-110 transition-transform flex items-center justify-center p-1">
+                                        <img
+                                            src={typeof gift.image === 'string' ? gift.image : gift.image.src}
+                                            alt={gift.name}
+                                            className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]"
+                                        />
+                                    </div>
                                     <div className="text-center">
                                         <p className="text-[10px] font-bold text-white uppercase truncate w-full px-1">{gift.name}</p>
                                         <p className="text-xs text-neon-gold font-bold">{gift.credits} Créditos</p>
