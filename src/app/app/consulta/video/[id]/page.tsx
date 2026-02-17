@@ -52,6 +52,7 @@ export default function VideoConsultationPage() {
     const billingInterval = useRef<NodeJS.Timeout | null>(null)
     const clientRef = useRef<IAgoraRTCClient | null>(null)
     const hasChargedInitialFee = useRef(false)
+    const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -99,12 +100,17 @@ export default function VideoConsultationPage() {
             if (mediaType === 'video') {
                 setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user])
 
-                // CLIENT SIDE: Charge initial fee when oracle first connects (Stabilized)
+                // CLIENT SIDE: Charge initial fee when oracle first connects (Wait for stabilization)
                 if (profile?.role === 'client' && !hasChargedInitialFee.current) {
-                    if (oracle?.initial_fee_credits > 0) {
-                        await processInitialFee()
+                    if (!stabilizationTimer.current) {
+                        stabilizationTimer.current = setTimeout(async () => {
+                            if (oracle?.initial_fee_credits > 0 && remoteUsers.length > 0) {
+                                await processInitialFee()
+                                hasChargedInitialFee.current = true
+                            }
+                            stabilizationTimer.current = null
+                        }, 10000) // 10 seconds of stable video before charging
                     }
-                    hasChargedInitialFee.current = true
                 }
 
                 // CLIENT SIDE: Start regular billing only when Oracle video is received
@@ -120,6 +126,16 @@ export default function VideoConsultationPage() {
         client.on('user-unpublished', (user, mediaType) => {
             if (mediaType === 'video') {
                 setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+
+                // Pause billing if video stops
+                if (billingInterval.current) {
+                    clearInterval(billingInterval.current)
+                    billingInterval.current = null
+                }
+                if (stabilizationTimer.current) {
+                    clearTimeout(stabilizationTimer.current)
+                    stabilizationTimer.current = null
+                }
             }
         })
 
@@ -207,15 +223,18 @@ export default function VideoConsultationPage() {
         if (billingInterval.current) return // Prevent duplicate billing loops
 
         billingInterval.current = setInterval(async () => {
-            durationRef.current += 1
-            setDuration(durationRef.current)
+            // Só conta se houver usuários remotos (conexão estabelecida)
+            if (remoteUsers.length > 0) {
+                durationRef.current += 1
+                setDuration(durationRef.current)
 
-            // Cobrança a cada minuto (60 segundos)
-            if (durationRef.current > 0 && durationRef.current % 60 === 0) {
-                const success = await processMinuteBilling()
-                if (!success) {
-                    toast.error('Saldo esgotado. Chamada encerrada.')
-                    endCall()
+                // Cobrança a cada minuto (60 segundos)
+                if (durationRef.current > 0 && durationRef.current % 60 === 0) {
+                    const success = await processMinuteBilling()
+                    if (!success) {
+                        toast.error('Saldo esgotado. Chamada encerrada.')
+                        endCall()
+                    }
                 }
             }
         }, 1000)

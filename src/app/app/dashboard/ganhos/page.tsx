@@ -27,28 +27,22 @@ export default function OracleGanhosPage() {
         try {
             // Fetch all earnings transactions
             // We join with profiles (via metadata.client_id or sender_id)
-            // and consultations (via metadata.consultation_id)
+            // Fetch all earnings transactions
             const { data: transactions, error } = await supabase
                 .from('transactions')
-                .select(`
-                    *,
-                    consultation:consultations!transactions_metadata_consultation_id_fkey (
-                        type,
-                        duration_seconds,
-                        total_credits
-                    )
-                `)
+                .select('*')
                 .eq('user_id', profile!.id)
                 .in('type', ['earnings', 'gift_receive'])
                 .order('created_at', { ascending: false })
 
             if (error) throw error
 
-            // Enrichment: Fetch client profile names for those that are not in the join
-            // (transactions metadata often has client_id or sender_id)
+            // Enrichment: Fetch client profile names and consultation details
             const enrichedHistory = await Promise.all((transactions || []).map(async (tx: any) => {
                 const clientId = tx.metadata?.client_id || tx.metadata?.sender_id
+                const consultationId = tx.metadata?.consultation_id
                 let clientName = 'Consulente'
+                let consultation = null
 
                 if (clientId) {
                     const { data: userData } = await supabase
@@ -60,7 +54,17 @@ export default function OracleGanhosPage() {
                     if (userData) clientName = userData.full_name
                 }
 
-                return { ...tx, clientName }
+                if (consultationId) {
+                    const { data: consData } = await supabase
+                        .from('consultations')
+                        .select('type, duration_seconds, total_credits')
+                        .eq('id', consultationId)
+                        .single()
+
+                    if (consData) consultation = consData
+                }
+
+                return { ...tx, clientName, consultation }
             }))
 
             const safeAmount = (amount: any) => Math.abs(Number(amount) || 0)
