@@ -102,8 +102,30 @@ export default function ConsultationResponsePage() {
     useEffect(() => {
         if (consultation) {
             checkExistingRating()
+            fetchSentGifts()
         }
     }, [consultation])
+
+    const fetchSentGifts = async () => {
+        if (!profile?.id || !id) return
+
+        const { data } = await supabase
+            .from('transactions')
+            .select('description')
+            .eq('user_id', profile.id)
+            .eq('type', 'gift_send')
+            .contains('metadata', { consultation_id: id })
+
+        if (data) {
+            const foundGifts: string[] = []
+            data.forEach((tx: any) => {
+                const giftName = tx.description.replace('Envio de presente: ', '').trim()
+                const gift = GIFTS.find(g => g.name === giftName)
+                if (gift) foundGifts.push(gift.id)
+            })
+            setSentGifts(foundGifts)
+        }
+    }
 
     // "Don't leave" guard
     useEffect(() => {

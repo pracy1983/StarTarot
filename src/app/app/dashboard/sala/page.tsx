@@ -146,29 +146,10 @@ export default function ServiceRoomPage() {
         client.on('user-unpublished', (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
         })
-
-        // AUTO-PREVIEW: Start local tracks on init
-        try {
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
-            const videoTrack = await AgoraRTC.createCameraVideoTrack()
-
-            setLocalAudioTrack(audioTrack)
-            setLocalVideoTrack(videoTrack)
-
-            // Play local preview immediately
-            videoTrack.play('local-player')
-        } catch (err) {
-            console.error('Error initializing preview:', err)
-            toast.error('Erro ao acessar câmera/microfone. Verifique as permissões.')
-        }
     }
 
     const startCall = async () => {
-        if (!clientRef.current || !consultationId || !localVideoTrack || !localAudioTrack) {
-            toast.error('Câmera ou Microfone não inicializados.')
-            return
-        }
+        if (!clientRef.current || !consultationId) return
 
         try {
             const response = await fetch('/api/agora/token', {
@@ -180,20 +161,21 @@ export default function ServiceRoomPage() {
                     role: 'publisher'
                 })
             })
-
-            if (!response.ok) {
-                const errData = await response.json()
-                throw new Error(errData.error || 'Falha ao obter token de acesso')
-            }
-
             const { token, appId } = await response.json()
 
-            if (!appId) throw new Error('App ID não configurado no servidor')
-
             await clientRef.current.join(appId, consultationId, token, profile!.id)
-            await clientRef.current.publish([localAudioTrack, localVideoTrack])
+
+            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
+            const videoTrack = await AgoraRTC.createCameraVideoTrack()
+
+            setLocalAudioTrack(audioTrack)
+            setLocalVideoTrack(videoTrack)
+
+            await clientRef.current.publish([audioTrack, videoTrack])
 
             setJoined(true)
+            videoTrack.play('local-player')
 
             // Start Timer
             timerRef.current = setInterval(() => {
@@ -202,7 +184,11 @@ export default function ServiceRoomPage() {
 
         } catch (err: any) {
             console.error('Error starting call:', err)
-            toast.error('Erro ao conectar: ' + err.message)
+            if (err.message.includes('Agora credentials')) {
+                toast.error('O sistema de vídeo não está configurado. Avise a administração.')
+            } else {
+                toast.error('Erro ao conectar: ' + err.message)
+            }
         }
     }
 
@@ -376,14 +362,13 @@ export default function ServiceRoomPage() {
                 <div className="bg-black/40 rounded-2xl border border-white/10 relative overflow-hidden flex items-center justify-center group h-full">
                     <div id="local-player" className="absolute inset-0 flex items-center justify-center">
                         {!joined && (
-                            <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center space-y-4 z-10 p-6 text-center">
-                                <VideoIcon size={48} className="text-neon-cyan animate-pulse" />
-                                <div>
-                                    <h3 className="text-white font-bold text-lg">Câmera Preparada</h3>
-                                    <p className="text-xs text-slate-400 max-w-[200px] mt-1">O cliente já está na sala? Clique abaixo para iniciar.</p>
+                            <div className="text-center space-y-4 z-10">
+                                <div className="p-4 bg-neon-cyan/10 rounded-full text-neon-cyan inline-block">
+                                    <VideoIcon size={32} />
                                 </div>
-                                <NeonButton variant="green" onClick={startCall} fullWidth>
-                                    Entrar na Consulta
+                                <h3 className="text-white font-bold">Sua Câmera</h3>
+                                <NeonButton variant="purple" onClick={startCall}>
+                                    Conectar Agora
                                 </NeonButton>
                             </div>
                         )}

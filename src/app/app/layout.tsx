@@ -111,14 +111,44 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     useEffect(() => {
         if (profile?.id) {
-            supabase
-                .from('wallets')
-                .select('balance')
-                .eq('user_id', profile.id)
-                .single()
-                .then(({ data }) => {
-                    setWalletBalance(data?.balance ?? 0)
-                })
+            // Initial fetch
+            const fetchBalance = async () => {
+                const { data } = await supabase
+                    .from('wallets')
+                    .select('balance')
+                    .eq('user_id', profile.id)
+                    .single()
+                setWalletBalance(data?.balance ?? 0)
+            }
+            fetchBalance()
+
+            // Realtime subscription
+            const channel = supabase
+                .channel('wallet_balance')
+                .on(
+                    'postgres_changes',
+                    {
+                        event: '*',
+                        schema: 'public',
+                        table: 'wallets',
+                        filter: `user_id=eq.${profile.id}`
+                    },
+                    (payload) => {
+                        if (payload.new) {
+                            setWalletBalance((payload.new as any).balance)
+                            // Also update store to keep in sync
+                            useAuthStore.getState().setProfile({
+                                ...profile,
+                                credits: (payload.new as any).balance
+                            })
+                        }
+                    }
+                )
+                .subscribe()
+
+            return () => {
+                supabase.removeChannel(channel)
+            }
         }
     }, [profile?.id])
 

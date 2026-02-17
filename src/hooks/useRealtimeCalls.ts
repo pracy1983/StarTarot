@@ -7,6 +7,7 @@ export type IncomingCall = {
     id: string
     client_id: string
     client_name?: string
+    topic?: string
     created_at: string
     is_using_bonus?: boolean
 }

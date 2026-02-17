@@ -551,7 +551,7 @@ export default function WalletPage() {
                                     {t.amount > 0 ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
                                 </div>
                                 <div>
-                                    <p className="text-sm font-bold text-white">{t.metadata?.description || 'Transação'}</p>
+                                    <p className="text-sm font-bold text-white">{t.description || t.metadata?.description || 'Transação'}</p>
                                     <p className="text-xs text-slate-500">{new Date(t.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
