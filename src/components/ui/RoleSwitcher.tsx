@@ -62,6 +62,9 @@ export function RoleSwitcher() {
                         <button
                             key={v.id}
                             onClick={() => {
+                                if (v.id === 'client') {
+                                    sessionStorage.removeItem('oracle_redirected')
+                                }
                                 router.push(v.href)
                                 setOpen(false)
                             }}

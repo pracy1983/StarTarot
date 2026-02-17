@@ -112,6 +112,8 @@ export default function ServiceRoomPage() {
     }
 
     const fetchConsultation = async () => {
+        if (!consultationId) return
+
         const { data, error } = await supabase
             .from('consultations')
             .select('*, client:client_id(full_name, avatar_url)')
