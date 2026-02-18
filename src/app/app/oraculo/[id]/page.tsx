@@ -21,6 +21,7 @@ import {
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
 import { useAuthStore } from '@/stores/authStore'
+import { getOracleStatus } from '@/lib/status'
 import toast from 'react-hot-toast'
 
 export default function OracleProfilePage() {
@@ -219,6 +220,8 @@ export default function OracleProfilePage() {
     }
 
     const isAI = oracle.is_ai || oracle.oracle_type === 'ai'
+    const { status: effectiveStatus } = getOracleStatus(oracle.is_online, [], oracle.last_heartbeat_at)
+    const isOnline = effectiveStatus === 'online'
 
     return (
         <div className="max-w-3xl mx-auto space-y-8 pb-20">
@@ -245,7 +248,7 @@ export default function OracleProfilePage() {
                             />
                         </div>
                         {/* Status */}
-                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-deep-space z-20 ${oracle.is_online ? 'bg-green-500' : 'bg-slate-600'}`} />
+                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-deep-space z-20 ${isOnline ? 'bg-green-500' : 'bg-slate-600'}`} />
                     </div>
 
                     {/* Info */}
@@ -276,11 +279,7 @@ export default function OracleProfilePage() {
                                 </div>
                             )}
 
-                            {isAI && (
-                                <span className="px-2 py-0.5 bg-neon-cyan/10 text-neon-cyan text-[10px] font-bold rounded-full flex items-center">
-                                    <Brain size={10} className="mr-1" /> IA
-                                </span>
-                            )}
+                            {/* Removed IA Badge */}
                         </div>
 
                         {favCount > 0 && (
@@ -295,7 +294,7 @@ export default function OracleProfilePage() {
                         </p>
 
                         <div className="flex flex-col space-y-2 mb-6">
-                            {oracle.allows_video && !isAI && (
+                            {oracle.allows_video && (
                                 <div className="flex items-center justify-center md:justify-start text-slate-400 text-sm">
                                     <Video size={16} className="mr-2 text-neon-cyan" />
                                     {oracle.credits_per_minute} créditos por vídeo (minuto)
@@ -316,25 +315,17 @@ export default function OracleProfilePage() {
                 </div>
             </GlassCard>
 
-            {/* Personality / System Prompt (se AI) */}
-            {isAI && oracle.personality && (
-                <GlassCard className="border-white/5" hover={false}>
-                    <h3 className="font-bold text-white mb-3 flex items-center">
-                        <Sparkles size={18} className="mr-2 text-neon-gold" /> Estilo de Atendimento
-                    </h3>
-                    <p className="text-slate-400 text-sm leading-relaxed">{oracle.personality}</p>
-                </GlassCard>
-            )}
+            {/* Personality section hidden for client to obscure AI nature */}
 
             {/* Status & CTA */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
-                    <div className={`p-3 rounded-xl relative ${oracle.is_online ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-500'}`}>
-                        {oracle.is_online ? <Shield size={24} /> : <Shield size={24} className="opacity-50" />}
-                        <div className={`absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse ${oracle.is_online ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`} />
+                    <div className={`p-3 rounded-xl relative ${isOnline ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-500'}`}>
+                        {isOnline ? <Shield size={24} /> : <Shield size={24} className="opacity-50" />}
+                        <div className={`absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`} />
                     </div>
                     <div>
-                        <p className="text-sm font-bold text-white">{oracle.is_online ? 'Online Agora' : 'Offline'}</p>
+                        <p className="text-sm font-bold text-white">{isOnline ? 'Online Agora' : 'Offline'}</p>
                         <p className="text-[10px] text-slate-500 uppercase tracking-wider">Status Atual</p>
                     </div>
                 </GlassCard>
@@ -353,12 +344,12 @@ export default function OracleProfilePage() {
             {/* Iniciar Consulta Buttons */}
             {(oracle.allows_video || oracle.allows_text) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {oracle.allows_video && !isAI && (
+                    {oracle.allows_video && (
                         <NeonButton
                             variant="green"
                             size="lg"
                             className="px-8 py-6 h-auto"
-                            disabled={!oracle.is_online}
+                            disabled={!isOnline}
                             onClick={() => router.push(`/app/consulta/${oracle.id}?type=video`)}
                         >
                             <div className="flex flex-col items-center">

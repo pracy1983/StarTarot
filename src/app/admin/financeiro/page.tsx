@@ -92,11 +92,11 @@ export default function AdminFinanceiroPage() {
     }
 
     return (
-        <div className="p-8 space-y-8">
-            <header className="flex justify-between items-center">
+        <div className="p-4 md:p-8 space-y-6 md:space-y-8 max-w-full overflow-hidden">
+            <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                    <h1 className="text-3xl font-bold text-white mb-2">Fluxo <span className="neon-text-gold">Financeiro</span></h1>
-                    <p className="text-slate-400">Controle de ganhos, comissões de oraculistas e recargas de clientes.</p>
+                    <h1 className="text-2xl md:text-3xl font-bold text-white mb-1 md:mb-2">Fluxo <span className="neon-text-gold">Financeiro</span></h1>
+                    <p className="text-slate-400 text-sm md:text-base">Controle de ganhos, comissões de oraculistas e recargas de clientes.</p>
                 </div>
                 <button
                     onClick={fetchFinanceData}
@@ -107,39 +107,39 @@ export default function AdminFinanceiroPage() {
             </header>
 
             {/* Resumo Financeiro */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <GlassCard glowColor="gold" className="border-white/5">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-neon-gold/10 text-neon-gold border border-neon-gold/20">
-                            <DollarSign size={20} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
+                <GlassCard glowColor="gold" className="border-white/5 overflow-hidden">
+                    <div className="flex justify-between items-start mb-2 md:mb-4">
+                        <div className="p-2 md:p-3 rounded-xl bg-neon-gold/10 text-neon-gold border border-neon-gold/20">
+                            <DollarSign className="w-4 h-4 md:w-5 md:h-5" />
                         </div>
                     </div>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Receita Mensal (Estimativa)</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">
+                    <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Receita Mensal (Est.)</p>
+                    <h3 className="text-xl md:text-3xl font-bold text-white tracking-tight truncate">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.monthlyRevenue)}
                     </h3>
                 </GlassCard>
 
-                <GlassCard glowColor="purple" className="border-white/5">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
-                            <Wallet size={20} />
+                <GlassCard glowColor="purple" className="border-white/5 overflow-hidden">
+                    <div className="flex justify-between items-start mb-2 md:mb-4">
+                        <div className="p-2 md:p-3 rounded-xl bg-neon-purple/10 text-neon-purple border border-neon-purple/20">
+                            <Wallet className="w-4 h-4 md:w-5 md:h-5" />
                         </div>
                     </div>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Créditos em Circulação (Total)</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">
-                        {stats.creditsInCirculation.toLocaleString()} <span className="text-sm font-normal text-slate-500">Créditos</span>
+                    <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Total em Circulação</p>
+                    <h3 className="text-xl md:text-3xl font-bold text-white tracking-tight truncate">
+                        {stats.creditsInCirculation.toLocaleString()} <span className="text-[10px] md:text-sm font-normal text-slate-500">cr</span>
                     </h3>
                 </GlassCard>
 
-                <GlassCard glowColor="cyan" className="border-white/5">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
-                            <TrendingUp size={20} />
+                <GlassCard glowColor="cyan" className="border-white/5 overflow-hidden">
+                    <div className="flex justify-between items-start mb-2 md:mb-4">
+                        <div className="p-2 md:p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan border border-neon-cyan/20">
+                            <TrendingUp className="w-4 h-4 md:w-5 md:h-5" />
                         </div>
                     </div>
-                    <p className="text-slate-500 text-xs font-bold uppercase tracking-widest mb-1">Ganhos em Aberto (Oraculistas)</p>
-                    <h3 className="text-3xl font-bold text-white tracking-tight">
+                    <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Ganhos em Aberto</p>
+                    <h3 className="text-xl md:text-3xl font-bold text-white tracking-tight truncate">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(stats.oracleSplits.reduce((acc, s) => acc + s.amount, 0))}
                     </h3>
                 </GlassCard>
@@ -156,13 +156,13 @@ export default function AdminFinanceiroPage() {
                             {stats.recentRecharges.length > 0 ? stats.recentRecharges.map((tx, i) => (
                                 <div key={tx.created_at + i} className="flex items-center justify-between p-4 rounded-xl bg-white/5 border border-white/5 transition-all hover:border-white/10">
                                     <div className="flex items-center space-x-4">
-                                        <div className="w-10 h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center font-bold">
+                                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-full bg-green-500/10 text-green-500 flex items-center justify-center font-bold text-xs md:text-base">
                                             $
                                         </div>
-                                        <div>
-                                            <p className="text-sm font-bold text-white">{(tx.profiles as any)?.full_name || 'Cliente'}</p>
-                                            <p className="text-xs text-slate-500">
-                                                {format(new Date(tx.created_at), "dd 'de' MMM, HH:mm", { locale: ptBR })} • {tx.amount} Créditos
+                                        <div className="min-w-0">
+                                            <p className="text-sm font-bold text-white truncate">{(tx.profiles as any)?.full_name || 'Cliente'}</p>
+                                            <p className="text-[10px] md:text-xs text-slate-500 line-clamp-1">
+                                                {format(new Date(tx.created_at), "dd/MM, HH:mm", { locale: ptBR })} • {tx.amount} cr
                                             </p>
                                         </div>
                                     </div>
@@ -188,15 +188,15 @@ export default function AdminFinanceiroPage() {
                         <h3 className="text-white font-bold mb-6">Ganhos por Oraculista</h3>
                         <div className="space-y-6">
                             {stats.oracleSplits.length > 0 ? stats.oracleSplits.map((o, idx) => (
-                                <div key={idx} className="flex flex-col space-y-1">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-slate-300">{o.name}</span>
-                                        <span className="text-sm font-bold text-white">
+                                <div key={idx} className="flex flex-col space-y-1 min-w-0">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <span className="text-sm text-slate-300 truncate">{o.name}</span>
+                                        <span className="text-sm font-bold text-white shrink-0">
                                             {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(o.amount)}
                                         </span>
                                     </div>
-                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter">
-                                        {o.credits} Créditos • {o.isAi ? 'Margem 100% IA' : 'Pendente Payout'}
+                                    <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter truncate">
+                                        {o.credits} cr • {o.isAi ? 'IA' : 'Payout'}
                                     </span>
                                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                                         <div

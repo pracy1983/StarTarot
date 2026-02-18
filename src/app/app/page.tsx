@@ -105,13 +105,21 @@ export default function MarketplacePage() {
 
             // 4. Lógica de Ordenação: Favoritos (Online > Offline) > Resto (Online > Offline)
             const sortedOracles = oraclesWithSchedules.sort((a, b) => {
+                const isRecentlyOnline = (o: any) => {
+                    if (!o.is_online) return false
+                    if (!o.last_heartbeat_at) return false
+                    const lastPulse = new Date(o.last_heartbeat_at).getTime()
+                    const now = new Date().getTime()
+                    return (now - lastPulse) < 120000 // 2 minutes
+                }
+
                 const aFav = favorites.includes(a.id) ? 1 : 0
                 const bFav = favorites.includes(b.id) ? 1 : 0
 
                 if (aFav !== bFav) return bFav - aFav
 
-                const aOnline = a.is_online ? 1 : 0
-                const bOnline = b.is_online ? 1 : 0
+                const aOnline = isRecentlyOnline(a) ? 1 : 0
+                const bOnline = isRecentlyOnline(b) ? 1 : 0
 
                 if (aOnline !== bOnline) return bOnline - aOnline
 
@@ -140,7 +148,12 @@ export default function MarketplacePage() {
             o.specialty.toLowerCase().includes(searchTerm.toLowerCase())
 
         let matchesStatus = true
-        if (filter === 'online') matchesStatus = o.is_online
+        if (filter === 'online') {
+            const lastPulse = o.last_heartbeat_at ? new Date(o.last_heartbeat_at).getTime() : 0
+            const now = new Date().getTime()
+            const isPulseActive = (now - lastPulse) < 120000
+            matchesStatus = o.is_online && isPulseActive
+        }
 
         // Specialty Filter
         let matchesSpecialty = true
@@ -163,9 +176,9 @@ export default function MarketplacePage() {
     const paginatedOracles = filteredOracles.slice((page - 1) * oraclesPerPage, page * oraclesPerPage)
 
     return (
-        <div className="space-y-10">
+        <div className="space-y-6 md:space-y-10 max-w-full overflow-x-hidden">
             {/* Hero / Intro */}
-            <section className="relative py-12 px-8 rounded-3xl overflow-hidden glass border-white/5">
+            <section className="relative py-8 md:py-12 px-4 md:px-8 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-neon-purple/10 blur-[100px] z-0" />
                 <div className="absolute bottom-0 left-0 w-1/3 h-full bg-neon-cyan/10 blur-[100px] z-0" />
 
@@ -182,7 +195,7 @@ export default function MarketplacePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-4xl md:text-5xl font-bold font-raleway text-white mb-6 leading-tight"
+                        className="text-3xl md:text-5xl font-bold font-raleway text-white mb-4 md:mb-6 leading-tight"
                     >
                         A resposta que você busca está <span className="neon-text-purple">escrita nas estrelas.</span>
                     </motion.h1>
@@ -190,7 +203,7 @@ export default function MarketplacePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 text-lg leading-relaxed mb-8"
+                        className="text-slate-400 text-sm md:text-lg leading-relaxed mb-4 md:mb-8"
                     >
                         Escolha seu guia, concentre sua energia e inicie sua jornada de autoconhecimento agora mesmo.
                     </motion.p>
@@ -201,15 +214,15 @@ export default function MarketplacePage() {
             <section className="flex flex-col gap-6">
                 <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                     {/* Status Tabs */}
-                    <div className="flex items-center space-x-2 bg-white/5 p-1 rounded-full border border-white/5 w-fit">
+                    <div className="flex items-center space-x-1 md:space-x-2 bg-white/5 p-1 rounded-full border border-white/5 w-fit overflow-x-auto no-scrollbar max-w-full">
                         {[
-                            { id: 'all', label: 'Todos', icon: <Sun size={14} /> },
-                            { id: 'online', label: 'Online Agora', icon: <Moon size={14} /> },
+                            { id: 'all', label: 'Todos', icon: <Sun className="w-3 h-3 md:w-4 md:h-4" /> },
+                            { id: 'online', label: 'Online', icon: <Moon className="w-3 h-3 md:w-4 md:h-4" /> },
                         ].map((item) => (
                             <button
                                 key={item.id}
                                 onClick={() => { setFilter(item.id); setPage(1) }}
-                                className={`flex items-center space-x-2 px-4 py-1.5 rounded-full transition-all whitespace-nowrap text-sm font-medium ${filter === item.id
+                                className={`flex items-center space-x-1.5 md:space-x-2 px-3 md:px-4 py-1 md:py-1.5 rounded-full transition-all whitespace-nowrap text-[12px] md:text-sm font-medium ${filter === item.id
                                     ? 'bg-neon-purple text-white shadow-lg'
                                     : 'text-slate-400 hover:text-white'
                                     }`}
@@ -222,13 +235,13 @@ export default function MarketplacePage() {
 
                     {/* Search Bar */}
                     <div className="relative w-full md:w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors" size={18} />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors w-4 h-4 md:w-[18px] md:h-[18px]" />
                         <input
                             type="text"
-                            placeholder="Nome ou especialidade..."
+                            placeholder="Buscar oráculo..."
                             value={searchTerm}
                             onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
-                            className="w-full bg-white/5 border border-white/10 rounded-full py-2 pl-10 pr-4 text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
+                            className="w-full bg-white/5 border border-white/10 rounded-full py-1.5 md:py-2 pl-10 pr-4 text-[12px] md:text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
                         />
                     </div>
                 </div>

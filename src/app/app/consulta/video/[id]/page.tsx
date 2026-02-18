@@ -55,6 +55,8 @@ export default function VideoConsultationPage() {
     const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
     const [hasEstablishedConnection, setHasEstablishedConnection] = useState(false)
     const [callError, setCallError] = useState<string | null>(null)
+    const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
+    const [isFinalizing, setIsFinalizing] = useState(false)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -115,11 +117,6 @@ export default function VideoConsultationPage() {
                             }
                         }
 
-                        // Start regular billing only when connection is established
-                        if (profile?.role === 'client') {
-                            startBilling()
-                        }
-
                         stabilizationTimer.current = null
                     }, 3000) // 3 seconds of stable video before charging anything
                 }
@@ -133,16 +130,19 @@ export default function VideoConsultationPage() {
             if (mediaType === 'video') {
                 setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
 
-                // Pause billing if video stops
+                // Pause billing if video stops (temporary interruption)
                 if (billingInterval.current) {
                     clearInterval(billingInterval.current)
                     billingInterval.current = null
                 }
-                if (stabilizationTimer.current) {
-                    clearTimeout(stabilizationTimer.current)
-                    stabilizationTimer.current = null
-                }
             }
+        })
+
+        client.on('user-left', async (user) => {
+            setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+            setCallEndedBy('oracle')
+            // Se o oráculo saiu de vez, o cliente finaliza
+            setTimeout(() => autoFinalizeCall('oracle'), 1000)
         })
 
         // AUTO-PREVIEW: Start local tracks on init
@@ -226,26 +226,41 @@ export default function VideoConsultationPage() {
         }
     }
 
-    const startBilling = () => {
-        if (billingInterval.current) return // Prevent duplicate billing loops
+    // Unified Billing Effect for Client
+    useEffect(() => {
+        if (joined && remoteUsers.length > 0 && hasEstablishedConnection && profile?.role === 'client') {
+            if (!billingInterval.current) {
+                billingInterval.current = setInterval(async () => {
+                    setDuration(prev => {
+                        const newDuration = prev + 1
 
-        billingInterval.current = setInterval(async () => {
-            // Só conta se houver usuários remotos (conexão estabelecida)
-            if (remoteUsers.length > 0) {
-                durationRef.current += 1
-                setDuration(durationRef.current)
-
-                // Cobrança a cada minuto (60 segundos)
-                if (durationRef.current > 0 && durationRef.current % 60 === 0) {
-                    const success = await processMinuteBilling()
-                    if (!success) {
-                        toast.error('Saldo esgotado. Chamada encerrada.')
-                        endCall()
-                    }
-                }
+                        // Cobrança a cada minuto (60 segundos)
+                        if (newDuration > 0 && newDuration % 60 === 0) {
+                            processMinuteBilling().then(success => {
+                                if (!success) {
+                                    toast.error('Saldo esgotado. Chamada encerrada.')
+                                    endCall()
+                                }
+                            })
+                        }
+                        return newDuration
+                    })
+                }, 1000)
             }
-        }, 1000)
-    }
+        } else {
+            if (billingInterval.current) {
+                clearInterval(billingInterval.current)
+                billingInterval.current = null
+            }
+        }
+
+        return () => {
+            if (billingInterval.current) {
+                clearInterval(billingInterval.current)
+                billingInterval.current = null
+            }
+        }
+    }, [joined, remoteUsers.length, hasEstablishedConnection])
 
     const processInitialFee = async () => {
         try {
@@ -300,7 +315,26 @@ export default function VideoConsultationPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const endCall = async () => {
+        if (!id || isFinalizing) return
+        setCallEndedBy('client')
+        await autoFinalizeCall('client')
+    }
+
+    const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
+        if (isFinalizing) return
+        setIsFinalizing(true)
+
         if (billingInterval.current) clearInterval(billingInterval.current)
+
+        try {
+            await supabase.rpc('finalize_video_consultation', {
+                p_consultation_id: id,
+                p_duration_seconds: duration,
+                p_end_reason: endedBy === 'client' ? 'client_ended' : 'oracle_left'
+            })
+        } catch (err) {
+            console.error('Error finalizing call:', err)
+        }
 
         localAudioTrack?.stop()
         localAudioTrack?.close()
@@ -308,24 +342,15 @@ export default function VideoConsultationPage() {
         localVideoTrack?.close()
 
         if (clientRef.current) {
-            await clientRef.current.leave()
+            await clientRef.current.leave().catch(() => { })
         }
 
         setJoined(false)
 
-        try {
-            await supabase.rpc('finalize_video_consultation', {
-                p_consultation_id: id,
-                p_duration_seconds: duration,
-                p_end_reason: 'client_ended'
-            })
-        } catch (err) {
-            console.error('Error finalizing call:', err)
-        }
-
         if (duration >= 300) {
             setShowFeedback(true)
         } else {
+            toast.success(endedBy === 'client' ? 'Você encerrou a chamada.' : 'O oraculista encerrou a chamada.')
             router.push(`/app/consulta/resposta/${id}`)
         }
     }
@@ -372,7 +397,7 @@ export default function VideoConsultationPage() {
     if (loading) return null
 
     return (
-        <div className="fixed inset-0 bg-deep-space z-50 flex flex-col pt-20">
+        <div className="fixed inset-0 bg-deep-space z-50 flex flex-col pt-16 md:pt-20 overflow-hidden">
             {/* Feedback Modal */}
             {showFeedback && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -417,28 +442,28 @@ export default function VideoConsultationPage() {
             )}
 
             {/* Header / Info */}
-            <div className="container mx-auto px-4 py-4 flex items-center justify-between text-white z-10">
-                <div className="flex items-center space-x-4">
-                    <div className="w-12 h-12 rounded-full border border-neon-purple/50 overflow-hidden">
-                        <img src={oracle?.avatar_url || `https://ui-avatars.com/api/?name=${oracle?.full_name}`} alt="" />
+            <div className="w-full px-4 py-3 md:py-4 flex flex-row items-center justify-between text-white z-10 gap-2 border-b border-white/5">
+                <div className="flex items-center space-x-2 md:space-x-4 min-w-0">
+                    <div className="w-10 h-10 md:w-12 md:h-12 rounded-full border border-neon-purple/50 overflow-hidden shrink-0">
+                        <img src={oracle?.avatar_url || `https://ui-avatars.com/api/?name=${oracle?.full_name}`} alt="" className="w-full h-full object-cover" />
                     </div>
-                    <div>
-                        <h3 className="font-bold">{oracle?.full_name}</h3>
-                        <p className="text-xs text-neon-cyan uppercase">{oracle?.specialty}</p>
+                    <div className="min-w-0">
+                        <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
+                        <p className="text-[10px] md:text-xs text-neon-cyan uppercase truncate">{oracle?.specialty}</p>
                     </div>
                 </div>
 
-                <div className="flex items-center space-x-6">
-                    <div className="flex items-center bg-white/5 px-4 py-2 rounded-full border border-white/10">
-                        <Clock size={16} className="text-neon-cyan mr-2" />
-                        <span className="font-mono">{Math.floor(duration / 3600).toString().padStart(2, '0')}:
-                            {Math.floor((duration % 3600) / 60).toString().padStart(2, '0')}:
-                            {(duration % 60).toString().padStart(2, '0')}</span>
+                <div className="flex flex-row items-center space-x-2 md:space-x-6 shrink-0">
+                    <div className="flex items-center bg-white/5 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10">
+                        <Clock size={14} className="text-neon-cyan mr-1.5 md:mr-2" />
+                        <span className="font-mono text-xs md:text-sm">
+                            {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+                        </span>
                     </div>
                     {profile?.role === 'client' && (
-                        <div className={`flex items-center px-4 py-2 rounded-full border ${profile.credits! < WARNING_THRESHOLD ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-neon-gold'}`}>
+                        <div className={`hidden sm:flex items-center px-4 py-2 rounded-full border ${profile.credits! < WARNING_THRESHOLD ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-neon-gold'}`}>
                             <AlertCircle size={16} className="mr-2" />
-                            <span>{profile.credits?.toFixed(2)} Créditos</span>
+                            <span className="text-sm">{profile.credits?.toFixed(0)} cr</span>
                         </div>
                     )}
                 </div>
@@ -453,37 +478,35 @@ export default function VideoConsultationPage() {
                             <RemotePlayer user={remoteUsers[0]} />
                         ) : callError ? (
                             <div className="max-w-md w-full px-6 py-12 text-center space-y-6 animate-in fade-in duration-500">
-                                <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
-                                    <AlertCircle size={40} className="text-red-500" />
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
+                                    <AlertCircle className="w-8 h-8 md:w-10 md:h-10 text-red-500" />
                                 </div>
-                                <div className="space-y-2">
-                                    <h2 className="2xl font-bold text-white">Falha na Conexão</h2>
-                                    <p className="text-slate-400 text-sm leading-relaxed">
-                                        Não foi possível estabelecer o sinal de vídeo. Verifique sua internet e tente novamente.
+                                <div className="space-y-2 text-center">
+                                    <h2 className="text-xl md:text-2xl font-bold text-white">Falha na Conexão</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed px-4">
+                                        Não foi possível estabelecer o sinal de vídeo. Verifique sua internet.
                                     </p>
-                                    <p className="text-[10px] text-red-400/60 font-mono uppercase">{callError}</p>
                                 </div>
-                                <div className="pt-4">
+                                <div className="pt-4 flex justify-center">
                                     <NeonButton variant="purple" onClick={() => { setCallError(null); startCall(); }} size="lg">
-                                        <RefreshCw className="mr-2" size={20} />
-                                        Tentar Reconectar Agora
+                                        <RefreshCw className="mr-2 w-4 h-4 md:w-5 md:h-5" />
+                                        Tentar Reiniciar
                                     </NeonButton>
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center space-y-6">
+                            <div className="text-center space-y-4 md:space-y-6 p-4">
                                 <div className="relative">
-                                    <div className="w-24 h-24 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto relative z-10">
-                                        <Video size={48} className="text-neon-purple animate-pulse" />
+                                    <div className="w-20 h-20 md:w-24 md:h-24 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto relative z-10">
+                                        <Video className="w-10 h-10 md:w-12 md:h-12 text-neon-purple animate-pulse" />
                                     </div>
                                     <div className="absolute inset-0 bg-neon-purple blur-3xl opacity-20 animate-pulse" />
                                 </div>
                                 <div className="space-y-2">
-                                    <p className="text-white font-bold text-lg">Conectando com o Oráculo...</p>
-                                    <p className="text-slate-500 italic text-sm">
+                                    <p className="text-white font-bold text-base md:text-lg">Conectando...</p>
+                                    <p className="text-slate-500 italic text-xs md:text-sm px-4">
                                         {remoteUsers.length > 0 ? 'Estabilizando sinal...' : `Aguardando ${oracle?.full_name} entrar...`}
                                     </p>
-                                    <p className="text-[10px] text-neon-cyan/50 uppercase tracking-[0.2em] font-black pt-4">Nenhum crédito será cobrado até a conexão estabilizar</p>
                                 </div>
                             </div>
                         )}
@@ -494,14 +517,14 @@ export default function VideoConsultationPage() {
                         drag
                         dragConstraints={{ left: -300, right: 300, top: -500, bottom: 500 }}
                         initial={{ x: 20, y: 20 }}
-                        className="absolute right-4 top-4 w-32 h-44 sm:w-48 sm:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
+                        className="absolute right-4 top-4 w-28 h-40 md:w-48 md:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
                     >
                         <div id="local-player" className="w-full h-full bg-slate-900 overflow-hidden">
                             {!joined && (
                                 <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none p-2">
-                                    <div className="text-center space-y-2 pointer-events-auto bg-black/60 p-3 rounded-xl backdrop-blur-sm border border-white/10">
-                                        <p className="text-white font-bold text-[10px]">Câmera OK?</p>
-                                        <button onClick={startCall} className="bg-neon-purple px-3 py-1 rounded-full text-[10px] text-white font-bold hover:bg-neon-purple/80 transition-all">
+                                    <div className="text-center space-y-2 pointer-events-auto bg-black/60 p-2 md:p-3 rounded-xl backdrop-blur-sm border border-white/10">
+                                        <p className="text-white font-bold text-[8px] md:text-[10px]">Câmera OK?</p>
+                                        <button onClick={startCall} className="bg-neon-purple px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[10px] text-white font-bold hover:bg-neon-purple/80 transition-all">
                                             Entrar
                                         </button>
                                     </div>
@@ -512,54 +535,58 @@ export default function VideoConsultationPage() {
                             <User size={10} className="text-neon-cyan" />
                             <span className="text-[8px] text-white">Você</span>
                         </div>
-
-                        {/* Switch Camera Overlay Button */}
-                        {cameras.length > 1 && (
-                            <button
-                                onClick={(e) => { e.stopPropagation(); switchCamera(); }}
-                                className="absolute top-2 right-2 p-1.5 bg-black/40 rounded-full text-white hover:bg-black/60 transition-all"
-                            >
-                                <RefreshCw size={14} />
-                            </button>
-                        )}
                     </motion.div>
+
+                    {/* Call Ended Modal Overlay */}
+                    {callEndedBy && !showFeedback && (
+                        <div className="absolute inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                            <GlassCard className="max-w-xs w-full p-6 text-center space-y-4 border-red-500/20">
+                                <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                                    <PhoneOff size={32} className="text-red-500" />
+                                </div>
+                                <h3 className="text-xl font-bold text-white">Chamada Encerrada</h3>
+                                <p className="text-slate-400 text-sm">
+                                    {callEndedBy === 'oracle' ? 'O oraculista encerrou a chamada.' : 'Você encerrou a chamada.'}
+                                </p>
+                                <div className="animate-pulse text-neon-cyan text-[10px] md:text-xs font-bold uppercase">
+                                    Finalizando sessão...
+                                </div>
+                            </GlassCard>
+                        </div>
+                    )}
                 </div>
             </div>
 
             {/* Controls */}
-            <div className="bg-white/5 border-t border-white/10 py-8 backdrop-blur-xl">
-                <div className="container mx-auto flex items-center justify-center space-x-6">
+            <div className="bg-white/5 border-t border-white/10 py-6 md:py-8 backdrop-blur-xl shrink-0">
+                <div className="container mx-auto flex items-center justify-center space-x-4 md:space-x-6 px-4">
                     <button
                         onClick={toggleAudio}
-                        className={`p-4 rounded-full transition-all ${audioEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}
-                        title={audioEnabled ? 'Silenciar Áudio' : 'Ativar Áudio'}
+                        className={`p-3 md:p-4 rounded-full transition-all ${audioEnabled ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}
                     >
-                        {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+                        {audioEnabled ? <Mic className="w-5 h-5 md:w-6 md:h-6" /> : <MicOff className="w-5 h-5 md:w-6 md:h-6" />}
                     </button>
 
                     <button
                         onClick={endCall}
-                        className="p-6 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all transform hover:scale-110 shadow-2xl"
-                        title="Encerrar Consulta"
+                        className="p-4 md:p-6 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all transform hover:scale-105 shadow-2xl"
                     >
-                        <PhoneOff size={32} />
+                        <PhoneOff className="w-6 h-6 md:w-8 md:h-8" />
                     </button>
 
                     <button
                         onClick={toggleVideo}
-                        className={`p-4 rounded-full transition-all ${videoEnabled ? 'bg-white/10 text-white hover:bg-white/20' : 'bg-red-500 text-white'}`}
-                        title={videoEnabled ? 'Desativar Câmera' : 'Ativar Câmera'}
+                        className={`p-3 md:p-4 rounded-full transition-all ${videoEnabled ? 'bg-white/10 text-white' : 'bg-red-500 text-white'}`}
                     >
-                        {videoEnabled ? <Video size={24} /> : <VideoOff size={24} />}
+                        {videoEnabled ? <Video className="w-5 h-5 md:w-6 md:h-6" /> : <VideoOff className="w-5 h-5 md:w-6 md:h-6" />}
                     </button>
 
                     {cameras.length > 1 && (
                         <button
                             onClick={switchCamera}
-                            className="p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all sm:hidden"
-                            title="Inverter Câmera"
+                            className="p-3 md:p-4 rounded-full bg-white/10 text-white hover:bg-white/20 transition-all"
                         >
-                            <RefreshCw size={24} />
+                            <RefreshCw className="w-5 h-5 md:w-6 md:h-6" />
                         </button>
                     )}
                 </div>

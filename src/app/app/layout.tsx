@@ -23,6 +23,7 @@ import { supabase } from '@/lib/supabase'
 import { IncomingCallModal } from '@/components/oracle/IncomingCallModal'
 import { OracleStatusToggle } from '@/components/oracle/OracleStatusToggle'
 import { useRealtimeCalls } from '@/hooks/useRealtimeCalls'
+import { useHeartbeat } from '@/hooks/useHeartbeat'
 import toast, { Toaster } from 'react-hot-toast'
 import { AuthModal } from '@/components/auth/AuthModal'
 
@@ -32,6 +33,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const pathname = usePathname()
     const [walletBalance, setWalletBalance] = useState<number>(0)
     const [unreadCount, setUnreadCount] = useState(0)
+
+    // Heartbeat for Oracles
+    useHeartbeat()
 
     // Realtime Calls Hook (Global)
     const { isOnline, incomingCall, isAccepting, acceptCall, rejectCall, toggleOnline } = useRealtimeCalls()
@@ -218,7 +222,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     }, [profile?.id, profile?.role])
 
     return (
-        <div className={`flex min-h-screen bg-deep-space relative flex-col ${isAdminView ? 'theme-owner' : isOracleView ? 'theme-oracle' : 'theme-client'}`}>
+        <div className={`flex min-h-screen bg-deep-space relative flex-col overflow-x-hidden ${isAdminView ? 'theme-owner' : isOracleView ? 'theme-oracle' : 'theme-client'}`}>
             <div className={`stars-overlay ${isOracleView ? 'opacity-30' : 'opacity-20'}`} />
 
             {/* Top Header */}
@@ -369,7 +373,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 </nav>
 
                 {/* Main Content */}
-                <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto">
+                <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden">
                     {children}
                 </main>
             </div>

@@ -70,7 +70,9 @@ export default function ServiceRoomPage() {
 
     // Summary/Termination
     const [showSummary, setShowSummary] = useState(false)
-    const [summaryData, setSummaryData] = useState<any>(null)
+    const [summaryData, setSummaryData] = useState({ duration: 0, credits: 0 })
+    const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
+    const [isFinalizing, setIsFinalizing] = useState(false)
 
     // Error State
     const [callError, setCallError] = useState<string | null>(null)
@@ -279,7 +281,15 @@ export default function ServiceRoomPage() {
             client.on('user-unpublished', (user, mediaType) => {
                 if (mediaType === 'video') {
                     setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+                    // If client stops video but is still in room, we just wait
                 }
+            })
+
+            client.on('user-left', async (user) => {
+                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+                setCallEndedBy('client')
+                // Se o cliente saiu de vez, finaliza a consulta automaticamente
+                autoFinalizeCall('client')
             })
 
             client.on('connection-state-change', (curState, prevState) => {
@@ -402,35 +412,42 @@ export default function ServiceRoomPage() {
     }
 
     const endCall = async () => {
-        if (!consultationId) return
+        if (!consultationId || isFinalizing) return
+        setCallEndedBy('oracle')
+        await autoFinalizeCall('oracle')
+    }
+
+    const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
+        if (!consultationId || isFinalizing) return
+        setIsFinalizing(true)
 
         try {
-            // Calculate final credits
-            const { error } = await supabase.rpc('finalize_video_consultation', {
+            // Finalize in DB
+            const { data: result, error } = await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: consultationId,
                 p_duration_seconds: duration,
-                p_end_reason: 'oracle_ended'
+                p_end_reason: endedBy === 'oracle' ? 'oracle_ended' : 'client_left'
             })
 
             if (error) throw error
 
-            // Re-fetch to get final total_credits from DB
-            const { data: updatedCons } = await supabase
-                .from('consultations')
-                .select('total_credits')
-                .eq('id', consultationId)
-                .single()
+            const earnings = (result as any)?.[0]?.oracle_earnings || 0
 
             setSummaryData({
                 duration: duration,
-                credits: updatedCons?.total_credits || Math.floor((duration / 60) * (profile?.credits_per_minute || 0))
+                credits: Math.round(earnings)
             })
 
             await leaveCall()
             setShowSummary(true)
-            toast.success('Consulta finalizada!')
+            toast.success(endedBy === 'oracle' ? 'Consulta encerrada por você.' : 'O cliente encerrou a consulta.')
         } catch (err: any) {
-            toast.error('Erro ao finalizar: ' + err.message)
+            console.error('Finalize error:', err)
+            toast.error('Erro ao finalizar ganhos: ' + err.message)
+            // Still show summary if possible
+            setShowSummary(true)
+        } finally {
+            setIsFinalizing(false)
         }
     }
 
@@ -464,28 +481,27 @@ export default function ServiceRoomPage() {
     )
 
     return (
-        <div className="fixed inset-0 bg-black overflow-hidden z-[50]">
+        <div className="fixed inset-0 bg-black overflow-hidden z-[50] flex flex-col">
 
             {/* Summary Modal w/ High Z-Index */}
             {showSummary && (
                 <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <GlassCard className="max-w-md w-full p-8 text-center space-y-6 border-neon-purple/20 animate-in fade-in zoom-in duration-300">
-                        <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <VideoIcon size={40} className="text-neon-purple" />
+                    <GlassCard className="max-w-md w-full p-6 md:p-8 text-center space-y-6 border-neon-purple/20 animate-in fade-in zoom-in duration-300">
+                        <div className="w-16 h-16 md:w-20 md:h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <VideoIcon size={32} className="text-neon-purple" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white">Consulta Finalizada</h2>
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Duração</p>
-                                <p className="text-xl font-bold text-white">
+                        <h2 className="text-xl md:text-2xl font-bold text-white">Consulta Finalizada</h2>
+                        <div className="grid grid-cols-2 gap-3 md:gap-4">
+                            <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/5">
+                                <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black mb-1">Duração</p>
+                                <p className="text-base md:text-xl font-bold text-white">
                                     {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
                                 </p>
                             </div>
-                            <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
-                                <p className="text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos (Est.)</p>
-                                {/* We can estimate based on duration * rate if exact total isn't available yet */}
-                                <p className="text-xl font-bold text-neon-gold">
-                                    {summaryData?.credits || 0} Créditos
+                            <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/5 overflow-hidden">
+                                <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos Líquidos</p>
+                                <p className="text-base md:text-xl font-bold text-neon-gold truncate">
+                                    {summaryData?.credits || 0} cr
                                 </p>
                             </div>
                         </div>
@@ -499,79 +515,99 @@ export default function ServiceRoomPage() {
                 </div>
             )}
 
-
             {/* Main Video Area (Remote) */}
-            <div className="absolute inset-0 z-0 bg-zinc-900 flex items-center justify-center">
+            <div className="flex-1 relative z-0 bg-zinc-900 flex items-center justify-center overflow-hidden">
                 {remoteUsers.length > 0 ? (
                     <div className="w-full h-full">
                         <RemotePlayer user={remoteUsers[0]} />
                     </div>
-                ) : callError ? (
-                    <div className="max-w-md w-full px-6 py-12 text-center space-y-6">
-                        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
-                            <AlertTriangle size={40} className="text-red-500" />
-                        </div>
-                        <div className="space-y-2">
-                            <h2 className="text-2xl font-bold text-white">Falha na Conexão</h2>
-                            <p className="text-slate-400 text-sm leading-relaxed">
-                                {callError}
-                            </p>
-                        </div>
-                        <div className="pt-4 flex flex-col space-y-3">
-                            <NeonButton variant="purple" onClick={startCall} size="lg" fullWidth>
-                                <RefreshCcw className="mr-2" size={20} />
-                                Tentar Abrir Câmera Novamente
-                            </NeonButton>
-                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
-                                Dica: Verifique se não há outra aba do navegador aberta com a câmera.
-                            </p>
-                        </div>
-                    </div>
                 ) : (
-                    <div className="text-center p-8 space-y-6">
-                        <div className="relative group">
-                            <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white/10 relative z-10">
-                                <img src={consultation?.client?.avatar_url || `https://ui-avatars.com/api/?name=${consultation?.client?.full_name}`} className="w-full h-full object-cover" />
-                            </div>
-                            <div className="absolute inset-0 bg-neon-purple blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full animate-pulse" />
-                        </div>
-
-                        <div>
-                            <h2 className="text-2xl font-bold text-white mb-2">{consultation?.client?.full_name}</h2>
-                            <p className="text-white/60 animate-pulse text-sm">Aguardando conexão do cliente...</p>
-                        </div>
-
-                        {!joined ? (
-                            <div className="mt-8">
-                                <style jsx>{`
-                                    @keyframes pulse-red {
-                                        0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
-                                        70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); transform: scale(1.05); }
-                                        100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
-                                    }
-                                    .pulse-button {
-                                        animation: pulse-red 2s infinite;
-                                        background-color: #ef4444 !important;
-                                        color: white !important;
-                                    }
-                                `}</style>
-                                <NeonButton
-                                    variant="red"
-                                    onClick={startCall}
-                                    size="lg"
-                                    className="pulse-button font-bold px-12 py-6 text-xl uppercase tracking-tighter"
-                                >
-                                    <VideoIcon className="mr-3" size={24} />
-                                    Iniciar Atendimento
-                                </NeonButton>
+                    <div className="w-full h-full flex items-center justify-center p-6">
+                        {callError ? (
+                            <div className="max-w-md w-full text-center space-y-6">
+                                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
+                                    <AlertTriangle size={32} className="text-red-500" />
+                                </div>
+                                <div className="space-y-2">
+                                    <h2 className="text-xl md:text-2xl font-bold text-white">Falha na Conexão</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed">
+                                        {callError}
+                                    </p>
+                                </div>
+                                <div className="pt-4 flex flex-col space-y-3">
+                                    <NeonButton variant="purple" onClick={startCall} size="lg" fullWidth>
+                                        <RefreshCcw className="mr-2" size={20} />
+                                        Tentar Reiniciar
+                                    </NeonButton>
+                                </div>
                             </div>
                         ) : (
-                            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl max-w-xs mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                <Loader2 size={24} className="text-neon-cyan animate-spin mx-auto mb-2" />
-                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Aguardando vídeo dele...</p>
-                                <p className="text-[9px] text-slate-600 mt-2">Se ele não conectar em 30s, a consulta será cancelada automaticamente.</p>
+                            <div className="text-center space-y-6">
+                                <div className="relative group mx-auto w-fit">
+                                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white/10 relative z-10">
+                                        <img src={consultation?.client?.avatar_url || `https://ui-avatars.com/api/?name=${consultation?.client?.full_name}`} className="w-full h-full object-cover" />
+                                    </div>
+                                    <div className="absolute inset-0 bg-neon-purple blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full animate-pulse" />
+                                </div>
+
+                                <div>
+                                    <h2 className="text-xl md:text-2xl font-bold text-white mb-2">{consultation?.client?.full_name}</h2>
+                                    <p className="text-white/60 animate-pulse text-sm">Aguardando conexão do cliente...</p>
+                                </div>
+
+                                {!joined ? (
+                                    <div className="mt-8 flex justify-center">
+                                        <style jsx>{`
+                                            @keyframes pulse-red {
+                                                0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
+                                                70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); transform: scale(1.05); }
+                                                100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
+                                            }
+                                            .pulse-button {
+                                                animation: pulse-red 2s infinite;
+                                                background-color: #ef4444 !important;
+                                                color: white !important;
+                                            }
+                                        `}</style>
+                                        <NeonButton
+                                            variant="red"
+                                            onClick={startCall}
+                                            size="lg"
+                                            className="pulse-button font-bold px-8 md:px-12 py-4 md:py-6 text-lg md:text-xl uppercase tracking-tighter"
+                                        >
+                                            <VideoIcon className="mr-3" size={24} />
+                                            Iniciar Atendimento
+                                        </NeonButton>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white/5 border border-white/10 p-4 rounded-2xl max-w-xs mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                        <Loader2 size={24} className="text-neon-cyan animate-spin mx-auto mb-2" />
+                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Aguardando vídeo dele...</p>
+                                        <p className="text-[9px] text-slate-600 mt-2">Se ele não conectar em 30s, a consulta será cancelada automaticamente.</p>
+                                    </div>
+                                )}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Mensagem de Encerramento Superior */}
+                {callEndedBy && !showSummary && (
+                    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <GlassCard className="max-w-xs w-full p-6 text-center space-y-4 border-red-500/20">
+                            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
+                                <PhoneOff size={32} className="text-red-500" />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold text-white">Chamada Encerrada</h3>
+                                <p className="text-slate-400 text-sm">
+                                    {callEndedBy === 'client' ? 'O cliente encerrou a chamada.' : 'O oraculista encerrou a chamada.'}
+                                </p>
+                            </div>
+                            <div className="animate-pulse text-neon-cyan text-xs font-bold uppercase">
+                                Calculando ganhos...
+                            </div>
+                        </GlassCard>
                     </div>
                 )}
             </div>
@@ -582,7 +618,7 @@ export default function ServiceRoomPage() {
                     drag
                     dragConstraints={{ left: -300, right: 300, top: -500, bottom: 500 }}
                     initial={{ x: 20, y: 20 }}
-                    className="absolute right-4 bottom-32 w-32 h-44 sm:w-48 sm:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
+                    className="absolute right-4 bottom-32 w-28 h-40 md:w-48 md:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
                 >
                     <div ref={localPlayerRef} className="w-full h-full bg-slate-900 overflow-hidden" />
 
@@ -591,7 +627,6 @@ export default function ServiceRoomPage() {
                         <span className="text-[8px] text-white">Você</span>
                     </div>
 
-                    {/* Switch Camera Overlay Button */}
                     {cameras.length > 1 && (
                         <button
                             onClick={(e) => { e.stopPropagation(); switchCamera(); }}
@@ -606,51 +641,49 @@ export default function ServiceRoomPage() {
             {/* Top Bar - Info */}
             <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent pb-12">
                 <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${joined && remoteUsers.length > 0 ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
-                    <div>
-                        <p className="text-white font-bold text-sm shadow-black drop-shadow-md">
+                    <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${joined && remoteUsers.length > 0 ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
+                    <div className="min-w-0">
+                        <p className="text-white font-bold text-xs md:text-sm shadow-black drop-shadow-md truncate">
                             {joined && remoteUsers.length > 0 ? 'Online' : 'Conectando...'}
                         </p>
-                        <p className="text-white/60 text-xs">
+                        <p className="text-white/60 text-[10px] md:text-xs">
                             {queueCount} na fila
                         </p>
                     </div>
                 </div>
 
-                <div className="bg-black/40 backdrop-blur-md px-4 py-2 rounded-full border border-white/10">
-                    <span className="font-mono text-neon-cyan text-lg font-bold">
+                <div className="bg-black/40 backdrop-blur-md px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10">
+                    <span className="font-mono text-neon-cyan text-base md:text-lg font-bold">
                         {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
                     </span>
                 </div>
             </div>
 
-
             {/* Bottom Controls */}
             {joined && (
-                <div className="absolute bottom-8 left-0 right-0 z-20 flex justify-center items-center gap-6">
+                <div className="absolute bottom-6 md:bottom-8 left-0 right-0 z-20 flex justify-center items-center gap-4 md:gap-6 px-4 max-w-full">
                     <button
                         onClick={toggleAudio}
-                        className={`p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${audioEnabled ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
+                        className={`p-3 md:p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${audioEnabled ? 'bg-white/10 text-white border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
                     >
-                        {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+                        {audioEnabled ? <Mic size={20} className="md:w-6 md:h-6" /> : <MicOff size={20} className="md:w-6 md:h-6" />}
                     </button>
 
                     <button
                         onClick={endCall}
-                        className="p-4 rounded-full bg-red-600 text-white shadow-xl shadow-red-900/50 hover:bg-red-700 hover:scale-105 transition-all border border-red-400"
+                        className="p-3 md:p-4 rounded-full bg-red-600 text-white shadow-xl shadow-red-900/50 hover:bg-red-700 hover:scale-105 transition-all border border-red-400"
                     >
-                        <PhoneOff size={32} />
+                        <PhoneOff size={24} className="md:w-8 md:h-8" />
                     </button>
 
                     <button
                         onClick={toggleVideo}
-                        className={`p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${videoEnabled ? 'bg-white/10 text-white hover:bg-white/20 border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
+                        className={`p-3 md:p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${videoEnabled ? 'bg-white/10 text-white border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
                     >
-                        {videoEnabled ? <VideoIcon size={24} /> : <VideoOff size={24} />}
+                        {videoEnabled ? <VideoIcon size={20} className="md:w-6 md:h-6" /> : <VideoOff size={20} className="md:w-6 md:h-6" />}
                     </button>
                 </div>
             )}
         </div>
     )
 }
-

@@ -7,12 +7,22 @@ interface Schedule {
     is_active: boolean
 }
 
-export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = []): { status: OracleStatus, label: string } {
-    if (!isOnline && schedules.length === 0) {
+export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], lastHeartbeatAt?: string): { status: OracleStatus, label: string } {
+    const now = new Date()
+
+    // Check if heartbeat is active (within last 2 minutes)
+    let isPulseActive = false
+    if (isOnline && lastHeartbeatAt) {
+        const lastPulse = new Date(lastHeartbeatAt).getTime()
+        isPulseActive = (now.getTime() - lastPulse) < 120000 // 2 minutes
+    }
+
+    const effectiveOnline = isOnline && (lastHeartbeatAt ? isPulseActive : true)
+
+    if (!effectiveOnline && schedules.length === 0) {
         return { status: 'offline', label: 'Offline' }
     }
 
-    const now = new Date()
     const currentDay = now.getDay() // 0-6
     const currentTime = now.getHours() * 60 + now.getMinutes()
 
@@ -26,7 +36,7 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = []): 
         return currentTime >= startTotal && currentTime <= endTotal
     })
 
-    if (isOnline && isInSchedule) {
+    if (effectiveOnline && isInSchedule) {
         return { status: 'online', label: 'Online Agora' }
     }
 
@@ -34,7 +44,7 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = []): 
         return { status: 'horario', label: 'No Horário' }
     }
 
-    if (isOnline) {
+    if (effectiveOnline) {
         // Caso esteja online mas fora do horário (ex: atendendo extra)
         return { status: 'online', label: 'Online Agora' }
     }
