@@ -59,10 +59,10 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     // Auth Guard
     useEffect(() => {
-        if (!useAuthStore.getState().isLoading && !profile) {
+        if (!useAuthStore.getState().isLoading && !profile && !pathname.startsWith('/app/oraculo/')) {
             router.push('/')
         }
-    }, [profile, router])
+    }, [profile, router, pathname])
 
     useEffect(() => {
         if (!profile?.id) return

@@ -7,7 +7,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck, Search, Moon, Sun, Star, LogIn, LayoutDashboard } from 'lucide-react'
+import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck, Search, Moon, Sun, Star, LogIn, LayoutDashboard, ChevronDown, Check } from 'lucide-react'
 import { whatsappService } from '@/lib/whatsapp'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -38,6 +38,7 @@ export default function LandingPage() {
   const [specialtyFilter, setSpecialtyFilter] = useState('all')
   const [specialties, setSpecialties] = useState<string[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
+  const [isSpecialtyOpen, setIsSpecialtyOpen] = useState(false)
 
   useEffect(() => {
     checkAuth()
@@ -273,37 +274,68 @@ export default function LandingPage() {
           </div>
 
           {/* Specialty Tabs */}
-          <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar max-w-full py-1 bg-white/5 p-4 rounded-2xl border border-white/5">
+          {/* Specialty Dropdown */}
+          <div className="relative z-20">
             <button
-              onClick={() => { setSpecialtyFilter('all') }}
-              className={`px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'all'
-                ? 'bg-neon-gold border-neon-gold text-deep-space'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                }`}
+              onClick={() => setIsSpecialtyOpen(!isSpecialtyOpen)}
+              className="w-full md:w-auto min-w-[240px] flex items-center justify-between px-6 py-4 rounded-2xl bg-white/5 border border-white/10 hover:border-neon-purple/50 transition-all text-white group"
             >
-              Todas Especialidades
+              <div className="flex items-center space-x-3">
+                <Sparkles size={18} className="text-neon-purple" />
+                <span className="font-medium text-sm">
+                  {specialtyFilter === 'all' ? 'Todas Especialidades' :
+                    specialtyFilter === 'OUTROS' ? 'Outros' :
+                      specialtyFilter}
+                </span>
+              </div>
+              <ChevronDown size={18} className={`text-slate-400 transition-transform ${isSpecialtyOpen ? 'rotate-180' : ''}`} />
             </button>
-            {specialties.map(s => (
-              <button
-                key={s}
-                onClick={() => { setSpecialtyFilter(s) }}
-                className={`px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === s
-                  ? 'bg-neon-purple border-neon-purple text-white'
-                  : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                  }`}
-              >
-                {s}
-              </button>
-            ))}
-            <button
-              onClick={() => { setSpecialtyFilter('OUTROS') }}
-              className={`px-4 py-1.5 rounded-full text-[10px] md:text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'OUTROS'
-                ? 'bg-slate-500 border-slate-500 text-white'
-                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                }`}
-            >
-              Outros
-            </button>
+
+            <AnimatePresence>
+              {isSpecialtyOpen && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                  transition={{ duration: 0.2 }}
+                  className="absolute top-full mt-2 w-full md:w-[300px] max-h-[400px] overflow-y-auto custom-scrollbar bg-[#0f0f2d]/95 backdrop-blur-xl border border-white/10 rounded-2xl shadow-xl z-50 p-2"
+                >
+                  <button
+                    onClick={() => { setSpecialtyFilter('all'); setIsSpecialtyOpen(false) }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all ${specialtyFilter === 'all' ? 'bg-neon-purple/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    <span className="text-sm font-medium">Todas Especialidades</span>
+                    {specialtyFilter === 'all' && <Check size={14} className="text-neon-purple" />}
+                  </button>
+
+                  <div className="h-px bg-white/5 my-2 mx-2" />
+
+                  {specialties.map(s => (
+                    <button
+                      key={s}
+                      onClick={() => { setSpecialtyFilter(s); setIsSpecialtyOpen(false) }}
+                      className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all ${specialtyFilter === s ? 'bg-neon-purple/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                        }`}
+                    >
+                      <span className="text-sm font-medium">{s}</span>
+                      {specialtyFilter === s && <Check size={14} className="text-neon-purple" />}
+                    </button>
+                  ))}
+
+                  <div className="h-px bg-white/5 my-2 mx-2" />
+
+                  <button
+                    onClick={() => { setSpecialtyFilter('OUTROS'); setIsSpecialtyOpen(false) }}
+                    className={`w-full flex items-center justify-between px-4 py-3 rounded-xl text-left transition-all ${specialtyFilter === 'OUTROS' ? 'bg-neon-purple/20 text-white' : 'text-slate-400 hover:text-white hover:bg-white/5'
+                      }`}
+                  >
+                    <span className="text-sm font-medium">Outros</span>
+                    {specialtyFilter === 'OUTROS' && <Check size={14} className="text-neon-purple" />}
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">

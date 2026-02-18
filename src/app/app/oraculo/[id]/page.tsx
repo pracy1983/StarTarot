@@ -34,7 +34,7 @@ export default function OracleProfilePage() {
     const [avgResponseTime, setAvgResponseTime] = useState<string>('30 minutos')
     const [loading, setLoading] = useState(true)
     const [favCount, setFavCount] = useState(0)
-    const { profile } = useAuthStore()
+    const { profile, setShowAuthModal } = useAuthStore()
 
     // Favorite/Notify State
     const [isFavorite, setIsFavorite] = useState(false)
@@ -156,7 +156,7 @@ export default function OracleProfilePage() {
 
     const toggleFavorite = async () => {
         if (!profile?.id) {
-            toast.error('Faça login para favoritar')
+            setShowAuthModal(true)
             return
         }
 
@@ -191,7 +191,7 @@ export default function OracleProfilePage() {
 
     const toggleNotify = async () => {
         if (!profile?.id) {
-            toast.error('Faça login para ativar notificações')
+            setShowAuthModal(true)
             return
         }
 
@@ -362,7 +362,13 @@ export default function OracleProfilePage() {
                             size="lg"
                             className="px-8 py-6 h-auto"
                             disabled={!isOnline}
-                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=video`)}
+                            onClick={() => {
+                                if (!profile?.id) {
+                                    setShowAuthModal(true)
+                                    return
+                                }
+                                router.push(`/app/consulta/${oracle.id}?type=video`)
+                            }}
                         >
                             <div className="flex flex-col items-center">
                                 <div className="flex items-center mb-1">
@@ -378,7 +384,13 @@ export default function OracleProfilePage() {
                             variant="purple"
                             size="lg"
                             className="px-8 py-6 h-auto"
-                            onClick={() => router.push(`/app/consulta/${oracle.id}?type=message`)}
+                            onClick={() => {
+                                if (!profile?.id) {
+                                    setShowAuthModal(true)
+                                    return
+                                }
+                                router.push(`/app/consulta/${oracle.id}?type=message`)
+                            }}
                         >
                             <div className="flex flex-col items-center">
                                 <div className="flex items-center mb-1">
