@@ -264,14 +264,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
     const getStatusColor = () => {
         if (status === 'online') return 'bg-green-500 text-green-400'
-        if (status === 'horario') return 'bg-neon-gold text-neon-gold'
         return 'bg-slate-800 text-slate-500'
     }
 
     return (
         <GlassCard
             className="relative flex flex-col h-full border-white/5 group hover:border-white/20 transition-all duration-500 cursor-pointer"
-            glowColor={status === 'online' ? 'purple' : (status === 'horario' ? 'gold' : 'none')}
+            glowColor={status === 'online' ? 'purple' : 'none'}
             onClick={handleViewProfile}
         >
             {/* Zero Fee Badge - Top Right */}
@@ -283,22 +282,24 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
             {/* Favorite & Notify - Floating Right */}
             {profile?.id !== oracle.id && (
-                <div className={`absolute right-4 z-20 flex flex-col space-y-2 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100 ${isZeroFee ? 'top-10' : 'top-4'}`}>
+                <div className={`absolute right-4 z-20 flex flex-col space-y-2 ${isZeroFee ? 'top-10' : 'top-4'}`}>
                     <button
                         onClick={toggleFavorite}
                         disabled={isUpdatingMeta}
-                        className={`p-2 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-black/40 border-white/10 text-white/40 hover:text-white'}`}
+                        className={`group/btn flex items-center space-x-2 p-1.5 px-3 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
                         title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     >
                         <Heart size={14} className={isFavorite ? 'fill-neon-gold' : ''} />
+                        <span className="text-[10px] font-bold uppercase hidden md:inline">{isFavorite ? 'Favorito' : 'Favoritar'}</span>
                     </button>
                     <button
                         onClick={toggleNotify}
                         disabled={isUpdatingMeta}
-                        className={`p-2 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-black/40 border-white/10 text-white/40 hover:text-white'}`}
+                        className={`group/btn flex items-center space-x-2 p-1.5 px-3 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
                         title={notifyOnline ? 'Desativar notificações' : 'Ativar notificações'}
                     >
-                        <Bell size={14} className={notifyOnline ? 'fill-neon-cyan/20' : ''} />
+                        <Bell size={14} className={notifyOnline ? 'fill-neon-cyan/60' : ''} />
+                        <span className="text-[10px] font-bold uppercase hidden md:inline">{notifyOnline ? 'Avisar' : 'Me Avise'}</span>
                     </button>
                 </div>
             )}
@@ -315,21 +316,18 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
             {/* Status Badge - Top Left */}
             <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
-                status === 'offline' ? 'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10' :
-                    status === 'horario' ? 'bg-neon-gold/10 text-neon-gold border-neon-gold/20 shadow-neon-gold/10' :
-                        'bg-slate-800/50 text-slate-500 border-white/5'
+                'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10'
                 }`}>
                 <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-400 animate-pulse ring-2 ring-green-500/50' :
-                    status === 'offline' ? 'bg-red-500 animate-pulse ring-2 ring-red-500/50' :
-                        status === 'horario' ? 'bg-neon-gold' : 'bg-slate-600'
+                    'bg-red-500 animate-pulse ring-2 ring-red-500/50'
                     }`} />
-                <span>{status === 'online' ? 'ONLINE' : label}</span>
+                <span>{status === 'online' ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
             <div className="flex flex-col items-center text-center space-y-4 pt-4">
                 {/* Avatar */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : status === 'horario' ? 'bg-neon-gold' : 'bg-slate-500'
+                    <div className={`absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-slate-500'
                         }`} />
                     <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10">
                         <img
@@ -351,7 +349,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 {/* Info Tags */}
                 <div className="flex flex-col items-center space-y-1">
-                    {oracle.allows_video && (
+                    {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
                         <div className={`flex items-center text-[10px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
                             <Video size={12} className="mr-1" />
                             {oracle.credits_per_minute} | MINUTO (VÍDEO)
@@ -377,17 +375,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </span>
                 </div>
 
-                {/* Feature Icons */}
-                {profile?.id !== oracle.id && (oracle.allows_text || oracle.allows_video) && (
+                {/* Feature Icons - Always visible based on config */}
+                {profile?.id !== oracle.id && (
                     <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
                         {oracle.allows_text && (
-                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-purple/60' : 'opacity-40'}`}>
+                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-purple/80' : 'opacity-40'}`}>
                                 <MessageSquare size={16} />
                                 <span className="text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
                             </div>
                         )}
-                        {oracle.allows_video && (
-                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-cyan/60' : 'opacity-40'}`}>
+                        {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
+                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-cyan/80' : 'opacity-40'}`}>
                                 <Video size={16} />
                                 <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
                             </div>
@@ -397,7 +395,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 {profile?.id !== oracle.id ? (
                     <div className="mt-2 flex gap-2 w-full">
-                        {oracle.allows_video && (
+                        {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
                             <NeonButton
                                 variant="green"
                                 fullWidth

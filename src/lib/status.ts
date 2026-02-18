@@ -1,4 +1,4 @@
-export type OracleStatus = 'online' | 'horario' | 'offline'
+export type OracleStatus = 'online' | 'offline'
 
 interface Schedule {
     day_of_week: number
@@ -37,16 +37,7 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], l
         return currentTime >= startTotal && currentTime <= endTotal
     })
 
-    if (effectiveOnline && isInSchedule) {
-        return { status: 'online', label: 'Online Agora' }
-    }
-
-    if (isInSchedule) {
-        return { status: 'horario', label: 'No Horário' }
-    }
-
     if (effectiveOnline) {
-        // Caso esteja online mas fora do horário (ex: atendendo extra)
         return { status: 'online', label: 'Online Agora' }
     }
 

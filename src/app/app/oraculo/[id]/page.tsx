@@ -248,7 +248,7 @@ export default function OracleProfilePage() {
                             />
                         </div>
                         {/* Status */}
-                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-deep-space z-20 ${isOnline ? 'bg-green-500' : 'bg-slate-600'}`} />
+                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-deep-space z-20 ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
                     </div>
 
                     {/* Info */}
@@ -258,23 +258,25 @@ export default function OracleProfilePage() {
 
                             {/* Favorite & Notify Icons */}
                             {!isAI && profile?.id && profile.id !== oracle.id && (
-                                <div className="flex items-center space-x-2 ml-4">
+                                <div className="flex items-center space-x-3 ml-4">
                                     <button
                                         onClick={toggleFavorite}
                                         disabled={isUpdatingMeta}
-                                        className={`p-2 rounded-full transition-all ${isFavorite ? 'bg-gold/10 text-neon-gold' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
+                                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
                                         title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                                     >
-                                        <Star size={20} className={isFavorite ? 'fill-neon-gold' : ''} />
+                                        <Star size={18} className={isFavorite ? 'fill-neon-gold' : ''} />
+                                        <span className="text-[10px] font-bold uppercase hidden sm:inline">{isFavorite ? 'Favorito' : 'Favoritar'}</span>
                                     </button>
 
                                     <button
                                         onClick={toggleNotify}
                                         disabled={isUpdatingMeta}
-                                        className={`p-2 rounded-full transition-all ${notifyOnline ? 'bg-neon-cyan/10 text-neon-cyan' : 'bg-white/5 text-slate-500 hover:bg-white/10'}`}
-                                        title={notifyOnline ? 'Desativar notificações de online' : 'Ativar notificações de online'}
+                                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                                        title={notifyOnline ? 'Desativar notificações' : 'Me avisar quando online'}
                                     >
-                                        {notifyOnline ? <Bell size={20} className="fill-neon-cyan/20" /> : <BellOff size={20} />}
+                                        <Bell size={18} className={notifyOnline ? 'fill-neon-cyan/60' : ''} />
+                                        <span className="text-[10px] font-bold uppercase hidden sm:inline">{notifyOnline ? 'Avisar' : 'Me Avise'}</span>
                                     </button>
                                 </div>
                             )}
@@ -294,7 +296,7 @@ export default function OracleProfilePage() {
                         </p>
 
                         <div className="flex flex-col space-y-2 mb-6">
-                            {oracle.allows_video && (
+                            {!isAI && oracle.allows_video && (
                                 <div className="flex items-center justify-center md:justify-start text-slate-400 text-sm">
                                     <Video size={16} className="mr-2 text-neon-cyan" />
                                     {oracle.credits_per_minute} créditos por vídeo (minuto)
@@ -344,7 +346,7 @@ export default function OracleProfilePage() {
             {/* Iniciar Consulta Buttons */}
             {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {oracle.allows_video && (
+                    {!isAI && oracle.allows_video && (
                         <NeonButton
                             variant="green"
                             size="lg"

@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus, Loader2 } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Video, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -50,7 +50,9 @@ export default function OracleProfilePage() {
         price_per_message: 10,
         requires_birthdate: false,
         requires_birthtime: false,
-        whatsapp_notification_enabled: false
+        whatsapp_notification_enabled: false,
+        allows_video: true,
+        allows_text: true
     })
 
     const [priceInputs, setPriceInputs] = useState({
@@ -86,7 +88,9 @@ export default function OracleProfilePage() {
                 price_per_message: profile.price_per_message || 10,
                 requires_birthdate: profile.requires_birthdate || false,
                 requires_birthtime: profile.requires_birthtime || false,
-                whatsapp_notification_enabled: profile.whatsapp_notification_enabled || false
+                whatsapp_notification_enabled: profile.whatsapp_notification_enabled || false,
+                allows_video: profile.allows_video ?? true,
+                allows_text: profile.allows_text ?? true
             })
             setPriceInputs({
                 price_brl_per_minute: (profile.price_brl_per_minute || 5.00).toString(),
@@ -148,7 +152,9 @@ export default function OracleProfilePage() {
                     price_per_message: formData.price_per_message,
                     requires_birthdate: formData.requires_birthdate,
                     requires_birthtime: formData.requires_birthtime,
-                    whatsapp_notification_enabled: formData.whatsapp_notification_enabled
+                    whatsapp_notification_enabled: formData.whatsapp_notification_enabled,
+                    allows_video: formData.allows_video,
+                    allows_text: formData.allows_text
                 })
                 .eq('id', profile!.id)
 
@@ -261,7 +267,7 @@ export default function OracleProfilePage() {
         }
     }
 
-    const toggle = (field: 'requires_birthdate' | 'requires_birthtime') => {
+    const toggle = (field: 'requires_birthdate' | 'requires_birthtime' | 'allows_video' | 'allows_text') => {
         setFormData(prev => ({ ...prev, [field]: !prev[field] }))
     }
 
@@ -470,6 +476,52 @@ export default function OracleProfilePage() {
                             <p className="text-[9px] text-slate-400 italic">
                                 * Este valor é em Créditos diretamente.
                             </p>
+                        </div>
+                    </GlassCard>
+
+                    <GlassCard className="border-white/5" glowColor="cyan">
+                        <div className="flex items-center space-x-2 text-neon-cyan mb-4">
+                            <Briefcase size={18} />
+                            <h3 className="text-sm font-bold uppercase tracking-wider">Configuração de Canais</h3>
+                        </div>
+                        <p className="text-xs text-slate-500 mb-6 italic">
+                            Escolha como você deseja atender seus clientes. Atendentes de IA operam apenas por mensagem.
+                        </p>
+
+                        <div className="space-y-4">
+                            <div
+                                onClick={() => toggle('allows_text')}
+                                className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${formData.allows_text ? 'bg-neon-purple/20 border-neon-purple/50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                            >
+                                <div className="flex items-center space-x-3">
+                                    <div className={`p-2 rounded-lg ${formData.allows_text ? 'text-neon-purple bg-neon-purple/20' : 'text-slate-500 bg-white/5'}`}>
+                                        <MessageSquare size={18} />
+                                    </div>
+                                    <div>
+                                        <p className={`text-sm font-bold ${formData.allows_text ? 'text-white' : 'text-slate-400'}`}>Atendimento por Chat</p>
+                                        <p className="text-[10px] text-slate-500">Habilita consultas de texto</p>
+                                    </div>
+                                </div>
+                                {formData.allows_text ? <ToggleRight className="text-neon-purple" size={24} /> : <ToggleLeft className="text-slate-600" size={24} />}
+                            </div>
+
+                            {!profile?.is_ai && (
+                                <div
+                                    onClick={() => toggle('allows_video')}
+                                    className={`flex items-center justify-between p-3 rounded-xl border cursor-pointer transition-all ${formData.allows_video ? 'bg-neon-cyan/20 border-neon-cyan/50' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}
+                                >
+                                    <div className="flex items-center space-x-3">
+                                        <div className={`p-2 rounded-lg ${formData.allows_video ? 'text-neon-cyan bg-neon-cyan/20' : 'text-slate-500 bg-white/5'}`}>
+                                            <Video size={18} />
+                                        </div>
+                                        <div>
+                                            <p className={`text-sm font-bold ${formData.allows_video ? 'text-white' : 'text-slate-400'}`}>Atendimento por Vídeo</p>
+                                            <p className="text-[10px] text-slate-500">Habilita chamadas em tempo real</p>
+                                        </div>
+                                    </div>
+                                    {formData.allows_video ? <ToggleRight className="text-neon-cyan" size={24} /> : <ToggleLeft className="text-slate-600" size={24} />}
+                                </div>
+                            )}
                         </div>
                     </GlassCard>
 
