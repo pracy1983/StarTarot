@@ -65,7 +65,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             .select('*')
             .eq('user_id', profile!.id)
             .eq('oracle_id', oracle.id)
-            .single()
+            .maybeSingle()
 
         if (data) {
             setIsFavorite(true)

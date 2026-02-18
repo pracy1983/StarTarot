@@ -12,12 +12,13 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], l
 
     // Check if heartbeat is active (within last 2 minutes)
     let isPulseActive = false
-    if (isOnline && lastHeartbeatAt) {
+    if (lastHeartbeatAt) {
         const lastPulse = new Date(lastHeartbeatAt).getTime()
         isPulseActive = (now.getTime() - lastPulse) < 120000 // 2 minutes
     }
 
-    const effectiveOnline = isOnline && (lastHeartbeatAt ? isPulseActive : true)
+    // Require both is_online flag AND active heartbeat signal
+    const effectiveOnline = isOnline && isPulseActive
 
     if (!effectiveOnline && schedules.length === 0) {
         return { status: 'offline', label: 'Offline' }
