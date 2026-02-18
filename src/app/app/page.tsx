@@ -68,7 +68,7 @@ export default function MarketplacePage() {
         // If explicitly viewing as client, do not redirect
         if (searchParams.get('view') === 'client') return
 
-        if (profile?.role === 'oracle' && profile?.application_status === 'approved') {
+        if (profile?.role === 'oracle' && (profile?.application_status === 'approved' || profile?.application_status === 'rejected')) {
             // Check if user explicitly wants to stay (e.g. clicked "View as Client")
             // We can simple check if they are already on the right page? No this is the client page.
 

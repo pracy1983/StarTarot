@@ -169,9 +169,15 @@ export default function AdminOraculistasPage() {
                 .eq('user_id', oracleId)
                 .order('created_at', { ascending: false })
                 .limit(1)
-                .single()
+                .maybeSingle()
 
             if (error) throw error
+
+            if (!data) {
+                toast.error('Nenhum histórico de alterações encontrado para este usuário.')
+                setComparisonModal({ open: false, current: null, snapshot: null })
+                return
+            }
 
             const current = oraculistas.find(o => o.id === oracleId)
             setComparisonModal({

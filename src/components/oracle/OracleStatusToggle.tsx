@@ -21,11 +21,10 @@ export function OracleStatusToggle({ isOnline, onToggle, applicationStatus }: Or
                     : 'bg-white/5 text-slate-400 border-white/10 hover:bg-white/10'
                 }`}
         >
-            <div className={`w-2 h-2 rounded-full ${!isApproved ? 'bg-slate-600' : isOnline ? 'bg-green-400 animate-pulse' : 'bg-slate-500'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full ${!isApproved ? 'bg-slate-600' : isOnline ? 'bg-green-400 animate-pulse shadow-[0_0_8px_rgba(74,222,128,0.6)]' : 'bg-slate-500'}`} />
             <span className="text-xs font-bold uppercase tracking-wider">
                 {!isApproved ? 'Pendente' : (isOnline ? 'Online' : 'Offline')}
             </span>
-            <Power size={14} className={!isApproved ? 'text-slate-600' : (isOnline ? 'text-green-400' : 'text-slate-500')} />
         </button>
     )
 }
