@@ -88,7 +88,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             } else {
                 await supabase.from('user_favorites').upsert({ user_id: profile!.id, oracle_id: oracle.id })
                 setIsFavorite(true)
-                toast.success('Favoritado!')
+                toast.success('Adicionado aos favoritos')
             }
         } catch (err) {
             toast.error('Erro ao favoritar')
@@ -122,19 +122,33 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         const activeSchedules = oracle.schedules.filter(s => s.is_active)
         if (activeSchedules.length === 0) return 'Horário flexível'
 
-        // Group by time if multiple days have same hours
-        const groups: Record<string, number[]> = {}
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+
+        // Group by same time range
+        const timeGroups: Record<string, number[]> = {}
         activeSchedules.forEach(s => {
             const timeRange = `${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)}`
-            if (!groups[timeRange]) groups[timeRange] = []
-            groups[timeRange].push(s.day_of_week)
+            if (!timeGroups[timeRange]) timeGroups[timeRange] = []
+            timeGroups[timeRange].push(s.day_of_week)
         })
 
-        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
-        return Object.entries(groups).map(([time, days]) => {
-            const dStr = days.sort().map(d => dayNames[d]).join(', ')
-            return `${dStr}: ${time}`
-        }).join(' | ')
+        const summaries = Object.entries(timeGroups).map(([time, days]) => {
+            days.sort((a, b) => a - b)
+
+            // Check for ranges (e.g., Seg-Fri)
+            let dayStr = ''
+            if (days.length === 7) {
+                dayStr = 'Todos os dias'
+            } else if (days.length >= 5 && days[0] === 1 && days[days.length - 1] === 5 && days.length === (days[days.length - 1] - days[0] + 1)) {
+                dayStr = 'Seg a Sex'
+            } else {
+                dayStr = days.map(d => dayNames[d]).join(', ')
+            }
+
+            return `${dayStr}: ${time}`
+        })
+
+        return summaries.join(' | ')
     }
 
     // Listen to consultation changes when modal is open
@@ -246,7 +260,12 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         }
     }
 
-    const { status, label } = getOracleStatus(oracle.is_online, oracle.schedules || [], oracle.last_heartbeat_at)
+    const { status, label } = getOracleStatus(
+        oracle.is_online,
+        oracle.schedules || [],
+        oracle.last_heartbeat_at,
+        oracle.is_ai || oracle.oracle_type === 'ai'
+    )
     const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video
 
     const handleStartConsultation = (e: React.MouseEvent) => {
@@ -286,20 +305,29 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     <button
                         onClick={toggleFavorite}
                         disabled={isUpdatingMeta}
-                        className={`group/btn flex items-center space-x-2 p-1.5 px-3 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
+                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden ${isFavorite ? 'bg-neon-gold border-neon-gold text-deep-space w-32 px-3' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60 hover:w-32 hover:px-3 w-10'}`}
                         title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     >
-                        <Heart size={14} className={isFavorite ? 'fill-neon-gold' : ''} />
-                        <span className="text-[10px] font-bold uppercase hidden md:inline">{isFavorite ? 'Favorito' : 'Favoritar'}</span>
+                        <div className="flex items-center min-w-max">
+                            <Heart size={16} className={`${isFavorite ? 'fill-deep-space' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
+                            <span className={`text-[10px] font-bold uppercase transition-all duration-300 ml-2 ${isFavorite ? 'opacity-100' : 'opacity-0 group-hover/btn:opacity-100'}`}>
+                                {isFavorite ? 'Favorito' : 'Favoritar'}
+                            </span>
+                        </div>
                     </button>
+
                     <button
                         onClick={toggleNotify}
                         disabled={isUpdatingMeta}
-                        className={`group/btn flex items-center space-x-2 p-1.5 px-3 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
+                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden ${notifyOnline ? 'bg-neon-cyan border-neon-cyan text-deep-space w-32 px-3' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60 hover:w-32 hover:px-3 w-10'}`}
                         title={notifyOnline ? 'Desativar notificações' : 'Ativar notificações'}
                     >
-                        <Bell size={14} className={notifyOnline ? 'fill-neon-cyan/60' : ''} />
-                        <span className="text-[10px] font-bold uppercase hidden md:inline">{notifyOnline ? 'Avisar' : 'Me Avise'}</span>
+                        <div className="flex items-center min-w-max">
+                            <Bell size={16} className={`${notifyOnline ? 'fill-deep-space' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
+                            <span className={`text-[10px] font-bold uppercase transition-all duration-300 ml-2 ${notifyOnline ? 'opacity-100' : 'opacity-0 group-hover/btn:opacity-100'}`}>
+                                {notifyOnline ? 'Avisar' : 'Me Avise'}
+                            </span>
+                        </div>
                     </button>
                 </div>
             )}
@@ -368,9 +396,9 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </p>
 
                 {/* Schedule info */}
-                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 w-full">
-                    <Clock size={12} className="text-slate-500 shrink-0" />
-                    <span className="text-[10px] text-slate-400 truncate font-medium">
+                <div className="flex items-start space-x-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5 w-full min-h-[44px]">
+                    <Clock size={12} className="text-slate-500 shrink-0 mt-0.5" />
+                    <span className="text-[10px] text-slate-400 font-medium leading-relaxed text-left flex-1">
                         {getScheduleSummary()}
                     </span>
                 </div>

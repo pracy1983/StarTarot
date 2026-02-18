@@ -7,26 +7,11 @@ interface Schedule {
     is_active: boolean
 }
 
-export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], lastHeartbeatAt?: string): { status: OracleStatus, label: string } {
+export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], lastHeartbeatAt?: string, isAI: boolean = false): { status: OracleStatus, label: string } {
     const now = new Date()
-
-    // Check if heartbeat is active (within last 2 minutes)
-    let isPulseActive = false
-    if (lastHeartbeatAt) {
-        const lastPulse = new Date(lastHeartbeatAt).getTime()
-        isPulseActive = (now.getTime() - lastPulse) < 120000 // 2 minutes
-    }
-
-    // Require both is_online flag AND active heartbeat signal
-    const effectiveOnline = isOnline && isPulseActive
-
-    if (!effectiveOnline && schedules.length === 0) {
-        return { status: 'offline', label: 'Offline' }
-    }
 
     const currentDay = now.getDay() // 0-6
     const currentTime = now.getHours() * 60 + now.getMinutes()
-
     const todaySchedules = schedules.filter(s => s.day_of_week === currentDay && s.is_active)
 
     const isInSchedule = todaySchedules.some(s => {
@@ -36,6 +21,23 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], l
         const endTotal = endH * 60 + endM
         return currentTime >= startTotal && currentTime <= endTotal
     })
+
+    // For AI Oracles, they are online if within schedule
+    if (isAI) {
+        if (isInSchedule) {
+            return { status: 'online', label: 'Online Agora' }
+        }
+        return { status: 'offline', label: 'Offline' }
+    }
+
+    // For Human Oracles, require both is_online flag AND active heartbeat signal
+    let isPulseActive = false
+    if (lastHeartbeatAt) {
+        const lastPulse = new Date(lastHeartbeatAt).getTime()
+        isPulseActive = (now.getTime() - lastPulse) < 120000 // 2 minutes
+    }
+
+    const effectiveOnline = isOnline && isPulseActive
 
     if (effectiveOnline) {
         return { status: 'online', label: 'Online Agora' }

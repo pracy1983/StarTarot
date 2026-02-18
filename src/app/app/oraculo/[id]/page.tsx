@@ -28,6 +28,7 @@ export default function OracleProfilePage() {
     const { id } = useParams()
     const router = useRouter()
     const [oracle, setOracle] = useState<any>(null)
+    const [schedules, setSchedules] = useState<any[]>([])
     const [consultationCount, setConsultationCount] = useState(0)
     const [ratings, setRatings] = useState<any[]>([])
     const [avgResponseTime, setAvgResponseTime] = useState<string>('30 minutos')
@@ -87,6 +88,15 @@ export default function OracleProfilePage() {
 
             if (error) throw error
             setOracle(data)
+
+            // Buscar horários
+            const { data: scheduleData } = await supabase
+                .from('oracle_schedules')
+                .select('*')
+                .eq('oracle_id', id)
+                .eq('is_active', true)
+
+            setSchedules(scheduleData || [])
 
             const isAI = data.is_ai || data.oracle_type === 'ai'
 
@@ -220,7 +230,7 @@ export default function OracleProfilePage() {
     }
 
     const isAI = oracle.is_ai || oracle.oracle_type === 'ai'
-    const { status: effectiveStatus } = getOracleStatus(oracle.is_online, [], oracle.last_heartbeat_at)
+    const { status: effectiveStatus } = getOracleStatus(oracle.is_online, schedules, oracle.last_heartbeat_at, isAI)
     const isOnline = effectiveStatus === 'online'
 
     return (

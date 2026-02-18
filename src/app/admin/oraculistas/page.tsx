@@ -325,7 +325,7 @@ export default function AdminOraculistasPage() {
                                     </td>
                                     <td className="px-6 py-4">
                                         {(() => {
-                                            const { status } = getOracleStatus(o.is_online, o.schedules || [], o.last_heartbeat_at)
+                                            const { status } = getOracleStatus(o.is_online, o.schedules || [], o.last_heartbeat_at, o.is_ai || o.oracle_type === 'ai')
                                             const isOnline = status === 'online'
                                             const isVideoAvailable = !o.is_ai && o.allows_video
                                             const isMessageAvailable = o.allows_text

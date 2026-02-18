@@ -21,17 +21,29 @@ export default function MarketplacePage() {
     const [filterMessage, setFilterMessage] = useState(false)
     const [favorites, setFavorites] = useState<string[]>([])
 
-    const specialties = ['Tarot', 'Astrologia', 'Búzios', 'Numerologia', 'Reiki', 'Vidência']
+    const [specialties, setSpecialties] = useState<string[]>([])
 
     useEffect(() => {
         fetchOracles()
         fetchFavorites()
+        fetchSpecialties()
         // Load persistency
         const v = localStorage.getItem('pref_filter_video') === 'true'
         const m = localStorage.getItem('pref_filter_message') === 'true'
         if (v) setFilterVideo(true)
         if (m) setFilterMessage(true)
     }, [profile?.id])
+
+    const fetchSpecialties = async () => {
+        const { data } = await supabase
+            .from('specialties')
+            .select('name')
+            .eq('active', true)
+            .order('name', { ascending: true })
+        if (data) {
+            setSpecialties(data.map(s => s.name))
+        }
+    }
 
     const fetchFavorites = async () => {
         if (!profile?.id) return
@@ -105,11 +117,24 @@ export default function MarketplacePage() {
 
             // 4. Lógica de Ordenação: Favoritos > Online (Randômico) > Offline
             const isOnline = (o: any) => {
-                if (!o.is_online) return false
-                if (!o.last_heartbeat_at) return false
+                const now = new Date()
+                const currentDay = now.getDay()
+                const currentTime = now.getHours() * 60 + now.getMinutes()
+                const todaySchedules = (o.schedules || []).filter((s: any) => s.day_of_week === currentDay && s.is_active)
+
+                const isInSchedule = todaySchedules.some((s: any) => {
+                    const [startH, startM] = s.start_time.split(':').map(Number)
+                    const [endH, endM] = s.end_time.split(':').map(Number)
+                    return currentTime >= (startH * 60 + startM) && currentTime <= (endH * 60 + endM)
+                })
+
+                if (o.is_ai || o.oracle_type === 'ai') {
+                    return isInSchedule
+                }
+
+                if (!o.is_online || !o.last_heartbeat_at) return false
                 const lastPulse = new Date(o.last_heartbeat_at).getTime()
-                const now = new Date().getTime()
-                return (now - lastPulse) < 120000 // 2 minutes
+                return (now.getTime() - lastPulse) < 120000 // 2 minutes
             }
 
             const favoritesList = oraclesWithSchedules.filter(o => favorites.includes(o.id))
@@ -151,7 +176,11 @@ export default function MarketplacePage() {
         // Specialty Filter
         let matchesSpecialty = true
         if (specialtyFilter !== 'all') {
-            matchesSpecialty = o.specialty?.toLowerCase() === specialtyFilter.toLowerCase()
+            if (specialtyFilter === 'OUTROS') {
+                matchesSpecialty = !specialties.some(s => s.toLowerCase() === o.specialty?.toLowerCase())
+            } else {
+                matchesSpecialty = o.specialty?.toLowerCase() === specialtyFilter.toLowerCase()
+            }
         }
 
         // Capabilities Filter
@@ -239,22 +268,39 @@ export default function MarketplacePage() {
                     </div>
                 </div>
 
-                {/* Secondary Filters: Specialty & Capabilities */}
-                <div className="flex flex-wrap items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-
-                    {/* Specialty Select */}
-                    <div className="relative">
-                        <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                        <select
-                            value={specialtyFilter}
-                            onChange={(e) => { setSpecialtyFilter(e.target.value); setPage(1) }}
-                            className="bg-deep-space border border-white/10 rounded-xl pl-9 pr-8 py-2 text-sm text-white appearance-none outline-none focus:border-neon-purple/50 cursor-pointer min-w-[160px]"
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
+                    {/* Specialty Tabs */}
+                    <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar max-w-full py-1">
+                        <button
+                            onClick={() => { setSpecialtyFilter('all'); setPage(1) }}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'all'
+                                ? 'bg-neon-gold border-neon-gold text-deep-space'
+                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                }`}
                         >
-                            <option value="all">Todas Especialidades</option>
-                            {specialties.map(s => (
-                                <option key={s} value={s}>{s}</option>
-                            ))}
-                        </select>
+                            Todas
+                        </button>
+                        {specialties.map(s => (
+                            <button
+                                key={s}
+                                onClick={() => { setSpecialtyFilter(s); setPage(1) }}
+                                className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === s
+                                    ? 'bg-neon-purple border-neon-purple text-white'
+                                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                    }`}
+                            >
+                                {s}
+                            </button>
+                        ))}
+                        <button
+                            onClick={() => { setSpecialtyFilter('OUTROS'); setPage(1) }}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'OUTROS'
+                                ? 'bg-slate-500 border-slate-500 text-white'
+                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
+                                }`}
+                        >
+                            Outros
+                        </button>
                     </div>
 
                     {/* Checkboxes */}
