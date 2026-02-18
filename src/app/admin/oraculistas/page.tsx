@@ -17,6 +17,8 @@ const StatusBadge = ({ status }: { status?: string }) => {
             return <span className="text-[10px] bg-green-500/20 text-green-500 border border-green-500/30 px-2 py-0.5 rounded-full font-bold uppercase">Aprovado</span>
         case 'pending':
             return <span className="text-[10px] bg-yellow-500/20 text-yellow-500 border border-yellow-500/30 px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">Pendente</span>
+        case 'waitlist':
+            return <span className="text-[10px] bg-orange-500/20 text-orange-500 border border-orange-500/30 px-2 py-0.5 rounded-full font-bold uppercase animate-pulse">Waitlist</span>
         case 'rejected':
             return <span className="text-[10px] bg-red-500/20 text-red-500 border border-red-500/30 px-2 py-0.5 rounded-full font-bold uppercase">Rejeitado</span>
         default:
@@ -46,7 +48,7 @@ export default function AdminOraculistasPage() {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .or('role.in.(oracle,owner),application_status.eq.pending')
+                .or('role.in.(oracle,owner),application_status.in.(pending,waitlist)')
                 .order('full_name', { ascending: true })
 
             if (error) throw error
@@ -165,7 +167,7 @@ export default function AdminOraculistasPage() {
             o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
 
         if (activeTab === 'pending') {
-            return matchesSearch && o.application_status === 'pending'
+            return matchesSearch && (o.application_status === 'pending' || o.application_status === 'waitlist')
         }
         return matchesSearch && (o.application_status === 'approved' || !o.application_status || o.application_status === 'none')
     })

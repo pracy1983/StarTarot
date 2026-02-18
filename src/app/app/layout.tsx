@@ -57,6 +57,13 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         }
     }
 
+    // Auth Guard
+    useEffect(() => {
+        if (!useAuthStore.getState().isLoading && !profile) {
+            router.push('/')
+        }
+    }, [profile, router])
+
     useEffect(() => {
         if (!profile?.id) return
 
@@ -240,7 +247,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     <h2 className="text-lg font-bold text-white flex items-center truncate">
                         <Sparkles className={`mr-3 shrink-0 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={18} />
                         Olá, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
-                            {(isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]) || 'Viajante'}
+                            {isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]}
                         </span>!
                     </h2>
                 </div>

@@ -44,7 +44,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 const { count } = await supabase
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
-                    .eq('application_status', 'pending')
+                    .in('application_status', ['pending', 'waitlist'])
 
                 setPendingOracles(count || 0)
             }

@@ -44,6 +44,23 @@ export const AuthModal = () => {
     const [generatedOtp, setGeneratedOtp] = useState('')
     const [existingUser, setExistingUser] = useState<any>(null)
     const [upgradeMode, setUpgradeMode] = useState(false)
+    const [rememberMe, setRememberMe] = useState(true)
+
+    React.useEffect(() => {
+        const savedEmail = localStorage.getItem('remembered_email')
+        const savedRemember = localStorage.getItem('remember_me') === 'true'
+        setRememberMe(savedRemember)
+        if (savedEmail && savedRemember) {
+            setEmail(savedEmail)
+        }
+    }, [])
+
+    React.useEffect(() => {
+        localStorage.setItem('remember_me', rememberMe.toString())
+        if (!rememberMe) {
+            localStorage.removeItem('remembered_email')
+        }
+    }, [rememberMe])
 
     const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
 
@@ -163,6 +180,12 @@ export const AuthModal = () => {
                 .update(updates)
                 .eq('email', email.trim().toLowerCase())
 
+            if (rememberMe) {
+                localStorage.setItem('remembered_email', email)
+            } else {
+                localStorage.removeItem('remembered_email')
+            }
+
             toast.success('Acesso recuperado e atualizado!')
             setShowAuthModal(false)
             router.push('/app')
@@ -189,6 +212,12 @@ export const AuthModal = () => {
                         .update({ is_oracle: true })
                         .eq('email', email.trim().toLowerCase())
                 }
+                if (rememberMe) {
+                    localStorage.setItem('remembered_email', email)
+                } else {
+                    localStorage.removeItem('remembered_email')
+                }
+
                 setShowAuthModal(false)
                 router.push('/app')
             }
@@ -341,6 +370,20 @@ export const AuthModal = () => {
                                 icon={<Lock size={18} />}
                                 required
                             />
+
+                            <div className="flex items-center space-x-2 px-1">
+                                <input
+                                    type="checkbox"
+                                    id="rememberMe"
+                                    checked={rememberMe}
+                                    onChange={(e) => setRememberMe(e.target.checked)}
+                                    className="w-4 h-4 rounded border-white/10 bg-white/5 text-neon-purple focus:ring-neon-purple transition-all cursor-pointer"
+                                />
+                                <label htmlFor="rememberMe" className="text-sm text-slate-400 cursor-pointer select-none">
+                                    Lembrar de mim
+                                </label>
+                            </div>
+
                             {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
                                 Entrar no Portal
