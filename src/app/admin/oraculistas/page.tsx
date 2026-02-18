@@ -46,7 +46,7 @@ export default function AdminOraculistasPage() {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .in('role', ['oracle', 'owner'])
+                .or('role.in.(oracle,owner),application_status.eq.pending')
                 .order('full_name', { ascending: true })
 
             if (error) throw error
@@ -100,9 +100,14 @@ export default function AdminOraculistasPage() {
     const handleStatusChange = async (id: string, newStatus: string, message?: string) => {
         setIsProcessingStatus(true)
         try {
+            const updates: any = { application_status: newStatus }
+            if (newStatus === 'approved') {
+                updates.role = 'oracle'
+            }
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ application_status: newStatus })
+                .update(updates)
                 .eq('id', id)
 
             if (error) throw error

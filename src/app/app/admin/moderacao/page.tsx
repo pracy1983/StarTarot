@@ -21,7 +21,6 @@ export default function AdminModerationPage() {
             const { data } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('role', 'oracle')
                 .eq('application_status', 'pending')
                 .order('created_at', { ascending: false })
 
@@ -36,9 +35,14 @@ export default function AdminModerationPage() {
     const handleAction = async (id: string, status: 'approved' | 'rejected') => {
         setProcessingId(id)
         try {
+            const updates: any = { application_status: status }
+            if (status === 'approved') {
+                updates.role = 'oracle'
+            }
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ application_status: status })
+                .update(updates)
                 .eq('id', id)
 
             if (error) throw error

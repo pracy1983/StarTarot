@@ -45,7 +45,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
                     .eq('application_status', 'pending')
-                    .eq('role', 'oracle')
 
                 setPendingOracles(count || 0)
             }
