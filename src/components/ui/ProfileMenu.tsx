@@ -162,15 +162,6 @@ export function ProfileMenu({ isOnline, toggleOnline }: ProfileMenuProps) {
                                 <span>Configurações</span>
                             </button>
 
-                            {isOracleView && (
-                                <button
-                                    onClick={() => navTo('/app/dashboard/sala')}
-                                    className="w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm text-slate-400 hover:bg-white/5 hover:text-white transition-all"
-                                >
-                                    <Radio size={16} />
-                                    <span>Minha Sala</span>
-                                </button>
-                            )}
 
                             <button
                                 onClick={handleLogout}
