@@ -42,15 +42,14 @@ export default function OracleSignupPage() {
 
         setLoading(true)
         try {
-            const { error } = await supabase
-                .from('profiles')
-                .update({
-                    ...formData,
-                    custom_specialty: formData.specialty === 'Outros' ? formData.custom_specialty : null,
-                    application_status: 'pending',
-                    role: 'oracle'
-                })
-                .eq('id', profile!.id)
+            const { data, error } = await supabase.rpc('update_oracle_application', {
+                p_full_name: formData.full_name,
+                p_specialty: formData.specialty,
+                p_bio: formData.bio,
+                p_personality: formData.personality,
+                p_phone: formData.phone,
+                p_custom_specialty: formData.specialty === 'Outros' ? formData.custom_specialty : null
+            })
 
             if (error) throw error
 

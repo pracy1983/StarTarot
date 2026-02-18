@@ -25,9 +25,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter()
     const [ownerBalance, setOwnerBalance] = useState<number | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+    const [pendingOracles, setPendingOracles] = useState(0)
 
     useEffect(() => {
         if (profile?.id) {
+            // Fetch Balance
             supabase
                 .from('wallets')
                 .select('balance')
@@ -36,6 +38,32 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 .then(({ data }) => {
                     setOwnerBalance(data?.balance ?? 0)
                 })
+
+            // Fetch Pending Oracles
+            const fetchPending = async () => {
+                const { count } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('application_status', 'pending')
+                    .eq('role', 'oracle')
+
+                setPendingOracles(count || 0)
+            }
+            fetchPending()
+
+            // Realtime updates for pending count
+            const channel = supabase
+                .channel('admin_pending_count')
+                .on(
+                    'postgres_changes',
+                    { event: '*', schema: 'public', table: 'profiles' },
+                    () => fetchPending()
+                )
+                .subscribe()
+
+            return () => {
+                supabase.removeChannel(channel)
+            }
         }
     }, [profile?.id])
 
@@ -46,7 +74,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const navItems = [
         { label: 'Visão Geral', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { label: 'Oraculistas', icon: <Users size={20} />, href: '/admin/oraculistas' },
+        { label: 'Oraculistas', icon: <Users size={20} />, href: '/admin/oraculistas', badge: pendingOracles },
         { label: 'Membros', icon: <Users size={20} />, href: '/admin/membros' },
         { label: 'Créditos', icon: <Wallet size={20} />, href: '/admin/creditos' },
         { label: 'Consultas', icon: <MessageSquare size={20} />, href: '/admin/consultas' },
@@ -100,6 +128,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                             >
                                 <span className="group-hover:text-neon-gold transition-colors">{item.icon}</span>
                                 <span className="text-sm font-medium">{item.label}</span>
+                                {(item as any).badge > 0 && (
+                                    <span className="ml-auto bg-red-500 text-white text-[10px] font-bold px-2 py-0.5 rounded-full animate-pulse shadow-[0_0_10px_rgba(239,68,68,0.5)]">
+                                        {(item as any).badge}
+                                    </span>
+                                )}
                             </button>
                         ))}
                     </nav>

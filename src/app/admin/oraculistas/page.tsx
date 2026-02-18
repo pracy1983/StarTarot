@@ -32,7 +32,7 @@ export default function AdminOraculistasPage() {
     const [isAddingCategory, setIsAddingCategory] = useState(false)
     const [newCategoryName, setNewCategoryName] = useState('')
     const [loadingCategory, setLoadingCategory] = useState(false)
-    const [activeTab, setActiveTab] = useState<'approved' | 'pending'>('approved')
+    const [activeTab, setActiveTab] = useState<'approved' | 'pending'>('pending')
     const [rejectionModal, setRejectionModal] = useState<{ open: boolean, id: string | null, name: string }>({ open: false, id: null, name: '' })
     const [rejectionMessage, setRejectionMessage] = useState('')
     const [isProcessingStatus, setIsProcessingStatus] = useState(false)
