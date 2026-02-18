@@ -72,6 +72,11 @@ export default function ServiceRoomPage() {
     const [showSummary, setShowSummary] = useState(false)
     const [summaryData, setSummaryData] = useState<any>(null)
 
+    // Error State
+    const [callError, setCallError] = useState<string | null>(null)
+    const [isAutoStarting, setIsAutoStarting] = useState(false)
+    const connectionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
+
     useEffect(() => {
         if (localVideoTrack && localPlayerRef.current) {
             localVideoTrack.play(localPlayerRef.current)
@@ -149,7 +154,15 @@ export default function ServiceRoomPage() {
             window.removeEventListener('beforeunload', handleBeforeUnload)
             leaveCall()
         }
-    }, [consultationId]) // Removed 'joined' from dependency to avoid re-subscribing
+    }, [consultationId])
+
+    // Auto-start call when arrival in sala
+    useEffect(() => {
+        if (consultationId && !joined && !callError && !loading && !isAutoStarting) {
+            setIsAutoStarting(true)
+            startCall()
+        }
+    }, [consultationId, joined, callError, loading, isAutoStarting])
 
     // Timer Logic: Only run when BOTH joined (i.e. joined=true AND remoteUsers.length > 0)
     useEffect(() => {
@@ -161,10 +174,7 @@ export default function ServiceRoomPage() {
                 }, 1000)
             }
         } else {
-            // Pause timer if condition fails (e.g. remote user disconnects temporarily)
-            // But we might want to keep it running if it's just a blip? 
-            // The user requested "creditos só computam quando o video é estabelecido". 
-            // Safer to pause if connection is lost.
+            // Pause timer if condition fails 
             if (timerRef.current) {
                 clearInterval(timerRef.current)
                 timerRef.current = null
@@ -239,11 +249,11 @@ export default function ServiceRoomPage() {
         }
         setConsultation(data)
         setLoading(false)
-        // Auto-init agora if possible, but don't join yet
     }
 
     const startCall = async () => {
         if (!consultationId) return
+        setCallError(null)
 
         try {
             const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
@@ -311,6 +321,21 @@ export default function ServiceRoomPage() {
                 videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
 
+            // Start connection timeout (30 seconds to establish connection with client)
+            if (consultation?.status === 'pending') {
+                connectionTimeoutRef.current = setTimeout(async () => {
+                    if (remoteUsers.length === 0) {
+                        toast.error('O cliente não conectou a tempo. Cancelando consulta sem cobrança.')
+                        await supabase.from('consultations').update({
+                            status: 'cancelled',
+                            metadata: { cancel_reason: 'client_timeout_no_connection' }
+                        }).eq('id', consultationId)
+                        leaveCall()
+                        router.push('/app/dashboard')
+                    }
+                }, 30000)
+            }
+
             // Update status to 'active' if not already
             if (consultation?.status === 'pending') {
                 await supabase.from('consultations').update({ status: 'active', started_at: new Date().toISOString() }).eq('id', consultationId)
@@ -318,21 +343,33 @@ export default function ServiceRoomPage() {
 
         } catch (err: any) {
             console.error('Error starting call:', err)
+
+            let errorMessage = err.message || 'Erro desconhecido'
+            if (err.name === 'NotReadableError' || errorMessage.includes('NotReadableError')) {
+                errorMessage = 'Sua câmera ou microfone já está sendo usada por outro aplicativo ou aba. Por favor, feche-os e tente novamente.'
+            } else if (err.name === 'NotAllowedError') {
+                errorMessage = 'Permissão de câmera/microfone negada. Verifique as configurações do seu navegador.'
+            }
+
+            setCallError(errorMessage)
+
             // Cleanup if partial failure
             if (clientRef.current) {
                 clientRef.current.leave().catch(() => { })
                 clientRef.current = null
             }
-            if (err.message.includes('Agora credentials')) {
+
+            if (errorMessage.includes('Agora credentials')) {
                 toast.error('Sistema de vídeo não configurado.')
             } else {
-                toast.error('Erro ao conectar: ' + err.message)
+                toast.error('Erro ao conectar: ' + errorMessage)
             }
         }
     }
 
     const leaveCall = async () => {
         if (timerRef.current) clearInterval(timerRef.current)
+        if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
 
         localAudioTrack?.stop()
         localAudioTrack?.close()
@@ -469,14 +506,42 @@ export default function ServiceRoomPage() {
                     <div className="w-full h-full">
                         <RemotePlayer user={remoteUsers[0]} />
                     </div>
-                ) : (
-                    <div className="text-center p-8 opacity-50">
-                        <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white/10">
-                            <img src={consultation?.client?.avatar_url} className="w-full h-full object-cover" />
+                ) : callError ? (
+                    <div className="max-w-md w-full px-6 py-12 text-center space-y-6">
+                        <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
+                            <AlertTriangle size={40} className="text-red-500" />
                         </div>
-                        <h2 className="text-2xl font-bold text-white mb-2">{consultation?.client?.full_name}</h2>
-                        <p className="text-white/60 animate-pulse">Aguardando conexão do cliente...</p>
-                        {!joined && (
+                        <div className="space-y-2">
+                            <h2 className="text-2xl font-bold text-white">Falha na Conexão</h2>
+                            <p className="text-slate-400 text-sm leading-relaxed">
+                                {callError}
+                            </p>
+                        </div>
+                        <div className="pt-4 flex flex-col space-y-3">
+                            <NeonButton variant="purple" onClick={startCall} size="lg" fullWidth>
+                                <RefreshCcw className="mr-2" size={20} />
+                                Tentar Abrir Câmera Novamente
+                            </NeonButton>
+                            <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">
+                                Dica: Verifique se não há outra aba do navegador aberta com a câmera.
+                            </p>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="text-center p-8 space-y-6">
+                        <div className="relative group">
+                            <div className="w-32 h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white/10 relative z-10">
+                                <img src={consultation?.client?.avatar_url || `https://ui-avatars.com/api/?name=${consultation?.client?.full_name}`} className="w-full h-full object-cover" />
+                            </div>
+                            <div className="absolute inset-0 bg-neon-purple blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full animate-pulse" />
+                        </div>
+
+                        <div>
+                            <h2 className="text-2xl font-bold text-white mb-2">{consultation?.client?.full_name}</h2>
+                            <p className="text-white/60 animate-pulse text-sm">Aguardando conexão do cliente...</p>
+                        </div>
+
+                        {!joined ? (
                             <div className="mt-8">
                                 <style jsx>{`
                                     @keyframes pulse-red {
@@ -499,6 +564,12 @@ export default function ServiceRoomPage() {
                                     <VideoIcon className="mr-3" size={24} />
                                     Iniciar Atendimento
                                 </NeonButton>
+                            </div>
+                        ) : (
+                            <div className="bg-white/5 border border-white/10 p-4 rounded-2xl max-w-xs mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                                <Loader2 size={24} className="text-neon-cyan animate-spin mx-auto mb-2" />
+                                <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Aguardando vídeo dele...</p>
+                                <p className="text-[9px] text-slate-600 mt-2">Se ele não conectar em 30s, a consulta será cancelada automaticamente.</p>
                             </div>
                         )}
                     </div>

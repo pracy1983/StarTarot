@@ -18,3 +18,12 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 1. **Owner:** Gestão total de oraculistas.
 2. **Oraculista:** Atendimento humano.
 3. **Cliente:** Consumidor final (créditos por minuto).
+
+## 🛠️ Próximas Implementações (Bugfixes & UX)
+- [ ] **Verificação de Hardware Pré-Consulta (Oráculo):**
+    - Implementar check de câmera/microfone antes de aceitar chamada.
+    - Exibir estados de "Processando" e "Erro de Hardware" (ex: Câmera em uso).
+    - Botão de "Tentar Novamente" no Modal de Chamada e na Sala de Atendimento.
+- [ ] **Otimização de UI de Aceite:**
+    - Feedback visual de processamento ao clicar em aceitar.
+    - Fechamento imediato do modal e transição fluida para a sala.

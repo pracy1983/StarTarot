@@ -2,6 +2,10 @@
 
 ## ⏳ Em Progresso
 - [ ] Phase 1: Foundation (Limpeza + Design System)
+- [ ] **Bugfix/UX: Melhoria no Fluxo de Atendimento do Oráculo**
+    - [ ] Hardware check (câmera/mic) antes de aceitar consulta
+    - [ ] UI de "Processando" ao aceitar consulta
+    - [ ] Tratamento de erro "NotReadableError" com botão de retry
 
 ## 📋 Backlog de Tarefas
 

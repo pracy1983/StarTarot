@@ -53,6 +53,8 @@ export default function VideoConsultationPage() {
     const clientRef = useRef<IAgoraRTCClient | null>(null)
     const hasChargedInitialFee = useRef(false)
     const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
+    const [hasEstablishedConnection, setHasEstablishedConnection] = useState(false)
+    const [callError, setCallError] = useState<string | null>(null)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -100,22 +102,26 @@ export default function VideoConsultationPage() {
             if (mediaType === 'video') {
                 setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user])
 
-                // CLIENT SIDE: Charge initial fee when oracle first connects (Wait for stabilization)
-                if (profile?.role === 'client' && !hasChargedInitialFee.current) {
-                    if (!stabilizationTimer.current) {
-                        stabilizationTimer.current = setTimeout(async () => {
-                            if (oracle?.initial_fee_credits > 0 && remoteUsers.length > 0) {
+                // Stabilization: Only consider connection "established" after 3 seconds of video
+                if (!stabilizationTimer.current) {
+                    stabilizationTimer.current = setTimeout(async () => {
+                        setHasEstablishedConnection(true)
+
+                        // Charge initial fee only once connection is established
+                        if (profile?.role === 'client' && !hasChargedInitialFee.current) {
+                            if (oracle?.initial_fee_credits > 0) {
                                 await processInitialFee()
                                 hasChargedInitialFee.current = true
                             }
-                            stabilizationTimer.current = null
-                        }, 10000) // 10 seconds of stable video before charging
-                    }
-                }
+                        }
 
-                // CLIENT SIDE: Start regular billing only when Oracle video is received
-                if (profile?.role === 'client') {
-                    startBilling()
+                        // Start regular billing only when connection is established
+                        if (profile?.role === 'client') {
+                            startBilling()
+                        }
+
+                        stabilizationTimer.current = null
+                    }, 3000) // 3 seconds of stable video before charging anything
                 }
             }
             if (mediaType === 'audio') {
@@ -211,11 +217,12 @@ export default function VideoConsultationPage() {
             // Billing is now triggered in user-published event
         } catch (err: any) {
             console.error('Error starting call:', err)
-            if (err.message.includes('Agora credentials')) {
-                toast.error('Erro de configuração do servidor (Vídeo). Contate o suporte.')
-            } else {
-                toast.error('Erro ao conectar: ' + err.message)
+            let msg = err.message || 'Erro desconhecido'
+            if (msg.includes('Agora credentials')) {
+                msg = 'Erro de configuração do servidor (Vídeo). Contate o suporte.'
             }
+            setCallError(msg)
+            toast.error('Erro ao conectar: ' + msg)
         }
     }
 
@@ -442,14 +449,42 @@ export default function VideoConsultationPage() {
                 {/* Main View (Remote User / Oracle) */}
                 <div className="relative w-full h-full max-h-[80vh] bg-white/5 rounded-3xl border border-white/10 overflow-hidden shadow-2xl group">
                     <div id="remote-player" className="w-full h-full bg-slate-900 flex items-center justify-center">
-                        {remoteUsers.length > 0 ? (
+                        {remoteUsers.length > 0 && hasEstablishedConnection ? (
                             <RemotePlayer user={remoteUsers[0]} />
-                        ) : (
-                            <div className="text-center space-y-4">
-                                <div className="w-20 h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto animate-pulse">
-                                    <Video size={40} className="text-neon-purple" />
+                        ) : callError ? (
+                            <div className="max-w-md w-full px-6 py-12 text-center space-y-6 animate-in fade-in duration-500">
+                                <div className="w-20 h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
+                                    <AlertCircle size={40} className="text-red-500" />
                                 </div>
-                                <p className="text-slate-500 italic">Aguardando {oracle?.full_name}...</p>
+                                <div className="space-y-2">
+                                    <h2 className="2xl font-bold text-white">Falha na Conexão</h2>
+                                    <p className="text-slate-400 text-sm leading-relaxed">
+                                        Não foi possível estabelecer o sinal de vídeo. Verifique sua internet e tente novamente.
+                                    </p>
+                                    <p className="text-[10px] text-red-400/60 font-mono uppercase">{callError}</p>
+                                </div>
+                                <div className="pt-4">
+                                    <NeonButton variant="purple" onClick={() => { setCallError(null); startCall(); }} size="lg">
+                                        <RefreshCw className="mr-2" size={20} />
+                                        Tentar Reconectar Agora
+                                    </NeonButton>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="text-center space-y-6">
+                                <div className="relative">
+                                    <div className="w-24 h-24 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto relative z-10">
+                                        <Video size={48} className="text-neon-purple animate-pulse" />
+                                    </div>
+                                    <div className="absolute inset-0 bg-neon-purple blur-3xl opacity-20 animate-pulse" />
+                                </div>
+                                <div className="space-y-2">
+                                    <p className="text-white font-bold text-lg">Conectando com o Oráculo...</p>
+                                    <p className="text-slate-500 italic text-sm">
+                                        {remoteUsers.length > 0 ? 'Estabilizando sinal...' : `Aguardando ${oracle?.full_name} entrar...`}
+                                    </p>
+                                    <p className="text-[10px] text-neon-cyan/50 uppercase tracking-[0.2em] font-black pt-4">Nenhum crédito será cobrado até a conexão estabilizar</p>
+                                </div>
                             </div>
                         )}
                     </div>
