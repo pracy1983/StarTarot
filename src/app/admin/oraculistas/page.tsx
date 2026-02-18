@@ -103,22 +103,24 @@ export default function AdminOraculistasPage() {
         setIsProcessingStatus(true)
         try {
             const updates: any = { application_status: newStatus }
-            if (newStatus === 'approved') {
+            if (newStatus === 'rejected') {
+                // Determine current profile state to save as snapshot
+                const currentProfile = oraculistas.find(o => o.id === id)
+                if (currentProfile) {
+                    const { error: snapError } = await supabase.from('profile_snapshots').insert({
+                        user_id: id,
+                        data: currentProfile,
+                        reason: message,
+                        admin_id: (await supabase.auth.getUser()).data.user?.id
+                    })
+                    if (snapError) console.error('Error creating snapshot:', snapError)
+                }
+
+                updates.rejection_reason = message
+            } else if (newStatus === 'approved') {
                 updates.role = 'oracle'
                 // Clear rejection reason if approved
                 updates.rejection_reason = null
-            } else if (newStatus === 'rejected') {
-                // Set reason
-                updates.rejection_reason = message
-                // Remove role oracle if rejected?
-                // updates.role = 'client' // Maybe? Or keep oracle but inactive?
-                // If we set to client, they lose access to dashboard...
-                // User wants them to see dashboard to resubmit. So keep role='oracle' or ensure 'client' works too.
-                // Actually, if role='client', they see client dashboard.
-                // If role='oracle', they see oracle dashboard.
-                // We need them to see the re-submit button.
-                // The 'Tornar-se Oraculo' page handles pending status.
-                // Let's keep role as is, simply change status. Check dashboard logic.
             }
 
             const { error } = await supabase
@@ -135,7 +137,7 @@ export default function AdminOraculistasPage() {
                     title: 'Atenção: Ação Necessária no Seu Perfil',
                     content: message,
                     type: 'system',
-                    role: 'oracle' // Send to oracle
+                    role: 'oracle'
                 })
             }
 
@@ -151,6 +153,37 @@ export default function AdminOraculistasPage() {
             toast.error('Erro ao atualizar status')
         } finally {
             setIsProcessingStatus(false)
+        }
+    }
+
+    const [comparisonModal, setComparisonModal] = useState<{ open: boolean, current: any, snapshot: any }>({ open: false, current: null, snapshot: null })
+    const [loadingSnapshot, setLoadingSnapshot] = useState(false)
+
+    const handleViewChanges = async (oracleId: string) => {
+        setLoadingSnapshot(true)
+        try {
+            // Get latest snapshot
+            const { data, error } = await supabase
+                .from('profile_snapshots')
+                .select('*')
+                .eq('user_id', oracleId)
+                .order('created_at', { ascending: false })
+                .limit(1)
+                .single()
+
+            if (error) throw error
+
+            const current = oraculistas.find(o => o.id === oracleId)
+            setComparisonModal({
+                open: true,
+                current,
+                snapshot: data.data // The JSON data stored
+            })
+        } catch (err) {
+            console.error('Error fetching snapshot:', err)
+            toast.error('Não foi possível carregar o histórico de alterações.')
+        } finally {
+            setLoadingSnapshot(false)
         }
     }
 
@@ -258,6 +291,95 @@ export default function AdminOraculistasPage() {
                 )}
             </AnimatePresence>
 
+            {/* Comparison Modal */}
+            <AnimatePresence>
+                {comparisonModal.open && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col bg-[#0f172a] rounded-2xl border border-white/10"
+                        >
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                <h3 className="text-xl font-bold text-white">Comparação de Alterações</h3>
+                                <button
+                                    onClick={() => setComparisonModal({ open: false, current: null, snapshot: null })}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <X size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 gap-8">
+                                {/* Previous State */}
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-red-400 uppercase tracking-wider text-xs border-b border-red-500/20 pb-2">Antes (Pausado)</h4>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Nome</label>
+                                            <p className="text-slate-300">{comparisonModal.snapshot?.full_name}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Bio</label>
+                                            <p className="text-slate-300 text-sm whitespace-pre-wrap">{comparisonModal.snapshot?.bio}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Especialidade</label>
+                                            <p className="text-slate-300">{comparisonModal.snapshot?.specialty}</p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Preço / Min</label>
+                                            <p className="text-slate-300">{comparisonModal.snapshot?.credits_per_minute}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Current State */}
+                                <div className="space-y-4">
+                                    <h4 className="font-bold text-green-400 uppercase tracking-wider text-xs border-b border-green-500/20 pb-2">Agora (Atual)</h4>
+                                    <div className="space-y-6">
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Nome</label>
+                                            <p className={`text-white ${comparisonModal.current?.full_name !== comparisonModal.snapshot?.full_name ? 'text-green-400 font-bold' : ''}`}>
+                                                {comparisonModal.current?.full_name}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Bio</label>
+                                            <p className={`text-slate-300 text-sm whitespace-pre-wrap ${comparisonModal.current?.bio !== comparisonModal.snapshot?.bio ? 'text-green-300 bg-green-500/10 p-2 rounded' : ''}`}>
+                                                {comparisonModal.current?.bio}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Especialidade</label>
+                                            <p className={`text-slate-300 ${comparisonModal.current?.specialty !== comparisonModal.snapshot?.specialty ? 'text-green-400 font-bold' : ''}`}>
+                                                {comparisonModal.current?.specialty}
+                                            </p>
+                                        </div>
+                                        <div>
+                                            <label className="text-xs text-slate-500 uppercase">Preço / Min</label>
+                                            <p className={`text-slate-300 ${comparisonModal.current?.credits_per_minute !== comparisonModal.snapshot?.credits_per_minute ? 'text-green-400 font-bold' : ''}`}>
+                                                {comparisonModal.current?.credits_per_minute}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end">
+                                <button
+                                    onClick={() => setComparisonModal({ open: false, current: null, snapshot: null })}
+                                    className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
+                                >
+                                    Fechar Comparação
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
             <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
                 <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4">
                     <button
@@ -343,6 +465,12 @@ export default function AdminOraculistasPage() {
                                     <td className="px-6 py-4 text-sm text-slate-400">{o.specialty}</td>
                                     <td className="px-6 py-4">
                                         <StatusBadge status={o.application_status} />
+                                        {/* Show reason tooltip if rejected/pending with reason */}
+                                        {(o.application_status === 'rejected' || (o.application_status === 'pending' && o.rejection_reason)) && (
+                                            <div className="text-[10px] text-slate-500 mt-1 max-w-[150px] truncate" title={o.rejection_reason}>
+                                                {o.rejection_reason}
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4">
                                         {(() => {
@@ -385,6 +513,18 @@ export default function AdminOraculistasPage() {
                                             {/* Tab Specific Actions */}
                                             {activeTab === 'pending' ? (
                                                 <>
+                                                    {/* Show "Ver Alterações" if the user has been rejected before (has notification/snapshot history) */}
+                                                    {o.rejection_reason && (
+                                                        <button
+                                                            onClick={() => handleViewChanges(o.id)}
+                                                            className="flex items-center space-x-1 px-2 py-1.5 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
+                                                            title="Ver Alterações Recentes"
+                                                        >
+                                                            <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                                                            <span className="text-[10px] font-bold uppercase">Changes</span>
+                                                        </button>
+                                                    )}
+
                                                     <button
                                                         onClick={() => handleStatusChange(o.id, 'approved')}
                                                         className="flex items-center space-x-1 px-2 py-1.5 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
