@@ -128,17 +128,19 @@ export default function ConsultationResponsePage() {
         }
     }
 
-    // "Don't leave" guard
+    // Non-functional as per user request to remove friction
+    /*
     useEffect(() => {
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (!hasRated && stars === 0) {
+            if (!hasRated && stars === 0 && consultation?.status === 'answered') {
                 e.preventDefault()
                 e.returnValue = ''
             }
         }
         window.addEventListener('beforeunload', handleBeforeUnload)
         return () => window.removeEventListener('beforeunload', handleBeforeUnload)
-    }, [hasRated, stars])
+    }, [hasRated, stars, consultation])
+    */
 
     const handleRatingSubmit = async () => {
         if (stars === 0) {
@@ -303,9 +305,11 @@ export default function ConsultationResponsePage() {
                     </div>
                     <div className="text-right">
                         <p className="text-[10px] text-slate-500 uppercase font-bold tracking-widest">
-                            {consultation.client_id === profile?.id ? 'Valor Investido' : 'Ganhos da Consulta'}
+                            {consultation.status === 'canceled' || consultation.status === 'rejected'
+                                ? 'Valor Estornado'
+                                : (consultation.client_id === profile?.id ? 'Valor Investido' : 'Ganhos da Consulta')}
                         </p>
-                        <p className="text-xl font-bold text-neon-gold">
+                        <p className={`text-xl font-bold ${consultation.status === 'canceled' || consultation.status === 'rejected' ? 'text-green-400' : 'text-neon-gold'}`}>
                             {consultation.total_credits} Créditos
                         </p>
                     </div>
@@ -576,7 +580,7 @@ export default function ConsultationResponsePage() {
                     <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
                         <NeonButton
                             variant="cyan"
-                            onClick={() => router.push(`/app/oraculistas`)}
+                            onClick={() => router.push(`/app`)}
                         >
                             <UserIcon size={18} className="mr-2" />
                             Buscar Outro Oraculista

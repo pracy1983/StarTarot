@@ -103,29 +103,22 @@ export default function MarketplacePage() {
                 schedules: schedules?.filter(s => s.oracle_id === p.id) || []
             }))
 
-            // 4. Lógica de Ordenação: Favoritos (Online > Offline) > Resto (Online > Offline)
-            const sortedOracles = oraclesWithSchedules.sort((a, b) => {
-                const isRecentlyOnline = (o: any) => {
-                    if (!o.is_online) return false
-                    if (!o.last_heartbeat_at) return false
-                    const lastPulse = new Date(o.last_heartbeat_at).getTime()
-                    const now = new Date().getTime()
-                    return (now - lastPulse) < 120000 // 2 minutes
-                }
+            // 4. Lógica de Ordenação: Favoritos > Online (Randômico) > Offline
+            const isOnline = (o: any) => {
+                if (!o.is_online) return false
+                if (!o.last_heartbeat_at) return false
+                const lastPulse = new Date(o.last_heartbeat_at).getTime()
+                const now = new Date().getTime()
+                return (now - lastPulse) < 120000 // 2 minutes
+            }
 
-                const aFav = favorites.includes(a.id) ? 1 : 0
-                const bFav = favorites.includes(b.id) ? 1 : 0
+            const favoritesList = oraclesWithSchedules.filter(o => favorites.includes(o.id))
+            const remaining = oraclesWithSchedules.filter(o => !favorites.includes(o.id))
 
-                if (aFav !== bFav) return bFav - aFav
+            const onlineList = remaining.filter(o => isOnline(o)).sort(() => Math.random() - 0.5)
+            const offlineList = remaining.filter(o => !isOnline(o))
 
-                const aOnline = isRecentlyOnline(a) ? 1 : 0
-                const bOnline = isRecentlyOnline(b) ? 1 : 0
-
-                if (aOnline !== bOnline) return bOnline - aOnline
-
-                return 0
-            })
-
+            const sortedOracles = [...favoritesList, ...onlineList, ...offlineList]
             setOracles(sortedOracles)
         } catch (err) {
             console.error('Erro ao buscar oraculistas:', err)
@@ -286,7 +279,7 @@ export default function MarketplacePage() {
             </section>
 
             {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 gap-8 pb-10">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 pb-10">
                 {loading ? (
                     Array.from({ length: 3 }).map((_, i) => (
                         <div key={i} className="glass-card h-80 animate-pulse bg-white/5 border-white/5" />
