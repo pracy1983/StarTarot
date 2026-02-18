@@ -19,14 +19,33 @@ export default function HistoricoPage() {
 
     const fetchHistory = async () => {
         try {
-            const { data, error } = await supabase
+            // 1. Fetch consultations
+            const { data: consData, error: cError } = await supabase
                 .from('consultations')
                 .select('*, oracle:profiles!consultations_oracle_id_fkey(full_name, specialty)')
                 .eq('client_id', profile!.id)
                 .order('created_at', { ascending: false })
 
-            if (error) throw error
-            setAtendimentos(data || [])
+            if (cError) throw cError
+
+            // 2. Fetch all gift transactions for this user
+            const { data: giftData } = await supabase
+                .from('transactions')
+                .select('amount, metadata')
+                .eq('user_id', profile!.id)
+                .eq('type', 'gift_send')
+
+            // 3. Map gifts to consultations
+            const consultationsWithGifts = (consData || []).map(c => {
+                const consultationGifts = giftData?.filter(g => g.metadata?.consultation_id === c.id) || []
+                const totalGifts = consultationGifts.reduce((acc, current) => acc + Math.abs(current.amount), 0)
+                return {
+                    ...c,
+                    total_gifts: totalGifts
+                }
+            })
+
+            setAtendimentos(consultationsWithGifts)
         } catch (err) {
             console.error('Erro ao buscar histórico:', err)
         } finally {
@@ -101,9 +120,16 @@ export default function HistoricoPage() {
                                     )}
                                     <div>
                                         <p className="text-[10px] text-slate-500 uppercase tracking-widest font-bold mb-1">Investimento</p>
-                                        <p className="text-sm font-bold text-neon-gold flex items-center justify-center md:justify-start">
-                                            <CreditCard size={14} className="mr-2 opacity-70" /> {atendimento.total_credits} Créditos
-                                        </p>
+                                        <div className="flex flex-col md:items-start items-center">
+                                            <p className="text-sm font-bold text-neon-gold flex items-center justify-center md:justify-start">
+                                                <CreditCard size={14} className="mr-2 opacity-70" /> {atendimento.total_credits} créditos
+                                            </p>
+                                            {atendimento.total_gifts > 0 && (
+                                                <p className="text-[10px] text-neon-cyan/80 font-bold uppercase mt-1">
+                                                    + {atendimento.total_gifts} em presentes
+                                                </p>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
 

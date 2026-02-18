@@ -23,7 +23,7 @@ import { IncomingCallModal } from '@/components/oracle/IncomingCallModal'
 import { ProfileMenu } from '@/components/ui/ProfileMenu'
 import { useRealtimeCalls } from '@/hooks/useRealtimeCalls'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
-import toast, { Toaster } from 'react-hot-toast'
+import toast from 'react-hot-toast'
 import { AuthModal } from '@/components/auth/AuthModal'
 
 export default function ClientLayout({ children }: { children: React.ReactNode }) {
@@ -368,18 +368,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 onReject={rejectCall}
             />
             <AuthModal />
-            <Toaster
-                position="top-right"
-                toastOptions={{
-                    // No mobile, move para baixo pra não cobrir o saldo
-                    className: 'md:!mt-0 !mt-20',
-                    style: {
-                        background: '#0a0a1a',
-                        color: '#fff',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                    },
-                }}
-            />
         </div >
     )
 }

@@ -60,9 +60,21 @@ export default function OracleProfilePage() {
         initial_fee_brl: '0.00'
     })
 
+    const [averages, setAverages] = useState({
+        avg_price_per_minute: 0,
+        avg_initial_fee: 0,
+        avg_price_per_message: 0
+    })
+
     useEffect(() => {
         fetchSpecialties()
+        fetchAverages()
     }, [])
+
+    const fetchAverages = async () => {
+        const { data } = await supabase.from('oracle_average_prices').select('*').single()
+        if (data) setAverages(data)
+    }
 
     const fetchSpecialties = async () => {
         const { data } = await supabase
@@ -381,7 +393,7 @@ export default function OracleProfilePage() {
                         <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-slate-500 ml-1 italic">
-                                    Quanto você deseja ganhar por minuto?
+                                    Quanto você deseja ganhar por minuto? {averages.avg_price_per_minute > 0 && <span className="text-neon-gold/60 font-bold ml-1">(Média do site: R$ {averages.avg_price_per_minute.toFixed(2)})</span>}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
@@ -418,7 +430,7 @@ export default function OracleProfilePage() {
                         <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-slate-400 ml-1 italic">
-                                    Quanto custa para abrir a mensagem com você?
+                                    Quanto custa para abrir a mensagem com você? {averages.avg_initial_fee > 0 && <span className="text-neon-gold/60 font-bold ml-1">(Média do site: R$ {averages.avg_initial_fee.toFixed(2)})</span>}
                                 </label>
                                 <div className="relative">
                                     <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 font-bold">R$</span>
@@ -461,7 +473,7 @@ export default function OracleProfilePage() {
                         <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-slate-400 ml-1 italic">
-                                    Quantos Créditos por Mensagem?
+                                    Quantos Créditos por Mensagem? {averages.avg_price_per_message > 0 && <span className="text-neon-purple/60 font-bold ml-1">(Média do site: {averages.avg_price_per_message} cr)</span>}
                                 </label>
                                 <div className="relative">
                                     <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
