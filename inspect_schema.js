@@ -20,7 +20,6 @@ function getEnv() {
 
 const env = getEnv()
 const supabaseUrl = env.NEXT_PUBLIC_SUPABASE_URL
-// Use Service Role Key to bypass RLS for inspection
 const supabaseKey = env.SUPABASE_SERVICE_ROLE_KEY || env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 
 if (!supabaseUrl || !supabaseKey) {
@@ -31,28 +30,23 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey)
 
 async function inspect() {
-    console.log('--- Inspecting Database Schema (JS Version) ---')
-
-    const tables = ['profiles', 'specialties']
-
-    for (const table of tables) {
-        console.log(`\nChecking table [${table}]...`)
-        try {
-            const { data, error } = await supabase.from(table).select('*').limit(1)
-            if (error) {
-                console.log(`Table [${table}] check FAILED:`, error.message)
-                if (error.code) console.log(`Error Code: ${error.code}`)
+    console.log('--- Inspecting PROFILES Schema ---')
+    try {
+        const { data, error } = await supabase.from('profiles').select('*').limit(1)
+        if (error) {
+            console.log(`Table profiles check FAILED:`, error.message)
+        } else {
+            console.log(`Table profiles check OK.`)
+            if (data.length > 0) {
+                console.log('Sample row keys:', Object.keys(data[0]).join(', '))
+                const hasHeartbeat = Object.keys(data[0]).includes('last_heartbeat_at')
+                console.log(`Has last_heartbeat_at column? ${hasHeartbeat ? 'YES' : 'NO'}`)
             } else {
-                console.log(`Table [${table}] check OK. Found ${data.length} rows.`)
-                if (data.length > 0) {
-                    console.log('Sample row keys:', Object.keys(data[0]).join(', '))
-                } else {
-                    console.log('Table is empty, cannot infer columns from data.')
-                }
+                console.log('Table is empty, cannot verify columns.')
             }
-        } catch (err) {
-            console.error(`Unexpected error checking [${table}]:`, err)
         }
+    } catch (err) {
+        console.error(`Unexpected error:`, err)
     }
 }
 

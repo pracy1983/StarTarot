@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare, Star, Heart, Award, Video } from 'lucide-react'
+import { ArrowLeft, Sparkles, Calendar, User as UserIcon, MessageSquare, Star, Heart, Award, Video, Clock } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -46,6 +46,7 @@ export default function ConsultationResponsePage() {
     const [showRatingPrompt, setShowRatingPrompt] = useState(false)
     const [isSendingGift, setIsSendingGift] = useState<string | null>(null)
     const [sentGifts, setSentGifts] = useState<string[]>([])
+    const [isCancelling, setIsCancelling] = useState(false)
 
     useEffect(() => {
         if (id) fetchConsultation()
@@ -227,6 +228,36 @@ export default function ConsultationResponsePage() {
         }
     }
 
+    const handleCancelConsultation = async () => {
+        if (!confirm('Tem certeza que deseja cancelar a consulta? Os créditos serão estornados imediatamente.')) return
+
+        setIsCancelling(true)
+        try {
+            const { data, error } = await supabase.rpc('cancel_pending_consultation', {
+                p_consultation_id: id,
+                p_reason: 'canceled_by_client_request'
+            })
+
+            if (error) throw error
+            if (!data.success) throw new Error(data.error)
+
+            toast.success('Consulta cancelada e créditos estornados!')
+
+            // Atualizar saldo local
+            if (data.new_balance !== undefined) {
+                setProfile({ ...profile!, credits: data.new_balance })
+            }
+
+            // Redirecionar para mensagens ou dashboard
+            router.push('/app/mensagens')
+        } catch (err: any) {
+            console.error('Error cancelling:', err)
+            toast.error('Erro ao cancelar: ' + err.message)
+        } finally {
+            setIsCancelling(false)
+        }
+    }
+
     if (loading) {
         return (
             <div className="flex items-center justify-center min-h-[60vh]">
@@ -327,7 +358,38 @@ export default function ConsultationResponsePage() {
                                 </div>
                                 <div className="bg-gradient-to-br from-neon-purple/5 to-transparent p-6 rounded-xl border border-neon-purple/10">
                                     <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
-                                        {q.answer_text || 'Processando resposta...'}
+                                        {q.answer_text || (
+                                            <div className="space-y-4">
+                                                {consultation.status === 'canceled' || consultation.status === 'rejected' ? (
+                                                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                                        <p className="flex items-center text-red-400 font-bold mb-2">
+                                                            <Clock size={16} className="mr-2" />
+                                                            Consulta Cancelada / Expirada
+                                                        </p>
+                                                        <p className="text-sm text-slate-300">
+                                                            O oráculo não respondeu dentro do prazo ou a consulta foi cancelada.
+                                                            <br /><strong className="text-white">Os créditos foram estornados para sua carteira.</strong>
+                                                        </p>
+                                                    </div>
+                                                ) : (
+                                                    <>
+                                                        <p className="flex items-center text-neon-cyan animate-pulse">
+                                                            <Clock size={16} className="mr-2" />
+                                                            Aguardando resposta do oráculo...
+                                                        </p>
+                                                        {consultation.status === 'pending' && (
+                                                            <button
+                                                                onClick={handleCancelConsultation}
+                                                                disabled={isCancelling}
+                                                                className="text-xs text-red-400 hover:text-red-300 underline mt-2 disabled:opacity-50"
+                                                            >
+                                                                {isCancelling ? 'Cancelando...' : 'Cancelar consulta e estornar créditos'}
+                                                            </button>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
                                     </p>
                                 </div>
                             </div>
@@ -360,60 +422,62 @@ export default function ConsultationResponsePage() {
                 </GlassCard>
             )}
 
-            {/* Gifts Section */}
-            <GlassCard className="border-neon-gold/20 bg-neon-gold/5" hover={false}>
-                <div className="text-center space-y-4">
-                    <div className="flex items-center justify-center space-x-2 text-neon-gold">
-                        <Sparkles size={20} />
-                        <h3 className="text-lg font-bold uppercase tracking-wider">Envie um Presente Especial</h3>
-                    </div>
-                    <p className="text-slate-400 text-sm italic">
-                        Gostou do atendimento? Demonstre seu carinho enviando um presente simbólico ao oraculista.
-                    </p>
+            {/* Gifts Section - Only if Answered */}
+            {consultation.status === 'answered' && (
+                <GlassCard className="border-neon-gold/20 bg-neon-gold/5" hover={false}>
+                    <div className="text-center space-y-4">
+                        <div className="flex items-center justify-center space-x-2 text-neon-gold">
+                            <Sparkles size={20} />
+                            <h3 className="text-lg font-bold uppercase tracking-wider">Envie um Presente Especial</h3>
+                        </div>
+                        <p className="text-slate-400 text-sm italic">
+                            Gostou do atendimento? Demonstre seu carinho enviando um presente simbólico ao oraculista.
+                        </p>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
-                        {GIFTS.map((gift) => {
-                            const isSent = sentGifts.includes(gift.id)
-                            return (
-                                <button
-                                    key={gift.id}
-                                    onClick={() => !isSent && handleSendGift(gift)}
-                                    disabled={isSendingGift === gift.id || isSent}
-                                    className={`relative group p-4 rounded-2xl border transition-all flex flex-col items-center justify-center space-y-2 ${isSent
-                                        ? 'bg-green-500/10 border-green-500/30'
-                                        : 'bg-white/5 border-white/10 hover:border-neon-gold/50 hover:bg-neon-gold/10'
-                                        }`}
-                                >
-                                    <div className="w-16 h-16 group-hover:scale-110 transition-transform flex items-center justify-center p-1">
-                                        <img
-                                            src={typeof gift.image === 'string' ? gift.image : gift.image.src}
-                                            alt={gift.name}
-                                            className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]"
-                                        />
-                                    </div>
-                                    <div className="text-center">
-                                        <p className="text-[10px] font-bold text-white uppercase truncate w-full px-1">{gift.name}</p>
-                                        <p className="text-xs text-neon-gold font-bold">{gift.credits} Créditos</p>
-                                    </div>
-                                    {isSendingGift === gift.id && (
-                                        <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
-                                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-6">
+                            {GIFTS.map((gift) => {
+                                const isSent = sentGifts.includes(gift.id)
+                                return (
+                                    <button
+                                        key={gift.id}
+                                        onClick={() => !isSent && handleSendGift(gift)}
+                                        disabled={isSendingGift === gift.id || isSent}
+                                        className={`relative group p-4 rounded-2xl border transition-all flex flex-col items-center justify-center space-y-2 ${isSent
+                                            ? 'bg-green-500/10 border-green-500/30'
+                                            : 'bg-white/5 border-white/10 hover:border-neon-gold/50 hover:bg-neon-gold/10'
+                                            }`}
+                                    >
+                                        <div className="w-16 h-16 group-hover:scale-110 transition-transform flex items-center justify-center p-1">
+                                            <img
+                                                src={typeof gift.image === 'string' ? gift.image : gift.image.src}
+                                                alt={gift.name}
+                                                className="w-full h-full object-contain drop-shadow-[0_0_8px_rgba(255,215,0,0.3)]"
+                                            />
                                         </div>
-                                    )}
-                                    {isSent && (
-                                        <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg border border-white/20">
-                                            <Sparkles size={12} />
+                                        <div className="text-center">
+                                            <p className="text-[10px] font-bold text-white uppercase truncate w-full px-1">{gift.name}</p>
+                                            <p className="text-xs text-neon-gold font-bold">{gift.credits} Créditos</p>
                                         </div>
-                                    )}
-                                </button>
-                            )
-                        })}
+                                        {isSendingGift === gift.id && (
+                                            <div className="absolute inset-0 bg-black/40 rounded-2xl flex items-center justify-center">
+                                                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            </div>
+                                        )}
+                                        {isSent && (
+                                            <div className="absolute -top-2 -right-2 bg-green-500 text-white rounded-full p-1 shadow-lg border border-white/20">
+                                                <Sparkles size={12} />
+                                            </div>
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </div>
                     </div>
-                </div>
-            </GlassCard>
+                </GlassCard>
+            )}
 
-            {/* Rating Section */}
-            {(consultation.type !== 'video' || (consultation.duration_seconds || 0) >= 300) && (
+            {/* Rating Section - Only if Answered */}
+            {consultation.status === 'answered' && (consultation.type !== 'video' || (consultation.duration_seconds || 0) >= 300) && (
                 !hasRated ? (
                     <GlassCard className="border-neon-purple/20 bg-neon-purple/5" hover={false}>
                         <div className="text-center space-y-6 py-4">
@@ -499,18 +563,41 @@ export default function ConsultationResponsePage() {
             <div className="flex flex-col sm:flex-row gap-4 items-center justify-between p-6 bg-white/5 border border-white/10 rounded-xl">
                 <div className="text-sm text-slate-400 text-center sm:text-left">
                     <p>
-                        {consultation.type === 'video'
-                            ? 'Gostou da consulta? Favorite este oraculista.'
-                            : 'Gostou da consulta? Você pode fazer uma nova mensagem ao mesmo oráculo.'}
+                        {consultation.status === 'canceled' || consultation.status === 'rejected'
+                            ? 'O que você gostaria de fazer agora?'
+                            : (consultation.type === 'video'
+                                ? 'Gostou da consulta? Favorite este oraculista.'
+                                : 'Gostou da consulta? Você pode fazer uma nova mensagem ao mesmo oráculo.')
+                        }
                     </p>
                 </div>
-                <NeonButton
-                    variant="purple"
-                    onClick={() => router.push(`/app/consulta/${oracle.id}`)}
-                >
-                    <MessageSquare size={18} className="mr-2" />
-                    Nova Consulta
-                </NeonButton>
+
+                {consultation.status === 'canceled' || consultation.status === 'rejected' ? (
+                    <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto">
+                        <NeonButton
+                            variant="cyan"
+                            onClick={() => router.push(`/app/oraculistas`)}
+                        >
+                            <UserIcon size={18} className="mr-2" />
+                            Buscar Outro Oraculista
+                        </NeonButton>
+                        <NeonButton
+                            variant="purple"
+                            onClick={() => router.push(`/app/consulta/${oracle.id}`)}
+                        >
+                            <MessageSquare size={18} className="mr-2" />
+                            Tentar Novamente
+                        </NeonButton>
+                    </div>
+                ) : (
+                    <NeonButton
+                        variant="purple"
+                        onClick={() => router.push(`/app/consulta/${oracle.id}`)}
+                    >
+                        <MessageSquare size={18} className="mr-2" />
+                        Nova Consulta
+                    </NeonButton>
+                )}
             </div>
         </div>
     )

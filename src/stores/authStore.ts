@@ -28,6 +28,7 @@ interface Profile {
   requires_birthdate?: boolean
   requires_birthtime?: boolean
   is_online?: boolean
+  last_heartbeat_at?: string | null
   is_oracle?: boolean
   // Billing
   cpf?: string | null

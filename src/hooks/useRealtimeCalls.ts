@@ -198,14 +198,19 @@ export function useRealtimeCalls() {
         }
 
         try {
+            const updateData: any = { is_online: newState }
+            if (newState) {
+                updateData.last_heartbeat_at = new Date().toISOString()
+            }
+
             const { error } = await supabase
                 .from('profiles')
-                .update({ is_online: newState })
+                .update(updateData)
                 .eq('id', profile.id)
 
             if (error) throw error
             setIsOnline(newState)
-            useAuthStore.getState().setProfile({ ...profile, is_online: newState })
+            useAuthStore.getState().setProfile({ ...profile, is_online: newState, last_heartbeat_at: updateData.last_heartbeat_at })
             toast.success(newState ? 'Você está Online!' : 'Você está Offline')
 
             // Trigger notifications if going online

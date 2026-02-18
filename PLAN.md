@@ -18,6 +18,21 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 1. **Owner:** Gestão total de oraculistas.
 2. **Oraculista:** Atendimento humano.
 3. **Cliente:** Consumidor final (créditos por minuto).
+- **Consultas com IA:** 1-5 perguntas ou vídeo.
+- **Consultas Humans:** Vídeo (tempo real) ou Inbox (texto).
+
+## ✅ Implementações Recentes
+- **Correção de Registro de Oraculista** (RPC `update_oracle_application`).
+- **Sistema de Status Online** (Correção de `last_heartbeat_at`).
+- **Fluxo de Consulta Melhorado:**
+    - Uso de Nome Completo do Perfil.
+    - Status "Aguardando Resposta" claro.
+    - **Cancelamento e Reembolso Automático:**
+        - Cliente pode cancelar consultas pendentes.
+        - Créditos estornados automaticamente.
+        - Oraculista vê "Mensagem Perdida".
+        - Botões de "Reenviar" ou "Buscar Outro".
+    - **Timeout de 24h** (Job `check_consultation_timeouts`).
 
 ## 🛠️ Próximas Implementações (Bugfixes & UX)
 - [ ] **Verificação de Hardware Pré-Consulta (Oráculo):**

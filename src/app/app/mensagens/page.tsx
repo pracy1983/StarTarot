@@ -93,9 +93,43 @@ export default function InboxPage() {
                 }))
 
             const pendingConsultations = (consultationsData || [])
-                .filter(c => c.status !== 'answered' && c.status !== 'canceled' && c.status !== 'rejected')
+                .filter(c => c.status !== 'answered')
+                //.filter(c => c.status !== 'canceled' && c.status !== 'rejected') // Allow canceled/rejected to show up for specific logic
                 .filter(c => c.type !== 'video') // EXCLUDE VIDEO FROM INBOX
                 .map(c => {
+                    const isCanceled = c.status === 'canceled' || c.status === 'rejected'
+
+                    if (isCanceled && isOracleView) {
+                        return {
+                            id: `lost-${c.id}`,
+                            title: `🔴 Mensagem Perdida`,
+                            content: `Tempo esgotado ou cancelado pelo cliente.`,
+                            created_at: c.ended_at || c.created_at,
+                            is_read: true,
+                            metadata: {
+                                type: 'consultation_lost',
+                                target_user: c.client, // Oracle view, target is client
+                                consultation_id: c.id,
+                                is_lost: true
+                            }
+                        }
+                    }
+
+                    if (isCanceled && !isOracleView) {
+                        return {
+                            id: `canc-${c.id}`,
+                            title: `🚫 Consulta Cancelada`,
+                            content: `Toque para ver detalhes e reenviar.`,
+                            created_at: c.ended_at || c.created_at,
+                            is_read: true,
+                            metadata: {
+                                type: 'consultation_canceled',
+                                target_user: c.oracle, // Client view, target is oracle
+                                consultation_id: c.id
+                            }
+                        }
+                    }
+
                     return {
                         id: `pend-${c.id}`,
                         title: isOracleView
@@ -109,7 +143,7 @@ export default function InboxPage() {
                         metadata: {
                             type: 'consultation_pending',
                             consultation_id: c.id,
-                            oracle_data: c.oracle
+                            target_user: isOracleView ? c.client : c.oracle // Oracle view, target is client; Client view, target is oracle
                         }
                     }
                 })
@@ -130,9 +164,16 @@ export default function InboxPage() {
 
     const handleMessageClick = async (message: any) => {
         // Redirecionar se for consulta respondida
-        if ((message.metadata?.type === 'consultation_answered' || message.metadata?.type === 'consultation_pending') && message.metadata?.consultation_id) {
+        // Bloquear clique em mensagem perdida (Oráculo)
+        if (message.metadata?.is_lost) {
+            toast('Mensagem perdida. Não é possível responder.', { icon: '🚫' })
+            return
+        }
+
+        // Redirecionar se for consulta respondida, pendente ou cancelada (Cliente)
+        if ((message.metadata?.type === 'consultation_answered' || message.metadata?.type === 'consultation_pending' || message.metadata?.type === 'consultation_canceled') && message.metadata?.consultation_id) {
             // Se for uma mensagem real da inbox, marcar como lida
-            if (typeof message.id === 'number' || (typeof message.id === 'string' && !message.id.startsWith('cons-') && !message.id.startsWith('pend-'))) {
+            if (typeof message.id === 'number' || (typeof message.id === 'string' && !message.id.startsWith('cons-') && !message.id.startsWith('pend-') && !message.id.startsWith('canc-') && !message.id.startsWith('lost-'))) {
                 if (!message.is_read) {
                     await supabase
                         .from('inbox_messages')
@@ -142,11 +183,16 @@ export default function InboxPage() {
                     setMessages(prev => prev.map(m => m.id === message.id ? { ...m, is_read: true } : m))
                 }
             }
-            if (message.metadata?.type === 'consultation_answered' || message.metadata?.type === 'consultation_pending') {
-                if (isOracleView && message.metadata?.type === 'consultation_pending') {
+
+            if (message.metadata?.type === 'consultation_answered') {
+                router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+            } else if (message.metadata?.type === 'consultation_canceled') {
+                router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`) // Re-use response page to show cancellation details
+            } else if (message.metadata?.type === 'consultation_pending') {
+                if (isOracleView) {
                     router.push(`/app/dashboard/consulta/${message.metadata.consultation_id}`)
-                } else if (message.metadata?.type === 'consultation_answered') {
-                    router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`)
+                } else {
+                    router.push(`/app/consulta/resposta/${message.metadata.consultation_id}`) // Pending view for client
                 }
             }
         }
@@ -155,7 +201,7 @@ export default function InboxPage() {
     const handleDelete = async (e: React.MouseEvent, message: any) => {
         e.stopPropagation()
 
-        const isVirtual = typeof message.id === 'string' && (message.id.startsWith('cons-') || message.id.startsWith('pend-'))
+        const isVirtual = typeof message.id === 'string' && (message.id.startsWith('cons-') || message.id.startsWith('pend-') || message.id.startsWith('canc-') || message.id.startsWith('lost-'))
         const consultationId = message.metadata?.consultation_id
 
         try {
@@ -247,8 +293,8 @@ export default function InboxPage() {
                                                     <div className="relative">
                                                         <div className="w-12 h-12 rounded-full border border-neon-purple/30 p-0.5">
                                                             <img
-                                                                src={msg.metadata.oracle_data?.avatar_url || `https://ui-avatars.com/api/?name=${msg.metadata.oracle_data?.full_name || 'O'}&background=0a0a1a&color=a855f7`}
-                                                                alt="Oracle"
+                                                                src={msg.metadata.target_user?.avatar_url || `https://ui-avatars.com/api/?name=${msg.metadata.target_user?.full_name || 'U'}&background=0a0a1a&color=a855f7`}
+                                                                alt="User"
                                                                 className="w-full h-full rounded-full object-cover"
                                                             />
                                                         </div>
@@ -289,16 +335,16 @@ export default function InboxPage() {
                                                         <button
                                                             onClick={(e) => {
                                                                 e.stopPropagation()
-                                                                router.push(`/app/consulta/${msg.metadata.oracle_data?.username || msg.metadata.oracle_data?.id}`) // Fallback if username missing
+                                                                router.push(`/app/consulta/${msg.metadata.target_user?.username || msg.metadata.target_user?.id}`) // Fallback if username missing
                                                             }}
                                                             className="text-xs flex items-center text-neon-purple hover:text-white transition-colors bg-neon-purple/10 px-3 py-1.5 rounded-lg border border-neon-purple/20 hover:bg-neon-purple/20"
                                                         >
                                                             <User size={12} className="mr-1.5" />
                                                             Ver Perfil
                                                         </button>
-                                                        {msg.metadata.oracle_data?.full_name && (
+                                                        {msg.metadata.target_user?.full_name && (
                                                             <span className="text-xs text-slate-500">
-                                                                Oraculista: <strong className="text-slate-300">{msg.metadata.oracle_data.full_name}</strong>
+                                                                {isOracleView ? 'Cliente:' : 'Oraculista:'} <strong className="text-slate-300">{msg.metadata.target_user.full_name}</strong>
                                                             </span>
                                                         )}
                                                     </div>
