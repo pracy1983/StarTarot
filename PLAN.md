@@ -33,6 +33,10 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
         - Oraculista vê "Mensagem Perdida".
         - Botões de "Reenviar" ou "Buscar Outro".
     - **Timeout de 24h** (Job `check_consultation_timeouts`).
+- **UI/UX Refinada:**
+    - Filtros de especialidade unificados (Dropdown/Search).
+    - Botões de favoritos com interação `hover-expand` e cores temáticas.
+    - Middleware atualizado para proteção de rotas e acesso público a perfis.
 
 ## 🛠️ Próximas Implementações (Bugfixes & UX)
 - [ ] **Verificação de Hardware Pré-Consulta (Oráculo):**

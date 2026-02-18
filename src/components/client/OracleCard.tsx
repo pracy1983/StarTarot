@@ -305,13 +305,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     <button
                         onClick={toggleFavorite}
                         disabled={isUpdatingMeta}
-                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden ${isFavorite ? 'bg-neon-gold border-neon-gold text-deep-space w-32 px-3' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60 hover:w-32 hover:px-3 w-10 justify-center'}`}
+                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden w-10 hover:w-32 hover:px-3 justify-center ${isFavorite ? 'bg-neon-purple border-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
                         title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                     >
-                        <div className="flex items-center justify-center shrink-0">
-                            <Heart size={16} className={`${isFavorite ? 'fill-deep-space' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
+                        <div className="flex items-center justify-center shrink-0 w-10 h-10 absolute left-0 top-0">
+                            <Heart size={16} className={`${isFavorite ? 'fill-white' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
                         </div>
-                        <span className={`text-[10px] font-bold uppercase transition-all duration-300 whitespace-nowrap ml-2 ${isFavorite ? 'opacity-100 block' : 'opacity-0 hidden group-hover/btn:opacity-100 group-hover/btn:block'}`}>
+                        <span className="text-[10px] font-bold uppercase transition-all duration-300 whitespace-nowrap ml-8 opacity-0 group-hover/btn:opacity-100 hidden group-hover/btn:block">
                             {isFavorite ? 'Favorito' : 'Favoritar'}
                         </span>
                     </button>
@@ -319,13 +319,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     <button
                         onClick={toggleNotify}
                         disabled={isUpdatingMeta}
-                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden ${notifyOnline ? 'bg-neon-cyan border-neon-cyan text-deep-space w-32 px-3' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60 hover:w-32 hover:px-3 w-10 justify-center'}`}
+                        className={`group/btn flex items-center h-10 rounded-full border backdrop-blur-md transition-all duration-300 relative overflow-hidden w-10 hover:w-32 hover:px-3 justify-center ${notifyOnline ? 'bg-neon-cyan/80 border-neon-cyan text-white shadow-lg shadow-neon-cyan/20' : 'bg-black/40 border-white/10 text-white/40 hover:text-white hover:bg-black/60'}`}
                         title={notifyOnline ? 'Desativar notificações' : 'Ativar notificações'}
                     >
-                        <div className="flex items-center justify-center shrink-0">
-                            <Bell size={16} className={`${notifyOnline ? 'fill-deep-space' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
+                        <div className="flex items-center justify-center shrink-0 w-10 h-10 absolute left-0 top-0">
+                            <Bell size={16} className={`${notifyOnline ? 'fill-white' : 'group-hover/btn:scale-110 transition-transform duration-300'}`} />
                         </div>
-                        <span className={`text-[10px] font-bold uppercase transition-all duration-300 whitespace-nowrap ml-2 ${notifyOnline ? 'opacity-100 block' : 'opacity-0 hidden group-hover/btn:opacity-100 group-hover/btn:block'}`}>
+                        <span className="text-[10px] font-bold uppercase transition-all duration-300 whitespace-nowrap ml-8 opacity-0 group-hover/btn:opacity-100 hidden group-hover/btn:block">
                             {notifyOnline ? 'Avisar' : 'Me Avise'}
                         </span>
                     </button>

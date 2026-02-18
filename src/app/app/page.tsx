@@ -3,8 +3,9 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { OracleCard } from '@/components/client/OracleCard'
+import { OracleFilters } from '@/components/client/OracleFilters'
 import { supabase } from '@/lib/supabase'
-import { Sparkles, Filter, Search, Moon, Sun, Star } from 'lucide-react'
+import { Sparkles, Search, Star } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 import { useAuthStore } from '@/stores/authStore'
@@ -233,127 +234,52 @@ export default function MarketplacePage() {
             </section>
 
             {/* Advanced Filters & Search */}
-            <section className="flex flex-col gap-6">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    {/* Status Tabs */}
-                    <div className="flex items-center space-x-1 md:space-x-2 bg-white/5 p-1 rounded-full border border-white/5 w-fit overflow-x-auto no-scrollbar max-w-full">
-                        {[
-                            { id: 'all', label: 'Todos', icon: <Sun className="w-3 h-3 md:w-4 md:h-4" /> },
-                            { id: 'online', label: 'Online', icon: <Moon className="w-3 h-3 md:w-4 md:h-4" /> },
-                        ].map((item) => (
-                            <button
-                                key={item.id}
-                                onClick={() => { setFilter(item.id); setPage(1) }}
-                                className={`flex items-center space-x-1.5 md:space-x-2 px-3 md:px-4 py-1 md:py-1.5 rounded-full transition-all whitespace-nowrap text-[12px] md:text-sm font-medium ${filter === item.id
-                                    ? 'bg-neon-purple text-white shadow-lg'
-                                    : 'text-slate-400 hover:text-white'
-                                    }`}
-                            >
-                                {item.icon}
-                                <span>{item.label}</span>
-                            </button>
-                        ))}
-                    </div>
+            {/* Marketplace Filter */}
+            <section className="space-y-8">
+                <OracleFilters
+                    filter={filter}
+                    setFilter={setFilter}
+                    searchTerm={searchTerm}
+                    setSearchTerm={setSearchTerm}
+                    specialtyFilter={specialtyFilter}
+                    setSpecialtyFilter={setSpecialtyFilter}
+                    specialties={specialties}
+                    filterVideo={filterVideo}
+                    setFilterVideo={setFilterVideo}
+                    filterMessage={filterMessage}
+                    setFilterMessage={setFilterMessage}
+                />
 
-                    {/* Search Bar */}
-                    <div className="relative w-full md:w-72 group">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-cyan transition-colors w-4 h-4 md:w-[18px] md:h-[18px]" />
-                        <input
-                            type="text"
-                            placeholder="Buscar oráculo..."
-                            value={searchTerm}
-                            onChange={(e) => { setSearchTerm(e.target.value); setPage(1) }}
-                            className="w-full bg-white/5 border border-white/10 rounded-full py-1.5 md:py-2 pl-10 pr-4 text-[12px] md:text-sm text-white focus:border-neon-cyan/50 outline-none transition-all"
-                        />
-                    </div>
-                </div>
-
-                <div className="flex flex-col md:flex-row items-start md:items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/5">
-                    {/* Specialty Tabs */}
-                    <div className="flex items-center space-x-2 overflow-x-auto no-scrollbar max-w-full py-1">
-                        <button
-                            onClick={() => { setSpecialtyFilter('all'); setPage(1) }}
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'all'
-                                ? 'bg-neon-gold border-neon-gold text-deep-space'
-                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                                }`}
-                        >
-                            Todas
-                        </button>
-                        {specialties.map(s => (
-                            <button
-                                key={s}
-                                onClick={() => { setSpecialtyFilter(s); setPage(1) }}
-                                className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === s
-                                    ? 'bg-neon-purple border-neon-purple text-white'
-                                    : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                                    }`}
-                            >
-                                {s}
-                            </button>
-                        ))}
-                        <button
-                            onClick={() => { setSpecialtyFilter('OUTROS'); setPage(1) }}
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap border ${specialtyFilter === 'OUTROS'
-                                ? 'bg-slate-500 border-slate-500 text-white'
-                                : 'bg-white/5 border-white/10 text-slate-400 hover:text-white hover:border-white/20'
-                                }`}
-                        >
-                            Outros
-                        </button>
-                    </div>
-
-                    {/* Checkboxes */}
-                    <div className="flex items-center gap-4 border-l border-white/10 pl-4 ml-2">
-                        <label className="flex items-center space-x-2 cursor-pointer group">
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterVideo ? 'bg-neon-cyan border-neon-cyan text-deep-space' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {filterVideo && <Sparkles size={12} />}
-                                <input type="checkbox" checked={filterVideo} onChange={e => setFilterVideo(e.target.checked)} className="hidden" />
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 pb-10">
+                    {loading ? (
+                        Array.from({ length: 3 }).map((_, i) => (
+                            <div key={i} className="glass-card h-80 animate-pulse bg-white/5 border-white/5" />
+                        ))
+                    ) : paginatedOracles.length > 0 ? (
+                        <AnimatePresence mode='wait'>
+                            {paginatedOracles.map((oracle, idx) => (
+                                <motion.div
+                                    key={oracle.id}
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    transition={{ duration: 0.3, delay: idx * 0.05 }}
+                                >
+                                    <OracleCard oracle={oracle} />
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
+                    ) : (
+                        <div className="col-span-full py-20 text-center">
+                            <div className="inline-flex p-6 rounded-full bg-white/5 text-slate-600 mb-6">
+                                <Search size={48} />
                             </div>
-                            <span className={`text-sm ${filterVideo ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Vídeo</span>
-                        </label>
-
-                        <label className="flex items-center space-x-2 cursor-pointer group">
-                            <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all ${filterMessage ? 'bg-neon-purple border-neon-purple text-white' : 'border-white/20 group-hover:border-white/40'}`}>
-                                {filterMessage && <Sparkles size={12} />}
-                                <input type="checkbox" checked={filterMessage} onChange={e => setFilterMessage(e.target.checked)} className="hidden" />
-                            </div>
-                            <span className={`text-sm ${filterMessage ? 'text-white font-bold' : 'text-slate-400'}`}>Atende por Mensagem</span>
-                        </label>
-                    </div>
+                            <h3 className="text-xl font-bold text-white mb-2">Nenhum oráculo encontrado</h3>
+                            <p className="text-slate-500">Tente ajustar seus filtros para encontrar outros guias.</p>
+                        </div>
+                    )}
                 </div>
             </section>
-
-            {/* Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 pb-10">
-                {loading ? (
-                    Array.from({ length: 3 }).map((_, i) => (
-                        <div key={i} className="glass-card h-80 animate-pulse bg-white/5 border-white/5" />
-                    ))
-                ) : paginatedOracles.length > 0 ? (
-                    <AnimatePresence mode='wait'>
-                        {paginatedOracles.map((oracle, idx) => (
-                            <motion.div
-                                key={oracle.id}
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.3, delay: idx * 0.05 }}
-                            >
-                                <OracleCard oracle={oracle} />
-                            </motion.div>
-                        ))}
-                    </AnimatePresence>
-                ) : (
-                    <div className="col-span-full py-20 text-center">
-                        <div className="inline-flex p-6 rounded-full bg-white/5 text-slate-600 mb-6">
-                            <Search size={48} />
-                        </div>
-                        <h3 className="text-xl font-bold text-white mb-2">Nenhum oráculo encontrado</h3>
-                        <p className="text-slate-500">Tente ajustar seus filtros para encontrar outros guias.</p>
-                    </div>
-                )}
-            </div>
 
             {/* Pagination Controls */}
             {!loading && totalPages > 1 && (

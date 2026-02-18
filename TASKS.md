@@ -1,7 +1,10 @@
 # 🔮 Star Tarot - Lista de Tarefas (TASKS)
 
 ## ⏳ Em Progresso
-- [ ] Phase 1: Foundation (Limpeza + Design System)
+- [x] **UI/UX: Unificação de Filtros e Melhoria de Cards**
+    - [x] Componente `OracleFilters` unificado (Dashboard + Landing)
+    - [x] Botão Favorito/Avisar com estilo Neon Purple e expand-on-hover
+    - [x] Middleware: Proteção de rotas internas + Acesso público a perfil de oráculo
 - [ ] **Bugfix/UX: Melhoria no Fluxo de Atendimento do Oráculo**
     - [ ] Hardware check (câmera/mic) antes de aceitar consulta
     - [ ] UI de "Processando" ao aceitar consulta

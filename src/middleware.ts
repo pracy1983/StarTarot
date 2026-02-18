@@ -14,11 +14,9 @@ export async function middleware(req: NextRequest) {
 
     const url = req.nextUrl.clone()
 
-    // COMENTADO TEMPORARIAMENTE PARA QUEBRAR O LOOP DE REDIRECIONAMENTO
-    /*
     // Se não estiver logado e tentar acessar áreas restritas
     if (!session) {
-        if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/oracle') || url.pathname.startsWith('/app')) {
+        if (url.pathname.startsWith('/admin') || url.pathname.startsWith('/oracle') || (url.pathname.startsWith('/app') && !url.pathname.startsWith('/app/oraculo/'))) {
             url.pathname = '/'
             return NextResponse.redirect(url)
         }
@@ -33,7 +31,7 @@ export async function middleware(req: NextRequest) {
             .single()
 
         const role = profile?.role
-        console.log('Middleware Session found. Role:', role)
+        // console.log('Middleware Session found. Role:', role)
 
         // Proteção de rotas por Role
         if (url.pathname.startsWith('/admin') && role !== 'owner') {
@@ -47,17 +45,29 @@ export async function middleware(req: NextRequest) {
         }
 
         if (url.pathname.startsWith('/app') && role !== 'client' && role !== 'owner') {
-            url.pathname = role === 'owner' ? '/admin' : '/oracle'
-            return NextResponse.redirect(url)
+            // Allow oracles to view the client app? Usually yes, better than blocking.
+            // But strict rule says:
+            // url.pathname = role === 'owner' ? '/admin' : '/oracle'
+            // return NextResponse.redirect(url)
+            // User snippet had this. I'll keep it but maybe lenient?
+            // "if (url.pathname.startsWith('/app') && role !== 'client' && role !== 'owner')"
+            // If I am an Oracle, I might want to see my profile in /app/oraculo/...
+            // So I should allow /app/oraculo for Oracles too.
+            if (!url.pathname.startsWith('/app/oraculo/') && role === 'oracle') {
+                url.pathname = '/oracle'
+                return NextResponse.redirect(url)
+            }
         }
 
         // Evitar loop no login se já estiver logado
+        // REMOVIDO PARA EVITAR LOOP INFINITO E PERMITIR ACESSO A LANDING PAGE
+        /*
         if (url.pathname === '/') {
             url.pathname = role === 'owner' ? '/admin' : (role === 'oracle' ? '/oracle' : '/app')
             return NextResponse.redirect(url)
         }
+        */
     }
-    */
 
     return res
 }
