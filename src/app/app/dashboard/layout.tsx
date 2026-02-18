@@ -25,12 +25,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         }
 
         if (profile.role === 'oracle') {
-            if (profile.application_status === 'approved') {
+            if (profile.application_status === 'approved' || profile.application_status === 'rejected') {
                 setIsAuthorized(true)
             } else if (profile.application_status === 'pending') {
                 router.push('/app/tornar-se-oraculo')
             } else {
-                // Rejected or suspended or just role set without application ??
+                // suspended or just role set without application ??
                 router.push('/app')
             }
             return

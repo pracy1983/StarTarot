@@ -329,87 +329,87 @@ export default function OracleProfilePage() {
 
             {/* Personality section hidden for client to obscure AI nature */}
 
-            {/* Status & CTA */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
-                    <div className={`p-3 rounded-xl relative ${isOnline ? 'bg-green-500/10 text-green-400' : 'bg-red-500/10 text-red-500'}`}>
-                        {isOnline ? <Shield size={24} /> : <Shield size={24} className="opacity-50" />}
-                        <div className={`absolute top-2 right-2 w-2 h-2 rounded-full animate-pulse ${isOnline ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-red-500 shadow-[0_0_8px_#ef4444]'}`} />
-                    </div>
-                    <div>
-                        <p className="text-sm font-bold text-white">{isOnline ? 'Online Agora' : 'Offline'}</p>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Status Atual</p>
-                    </div>
-                </GlassCard>
+            <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
+                <div className={`p-4 rounded-full relative ${isOnline ? 'bg-green-500/10' : 'bg-slate-700/10'}`}>
+                    <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]' : 'bg-slate-500'}`} />
+                </div>
+                <div>
+                    <p className="text-sm font-bold text-white">{isOnline ? 'Online Agora' : 'Offline'}</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Status Atual</p>
+                </div>
+            </GlassCard>
 
-                <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
-                    <div className="p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan">
-                        <Clock size={24} />
-                    </div>
-                    <div>
-                        <p className="text-sm font-bold text-white">{avgResponseTime}</p>
-                        <p className="text-[10px] text-slate-500 uppercase tracking-wider">Média de Resposta</p>
-                    </div>
-                </GlassCard>
-            </div>
+            <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
+                <div className="p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan">
+                    <Clock size={24} />
+                </div>
+                <div>
+                    <p className="text-sm font-bold text-white">{avgResponseTime}</p>
+                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Média de Resposta</p>
+                </div>
+            </GlassCard>
 
             {/* Iniciar Consulta Buttons */}
-            {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {!isAI && oracle.allows_video && (
-                        <NeonButton
-                            variant="green"
-                            size="lg"
-                            className="px-8 py-6 h-auto"
-                            disabled={!isOnline}
-                            onClick={() => {
-                                if (!profile?.id) {
-                                    setShowAuthModal(true)
-                                    return
-                                }
-                                router.push(`/app/consulta/${oracle.id}?type=video`)
-                            }}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className="flex items-center mb-1">
-                                    <Video size={20} className="mr-2" />
-                                    <span className="font-bold">Vídeo Chamada</span>
+            {
+                profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {!isAI && oracle.allows_video && (
+                            <NeonButton
+                                variant="green"
+                                size="lg"
+                                className="px-8 py-6 h-auto"
+                                disabled={!isOnline}
+                                onClick={() => {
+                                    if (!profile?.id) {
+                                        setShowAuthModal(true)
+                                        return
+                                    }
+                                    router.push(`/app/consulta/${oracle.id}?type=video`)
+                                }}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-center mb-1">
+                                        <Video size={20} className="mr-2" />
+                                        <span className="font-bold">Vídeo Chamada</span>
+                                    </div>
+                                    <span className="text-[10px] opacity-70">Atendimento em tempo real</span>
                                 </div>
-                                <span className="text-[10px] opacity-70">Atendimento em tempo real</span>
-                            </div>
-                        </NeonButton>
-                    )}
-                    {oracle.allows_text && (
-                        <NeonButton
-                            variant="purple"
-                            size="lg"
-                            className="px-8 py-6 h-auto"
-                            onClick={() => {
-                                if (!profile?.id) {
-                                    setShowAuthModal(true)
-                                    return
-                                }
-                                router.push(`/app/consulta/${oracle.id}?type=message`)
-                            }}
-                        >
-                            <div className="flex flex-col items-center">
-                                <div className="flex items-center mb-1">
-                                    <MessageSquare size={20} className="mr-2" />
-                                    <span className="font-bold">Enviar Mensagem</span>
+                            </NeonButton>
+                        )}
+                        {oracle.allows_text && (
+                            <NeonButton
+                                variant="purple"
+                                size="lg"
+                                className="px-8 py-6 h-auto"
+                                onClick={() => {
+                                    if (!profile?.id) {
+                                        setShowAuthModal(true)
+                                        return
+                                    }
+                                    router.push(`/app/consulta/${oracle.id}?type=message`)
+                                }}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <div className="flex items-center mb-1">
+                                        <MessageSquare size={20} className="mr-2" />
+                                        <span className="font-bold">Enviar Mensagem</span>
+                                    </div>
+                                    <span className="text-[10px] opacity-70">Receba sua resposta no chat</span>
                                 </div>
-                                <span className="text-[10px] opacity-70">Receba sua resposta no chat</span>
-                            </div>
-                        </NeonButton>
-                    )}
-                </div>
-            )}
+                            </NeonButton>
+                        )}
+                    </div>
+                )
+            }
 
             {/* If it's the oracle themselves */}
-            {profile?.id === oracle.id && (
-                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
-                    <p className="text-sm text-slate-400">Clique na sua foto no topo para acessar o painel de atendimento.</p>
-                </div>
-            )}
+            {
+                profile?.id === oracle.id && (
+                    <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                        <p className="text-sm text-slate-400">Clique na sua foto no topo para acessar o painel de atendimento.</p>
+                    </div>
+                )
+            }
 
             {/* Avaliações */}
             <GlassCard className="border-white/5 space-y-6" hover={false}>
@@ -468,6 +468,6 @@ export default function OracleProfilePage() {
                     </div>
                 )}
             </GlassCard>
-        </div>
+        </div >
     )
 }
