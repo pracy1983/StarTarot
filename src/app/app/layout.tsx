@@ -18,10 +18,9 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { motion } from 'framer-motion'
-import { RoleSwitcher } from '@/components/ui/RoleSwitcher'
 import { supabase } from '@/lib/supabase'
 import { IncomingCallModal } from '@/components/oracle/IncomingCallModal'
-import { OracleStatusToggle } from '@/components/oracle/OracleStatusToggle'
+import { ProfileMenu } from '@/components/ui/ProfileMenu'
 import { useRealtimeCalls } from '@/hooks/useRealtimeCalls'
 import { useHeartbeat } from '@/hooks/useHeartbeat'
 import toast, { Toaster } from 'react-hot-toast'
@@ -212,9 +211,9 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
         if (!profile?.id || profile.role !== 'oracle') return
 
         const handleUnload = () => {
-            // Using sendBeacon for reliability when closing tab
-            const data = JSON.stringify({ userId: profile.id })
-            navigator.sendBeacon('/api/oracle/offline', data)
+            // Using Blob with sendBeacon for maximum reliability in application/json
+            const blob = new Blob([JSON.stringify({ userId: profile.id })], { type: 'application/json' })
+            navigator.sendBeacon('/api/oracle/offline', blob)
         }
 
         window.addEventListener('beforeunload', handleUnload)
@@ -227,64 +226,48 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
             {/* Top Header */}
             <header className="h-20 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass sticky top-0 z-40">
-                <div className="flex items-center space-x-3 cursor-pointer" onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard' : '/app')}>
+                <div className="flex items-center space-x-3 cursor-pointer shrink-0" onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard' : '/app')}>
                     <div className="w-10 h-10 relative">
                         <div className={`absolute inset-0 bg-${themeColor} blur-lg opacity-40 animate-pulse`} />
                         <img src="/logo.png" alt="Star Tarot" className="relative z-10 w-full" />
                     </div>
-                    <span className="text-2xl font-bold tracking-tighter text-white hidden sm:block">
+                    <span className="text-xl md:text-2xl font-bold tracking-tighter text-white hidden sm:block">
                         Star <span className={isAdminView ? 'neon-text-gold' : isOracleView ? 'neon-text-purple' : 'neon-text-cyan'}>Tarot</span>
                     </span>
                 </div>
 
-                <div className="flex-1 max-w-md mx-8 hidden md:flex items-center">
-                    <h2 className="text-xl font-bold text-white flex items-center">
-                        <Sparkles className={`mr-3 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={20} />
-                        Bem-vinde, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
+                <div className="flex-1 max-w-md mx-4 md:mx-8 hidden lg:flex items-center">
+                    <h2 className="text-lg font-bold text-white flex items-center truncate">
+                        <Sparkles className={`mr-3 shrink-0 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={18} />
+                        Olá, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
                             {(isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]) || 'Viajante'}
                         </span>!
                     </h2>
                 </div>
 
-                <div className="flex items-center space-x-2 sm:space-x-4">
-                    {/* Dropdown de Visões (Apenas para Oráculo Aprovado ou Owner) */}
-                    {(profile?.role === 'owner' || (profile?.role === 'oracle' && profile?.application_status === 'approved')) && <RoleSwitcher />}
-
-                    {/* Global Oracle Status Toggle */}
-                    {((profile?.role === 'oracle' && profile?.application_status === 'approved') || (profile?.role === 'owner' && isOracleView)) && (
-                        <div className="flex items-center">
-                            <OracleStatusToggle
-                                isOnline={isOnline}
-                                onToggle={toggleOnline}
-                                applicationStatus={profile?.application_status}
-                            />
-                        </div>
-                    )}
-
+                <div className="flex items-center space-x-3 md:space-x-4">
+                    {/* Wallet/Credits Display */}
                     <motion.div
                         key={walletBalance}
                         initial={{ scale: 1 }}
                         animate={{ scale: [1, 1.1, 1] }}
                         transition={{ duration: 0.3 }}
-                        className="flex flex-col items-end px-3 py-1.5 rounded-xl bg-white/5 border border-white/10"
+                        onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard/ganhos' : '/app/carteira')}
+                        className="flex items-center px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all shrink-0"
                     >
-                        <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold leading-none mb-1">
-                            {isOracleView ? 'Ganhos' : 'Saldo'}
-                        </span>
-                        <span className="text-neon-gold font-bold flex items-center leading-none">
-                            <Sparkles size={12} className="mr-1" />
-                            {walletBalance} <span className="text-[10px] ml-1 opacity-70 italic font-medium">Créditos</span>
-                        </span>
+                        <div className="flex flex-col items-end leading-none">
+                            <span className="text-[11px] md:text-xs font-bold text-neon-gold flex items-center">
+                                <Sparkles size={10} className="mr-1" />
+                                {walletBalance} <span className="ml-1 opacity-70 font-medium">cr</span>
+                            </span>
+                        </div>
                     </motion.div>
 
-                    <button
-                        onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard/perfil' : '/app/perfil')}
-                        className="w-10 h-10 rounded-full bg-gradient-to-tr from-neon-purple to-neon-cyan p-0.5 hover:scale-105 transition-transform"
-                    >
-                        <div className="w-full h-full rounded-full bg-deep-space flex items-center justify-center overflow-hidden">
-                            <img src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${profile?.full_name}&background=0a0a1a&color=a855f7`} alt="Profile" />
-                        </div>
-                    </button>
+                    {/* Consolidated Profile Menu */}
+                    <ProfileMenu
+                        isOnline={isOnline}
+                        toggleOnline={toggleOnline}
+                    />
                 </div>
             </header>
 

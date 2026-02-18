@@ -17,7 +17,7 @@ import {
 } from 'lucide-react'
 import { useAuthStore } from '@/stores/authStore'
 import { useRouter } from 'next/navigation'
-import { RoleSwitcher } from '@/components/ui/RoleSwitcher'
+import { ProfileMenu } from '@/components/ui/ProfileMenu'
 import { supabase } from '@/lib/supabase'
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
@@ -147,12 +147,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     </div>
 
                     <div className="flex items-center space-x-4">
-                        <RoleSwitcher />
-                        <div className="h-4 w-px bg-white/10 hidden md:block" />
-                        <div className="flex items-center text-sm font-bold text-neon-gold">
+                        <div className="flex items-center text-sm font-bold text-neon-gold hidden md:flex mr-2">
                             <Sparkles size={16} className="mr-2" />
-                            {ownerBalance !== null ? `${ownerBalance} Créditos` : '...'}
+                            {ownerBalance !== null ? `${ownerBalance} cr` : '...'}
                         </div>
+                        <div className="h-4 w-px bg-white/10 hidden md:block" />
+                        <ProfileMenu isOnline={false} toggleOnline={() => { }} />
                     </div>
                 </header>
 

@@ -12,6 +12,7 @@ import { useRouter } from 'next/navigation'
 import Cropper from 'react-easy-crop'
 import { motion, AnimatePresence } from 'framer-motion'
 import { AlertTriangle } from 'lucide-react'
+import { ScheduleGrid } from '@/components/ui/ScheduleGrid'
 
 export default function OracleProfilePage() {
     const { profile, setProfile, logout } = useAuthStore()
@@ -31,6 +32,10 @@ export default function OracleProfilePage() {
 
     // ... (rest of states) ... 
     const [newCategoryName, setNewCategoryName] = useState('')
+
+    const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
+        0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+    })
 
     const [formData, setFormData] = useState({
         full_name: '',
@@ -87,8 +92,29 @@ export default function OracleProfilePage() {
                 price_brl_per_minute: (profile.price_brl_per_minute || 5.00).toString(),
                 initial_fee_brl: (profile.initial_fee_brl || 0.00).toString()
             })
+            fetchSchedule()
         }
     }, [profile])
+
+    const fetchSchedule = async () => {
+        if (!profile?.id) return
+        const { data } = await supabase
+            .from('schedules')
+            .select('*')
+            .eq('oracle_id', profile.id)
+
+        if (data) {
+            const newSched: Record<number, any> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+            data.forEach(s => {
+                newSched[s.day_of_week].push({
+                    start: s.start_time.substring(0, 5),
+                    end: s.end_time.substring(0, 5),
+                    active: true
+                })
+            })
+            setSchedule(newSched)
+        }
+    }
 
 
     const handlePriceChange = (field: 'price_brl_per_minute' | 'initial_fee_brl', value: string) => {
@@ -127,6 +153,22 @@ export default function OracleProfilePage() {
                 .eq('id', profile!.id)
 
             if (error) throw error
+
+            // Salvar Schedule
+            await supabase.from('schedules').delete().eq('oracle_id', profile!.id)
+            const scheduleEntries = Object.entries(schedule).flatMap(([day, slots]) =>
+                slots.filter(s => s.active).map(s => ({
+                    oracle_id: profile!.id,
+                    day_of_week: parseInt(day),
+                    start_time: s.start.includes(':') ? (s.start.length === 5 ? `${s.start}:00` : s.start) : '00:00:00',
+                    end_time: s.end.includes(':') ? (s.end.length === 5 ? `${s.end}:00` : s.end) : '23:59:00'
+                }))
+            )
+
+            if (scheduleEntries.length > 0) {
+                const { error: schedError } = await supabase.from('schedules').insert(scheduleEntries)
+                if (schedError) throw schedError
+            }
 
             setProfile({
                 ...profile!,
@@ -571,6 +613,16 @@ export default function OracleProfilePage() {
                                     className="w-full bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:border-neon-purple/50 outline-none transition-all min-h-[80px]"
                                     placeholder="Ex: Direto, Acolhedor, Místico..."
                                 />
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t border-white/5">
+                                <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest flex items-center">
+                                    <Clock size={16} className="mr-2 text-neon-purple" /> Sua Escala de Atendimento
+                                </h3>
+                                <p className="text-xs text-slate-500 mb-6 italic">
+                                    * Defina os horários em que você estará disponível para consultas. O sistema automaticamente muda seu status para "Online" durante estes períodos.
+                                </p>
+                                <ScheduleGrid schedule={schedule} onChange={setSchedule} />
                             </div>
 
                             <div className="pt-6 border-t border-white/5 flex justify-end">

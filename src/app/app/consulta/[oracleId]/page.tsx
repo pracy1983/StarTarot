@@ -49,6 +49,11 @@ export default function NewConsultationPage() {
 
     useEffect(() => {
         if (oracleId && profile?.id) {
+            if (oracleId === profile.id) {
+                toast.error('Você não pode realizar uma consulta com você mesmo.')
+                router.push('/app')
+                return
+            }
             fetchData()
         }
     }, [oracleId, profile?.id])

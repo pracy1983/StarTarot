@@ -257,7 +257,7 @@ export default function OracleProfilePage() {
                             <h1 className="text-2xl font-bold text-white">{oracle.full_name}</h1>
 
                             {/* Favorite & Notify Icons */}
-                            {!isAI && profile?.id && (
+                            {!isAI && profile?.id && profile.id !== oracle.id && (
                                 <div className="flex items-center space-x-2 ml-4">
                                     <button
                                         onClick={toggleFavorite}
@@ -342,7 +342,7 @@ export default function OracleProfilePage() {
             </div>
 
             {/* Iniciar Consulta Buttons */}
-            {(oracle.allows_video || oracle.allows_text) && (
+            {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {oracle.allows_video && (
                         <NeonButton
@@ -377,6 +377,13 @@ export default function OracleProfilePage() {
                             </div>
                         </NeonButton>
                     )}
+                </div>
+            )}
+
+            {/* If it's the oracle themselves */}
+            {profile?.id === oracle.id && (
+                <div className="p-6 rounded-2xl bg-white/5 border border-white/10 text-center">
+                    <p className="text-sm text-slate-400">Clique na sua foto no topo para acessar o painel de atendimento.</p>
                 </div>
             )}
 

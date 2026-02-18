@@ -37,6 +37,10 @@ export default function EditOraclePage() {
         isOnline: true
     })
 
+    const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
+        0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
+    })
+
     useEffect(() => {
         if (oracleId) {
             loadOracle()
@@ -99,6 +103,25 @@ export default function EditOraclePage() {
                     avatarUrl: data.avatar_url || '',
                     isOnline: data.is_online ?? true
                 })
+
+                // Load Schedule
+                const { data: schedData } = await supabase
+                    .from('schedules')
+                    .select('*')
+                    .eq('oracle_id', oracleId)
+
+                if (schedData) {
+                    const newSched: Record<number, any> = { 0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: [] }
+                    schedData.forEach(s => {
+                        newSched[s.day_of_week].push({
+                            start: s.start_time.substring(0, 5),
+                            end: s.end_time.substring(0, 5),
+                            active: true
+                        })
+                    })
+                    // Ensure days without data have at least one inactive slot or stay empty
+                    setSchedule(newSched)
+                }
             }
         } catch (err: any) {
             console.error('Erro ao carregar oraculista:', err)
@@ -165,6 +188,25 @@ export default function EditOraclePage() {
                 .eq('id', oracleId)
 
             if (error) throw error
+
+            // Update Schedule
+            // 1. Delete old
+            await supabase.from('schedules').delete().eq('oracle_id', oracleId)
+
+            // 2. Insert new
+            const scheduleEntries = Object.entries(schedule).flatMap(([day, slots]) =>
+                slots.filter(s => s.active).map(s => ({
+                    oracle_id: oracleId,
+                    day_of_week: parseInt(day),
+                    start_time: s.start.includes(':') ? (s.start.length === 5 ? `${s.start}:00` : s.start) : '00:00:00',
+                    end_time: s.end.includes(':') ? (s.end.length === 5 ? `${s.end}:00` : s.end) : '23:59:00'
+                }))
+            )
+
+            if (scheduleEntries.length > 0) {
+                const { error: schedError } = await supabase.from('schedules').insert(scheduleEntries)
+                if (schedError) throw schedError
+            }
 
             toast.success('Oraculista atualizado com sucesso!')
             router.push('/admin/oraculistas')
@@ -427,6 +469,17 @@ export default function EditOraclePage() {
                                     </div>
                                 )}
                             </div>
+                        </GlassCard>
+
+                        <GlassCard hover={false}>
+                            <h3 className="text-sm font-bold text-white mb-4 uppercase tracking-widest flex items-center">
+                                <Clock size={16} className="mr-2 text-slate-400" /> Grade de Horários Ativos
+                            </h3>
+                            <div className="mb-6 flex items-start text-slate-500 text-xs bg-white/5 p-3 rounded-lg border border-white/5">
+                                <Clock size={14} className="mr-2 mt-0.5 flex-shrink-0" />
+                                <span>A disponibilidade automática do oráculo no marketplace será baseada nestes horários.</span>
+                            </div>
+                            <ScheduleGrid schedule={schedule} onChange={setSchedule} />
                         </GlassCard>
 
                         <div className="flex justify-end pt-4 gap-4">

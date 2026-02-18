@@ -3,7 +3,7 @@ import toast from 'react-hot-toast'
 import { motion } from 'framer-motion'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, MessageSquare, Video, DollarSign, Calendar, Star } from 'lucide-react'
+import { Sparkles, MessageSquare, Video, DollarSign, Calendar, Star, Bell, BellOff, Heart, Clock } from 'lucide-react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
@@ -46,6 +46,96 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
     const [queueModalOpen, setQueueModalOpen] = React.useState(false)
     const [queuePosition, setQueuePosition] = React.useState(1)
     const [consultationId, setConsultationId] = React.useState<string | null>(null)
+
+    // Favorite/Notify State
+    const [isFavorite, setIsFavorite] = React.useState(false)
+    const [notifyOnline, setNotifyOnline] = React.useState(false)
+    const [isUpdatingMeta, setIsUpdatingMeta] = React.useState(false)
+
+    // Initial fetch for favorites
+    React.useEffect(() => {
+        if (profile?.id && oracle.id) {
+            fetchFavoriteStatus()
+        }
+    }, [profile?.id, oracle.id])
+
+    const fetchFavoriteStatus = async () => {
+        const { data } = await supabase
+            .from('user_favorites')
+            .select('*')
+            .eq('user_id', profile!.id)
+            .eq('oracle_id', oracle.id)
+            .single()
+
+        if (data) {
+            setIsFavorite(true)
+            setNotifyOnline(data.notify_online)
+        }
+    }
+
+    const toggleFavorite = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!isAuthenticated) {
+            setShowAuthModal(true)
+            return
+        }
+        setIsUpdatingMeta(true)
+        try {
+            if (isFavorite) {
+                await supabase.from('user_favorites').delete().eq('user_id', profile!.id).eq('oracle_id', oracle.id)
+                setIsFavorite(false)
+                toast.success('Removido dos favoritos')
+            } else {
+                await supabase.from('user_favorites').upsert({ user_id: profile!.id, oracle_id: oracle.id })
+                setIsFavorite(true)
+                toast.success('Favoritado!')
+            }
+        } catch (err) {
+            toast.error('Erro ao favoritar')
+        } finally {
+            setIsUpdatingMeta(false)
+        }
+    }
+
+    const toggleNotify = async (e: React.MouseEvent) => {
+        e.stopPropagation()
+        if (!isAuthenticated) {
+            setShowAuthModal(true)
+            return
+        }
+        setIsUpdatingMeta(true)
+        const newState = !notifyOnline
+        try {
+            await supabase.from('user_favorites').upsert({ user_id: profile!.id, oracle_id: oracle.id, notify_online: newState })
+            setNotifyOnline(newState)
+            toast.success(newState ? 'Notificações ativadas! 🔔' : 'Notificações desativadas')
+        } catch (err) {
+            toast.error('Erro ao atualizar notificações')
+        } finally {
+            setIsUpdatingMeta(false)
+        }
+    }
+
+    const getScheduleSummary = () => {
+        if (!oracle.schedules || oracle.schedules.length === 0) return 'Horário flexível'
+
+        const activeSchedules = oracle.schedules.filter(s => s.is_active)
+        if (activeSchedules.length === 0) return 'Horário flexível'
+
+        // Group by time if multiple days have same hours
+        const groups: Record<string, number[]> = {}
+        activeSchedules.forEach(s => {
+            const timeRange = `${s.start_time.slice(0, 5)} - ${s.end_time.slice(0, 5)}`
+            if (!groups[timeRange]) groups[timeRange] = []
+            groups[timeRange].push(s.day_of_week)
+        })
+
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb']
+        return Object.entries(groups).map(([time, days]) => {
+            const dStr = days.sort().map(d => dayNames[d]).join(', ')
+            return `${dStr}: ${time}`
+        }).join(' | ')
+    }
 
     // Listen to consultation changes when modal is open
     React.useEffect(() => {
@@ -191,9 +281,31 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
             )}
 
+            {/* Favorite & Notify - Floating Right */}
+            {profile?.id !== oracle.id && (
+                <div className={`absolute right-4 z-20 flex flex-col space-y-2 transition-opacity duration-300 md:opacity-0 md:group-hover:opacity-100 ${isZeroFee ? 'top-10' : 'top-4'}`}>
+                    <button
+                        onClick={toggleFavorite}
+                        disabled={isUpdatingMeta}
+                        className={`p-2 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-black/40 border-white/10 text-white/40 hover:text-white'}`}
+                        title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
+                    >
+                        <Heart size={14} className={isFavorite ? 'fill-neon-gold' : ''} />
+                    </button>
+                    <button
+                        onClick={toggleNotify}
+                        disabled={isUpdatingMeta}
+                        className={`p-2 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-black/40 border-white/10 text-white/40 hover:text-white'}`}
+                        title={notifyOnline ? 'Desativar notificações' : 'Ativar notificações'}
+                    >
+                        <Bell size={14} className={notifyOnline ? 'fill-neon-cyan/20' : ''} />
+                    </button>
+                </div>
+            )}
+
             {/* Rating Stars - Top Right (Below Zero Fee or Top) */}
             {oracle.rating ? (
-                <div className={`absolute right-4 z-20 group/rating ${isZeroFee ? 'top-10' : 'top-4'}`} title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
+                <div className={`absolute right-4 z-20 group/rating ${isZeroFee ? 'top-[100px]' : (profile?.id !== oracle.id ? 'top-[100px]' : 'top-4')}`} title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
                     <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
                         <Star size={10} className="text-neon-gold fill-neon-gold" />
                         <span className="text-[10px] font-bold text-white ml-1">{oracle.rating.toFixed(1)}</span>
@@ -257,8 +369,16 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     {oracle.bio}
                 </p>
 
+                {/* Schedule info */}
+                <div className="flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 w-full">
+                    <Clock size={12} className="text-slate-500 shrink-0" />
+                    <span className="text-[10px] text-slate-400 truncate font-medium">
+                        {getScheduleSummary()}
+                    </span>
+                </div>
+
                 {/* Feature Icons */}
-                {(oracle.allows_text || oracle.allows_video) && (
+                {profile?.id !== oracle.id && (oracle.allows_text || oracle.allows_video) && (
                     <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
                         {oracle.allows_text && (
                             <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-purple/60' : 'opacity-40'}`}>
@@ -275,41 +395,47 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </div>
                 )}
 
-                <div className="mt-2 flex gap-2 w-full">
-                    {oracle.allows_video && (
-                        <NeonButton
-                            variant="green"
-                            fullWidth
-                            size="sm"
-                            disabled={status !== 'online'}
-                            className={status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                            onClick={(e) => {
-                                if (status !== 'online') return
-                                e.stopPropagation()
-                                if (!isAuthenticated) return handleStartConsultation(e)
-                                router.push(`/app/consulta/${oracle.id}?type=video`)
-                            }}
-                        >
-                            <Video size={16} className="mr-1" />
-                            Vídeo
-                        </NeonButton>
-                    )}
-                    {oracle.allows_text && (
-                        <NeonButton
-                            variant={status === 'online' ? "purple" : "gold"}
-                            fullWidth
-                            size="sm"
-                            onClick={(e) => {
-                                e.stopPropagation()
-                                if (!isAuthenticated) return handleStartConsultation(e)
-                                router.push(`/app/consulta/${oracle.id}?type=message`)
-                            }}
-                        >
-                            <MessageSquare size={16} className="mr-1" />
-                            {status === 'online' ? 'Chat' : 'Deixar Mensagem'}
-                        </NeonButton>
-                    )}
-                </div>
+                {profile?.id !== oracle.id ? (
+                    <div className="mt-2 flex gap-2 w-full">
+                        {oracle.allows_video && (
+                            <NeonButton
+                                variant="green"
+                                fullWidth
+                                size="sm"
+                                disabled={status !== 'online'}
+                                className={status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}
+                                onClick={(e) => {
+                                    if (status !== 'online') return
+                                    e.stopPropagation()
+                                    if (!isAuthenticated) return handleStartConsultation(e)
+                                    router.push(`/app/consulta/${oracle.id}?type=video`)
+                                }}
+                            >
+                                <Video size={16} className="mr-1" />
+                                Vídeo
+                            </NeonButton>
+                        )}
+                        {oracle.allows_text && (
+                            <NeonButton
+                                variant={status === 'online' ? "purple" : "gold"}
+                                fullWidth
+                                size="sm"
+                                onClick={(e) => {
+                                    e.stopPropagation()
+                                    if (!isAuthenticated) return handleStartConsultation(e)
+                                    router.push(`/app/consulta/${oracle.id}?type=message`)
+                                }}
+                            >
+                                <MessageSquare size={16} className="mr-1" />
+                                {status === 'online' ? 'Chat' : 'Deixar Mensagem'}
+                            </NeonButton>
+                        )}
+                    </div>
+                ) : (
+                    <div className="mt-2 py-2 px-4 rounded-xl bg-white/5 border border-white/5 text-[10px] text-slate-500 uppercase font-bold tracking-widest italic">
+                        Seu Perfil de Oraculista
+                    </div>
+                )}
             </div>
 
             <ClientCallModal
