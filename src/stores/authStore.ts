@@ -48,6 +48,7 @@ interface Profile {
   allows_video?: boolean
   allows_text?: boolean
   whatsapp_notification_enabled?: boolean
+  suspended_until?: string | null
   metadata?: any
 }
 
@@ -144,6 +145,12 @@ export const useAuthStore = create<AuthState>((set) => ({
             .select('balance')
             .eq('user_id', profile.id)
             .single()
+
+          // Force offline on login to prevent lingering online state
+          if (profile.role === 'oracle' || profile.role === 'owner') {
+            await supabase.from('profiles').update({ is_online: false }).eq('id', profile.id)
+            profile.is_online = false
+          }
 
           set({
             profile: {

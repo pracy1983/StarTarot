@@ -48,7 +48,7 @@ export default function AdminOraculistasPage() {
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .or('role.in.(oracle,owner),application_status.in.(pending,waitlist)')
+                .or('role.in.(oracle,owner),application_status.in.(pending,waitlist,approved,rejected)')
                 .order('full_name', { ascending: true })
 
             if (error) throw error
@@ -105,6 +105,20 @@ export default function AdminOraculistasPage() {
             const updates: any = { application_status: newStatus }
             if (newStatus === 'approved') {
                 updates.role = 'oracle'
+                // Clear rejection reason if approved
+                updates.rejection_reason = null
+            } else if (newStatus === 'rejected') {
+                // Set reason
+                updates.rejection_reason = message
+                // Remove role oracle if rejected?
+                // updates.role = 'client' // Maybe? Or keep oracle but inactive?
+                // If we set to client, they lose access to dashboard...
+                // User wants them to see dashboard to resubmit. So keep role='oracle' or ensure 'client' works too.
+                // Actually, if role='client', they see client dashboard.
+                // If role='oracle', they see oracle dashboard.
+                // We need them to see the re-submit button.
+                // The 'Tornar-se Oraculo' page handles pending status.
+                // Let's keep role as is, simply change status. Check dashboard logic.
             }
 
             const { error } = await supabase
@@ -118,18 +132,18 @@ export default function AdminOraculistasPage() {
             if (newStatus === 'rejected' && message) {
                 await supabase.from('notifications').insert({
                     user_id: id,
-                    title: 'Sua solicitação de oraculista foi revisada',
+                    title: 'Atenção: Ação Necessária no Seu Perfil',
                     content: message,
                     type: 'system',
-                    role: 'client'
+                    role: 'oracle' // Send to oracle
                 })
             }
 
             setOraculistas(prev => prev.map(o =>
-                o.id === id ? { ...o, application_status: newStatus } : o
+                o.id === id ? { ...o, ...updates } : o
             ))
 
-            toast.success(`Status atualizado para: ${newStatus === 'approved' ? 'Aprovado' : 'Rejeitado'}`)
+            toast.success(`Status atualizado para: ${newStatus === 'approved' ? 'Aprovado' : 'Rejeitado/Pausado'}`)
             setRejectionModal({ open: false, id: null, name: '' })
             setRejectionMessage('')
         } catch (err: any) {
@@ -167,7 +181,7 @@ export default function AdminOraculistasPage() {
             o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
 
         if (activeTab === 'pending') {
-            return matchesSearch && (o.application_status === 'pending' || o.application_status === 'waitlist')
+            return matchesSearch && (o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected')
         }
         return matchesSearch && (o.application_status === 'approved' || !o.application_status || o.application_status === 'none')
     })
@@ -256,10 +270,10 @@ export default function AdminOraculistasPage() {
                         onClick={() => setActiveTab('pending')}
                         className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space' : 'text-slate-500 hover:text-white'}`}
                     >
-                        Pendentes
-                        {oraculistas.filter(o => o.application_status === 'pending').length > 0 && (
+                        Pendentes/Ajustes
+                        {oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length > 0 && (
                             <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-pulse">
-                                {oraculistas.filter(o => o.application_status === 'pending').length}
+                                {oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length}
                             </span>
                         )}
                     </button>
@@ -400,38 +414,12 @@ export default function AdminOraculistasPage() {
                                                     </Link>
 
                                                     <button
-                                                        onClick={() => {
-                                                            const isSuspended = !!o.suspended_until
-                                                            const newDate = isSuspended ? null : new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
-                                                            const action = isSuspended ? 'reativar' : 'suspender'
-
-                                                            if (!confirm(`Deseja realmente ${action} ${o.full_name}?`)) return
-
-                                                            supabase
-                                                                .from('profiles')
-                                                                .update({ suspended_until: newDate })
-                                                                .eq('id', o.id)
-                                                                .then(({ error }) => {
-                                                                    if (error) {
-                                                                        toast.error('Erro ao atualizar status')
-                                                                    } else {
-                                                                        setOraculistas(prev => prev.map(p =>
-                                                                            p.id === o.id ? { ...p, suspended_until: newDate } : p
-                                                                        ))
-                                                                        toast.success(`Oraculista ${isSuspended ? 'reativado' : 'suspenso'}!`)
-                                                                    }
-                                                                })
-                                                        }}
-                                                        className={`flex items-center space-x-1 px-2 py-1.5 rounded-lg transition-all border border-transparent ${o.suspended_until
-                                                            ? 'text-yellow-400 hover:bg-yellow-400/10 hover:border-yellow-400/30'
-                                                            : 'text-orange-400 hover:bg-orange-400/10 hover:border-orange-400/30'
-                                                            }`}
-                                                        title={o.suspended_until ? "Reativar Oraculista" : "Suspender Temporariamente"}
+                                                        onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        title="Pausar e Solicitar Correções"
                                                     >
-                                                        {o.suspended_until ? <Check size={14} /> : <Ban size={14} />}
-                                                        <span className="text-[10px] font-bold uppercase">
-                                                            {o.suspended_until ? 'Ativar' : 'Pausar'}
-                                                        </span>
+                                                        <Ban size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Pausar</span>
                                                     </button>
 
                                                     <button
@@ -464,13 +452,13 @@ export default function AdminOraculistasPage() {
                         >
                             <GlassCard className="border-red-500/30" hover={false}>
                                 <div className="space-y-4">
-                                    <h3 className="text-xl font-bold text-white">Rejeitar Inscrição</h3>
-                                    <p className="text-sm text-slate-400">Informe ao candidato <span className="text-white font-bold">{rejectionModal.name}</span> o motivo da rejeição. Ele receberá esta mensagem no sistema.</p>
+                                    <h3 className="text-xl font-bold text-white">Pausar / Solicitar Ajustes</h3>
+                                    <p className="text-sm text-slate-400">Informe ao oraculista <span className="text-white font-bold">{rejectionModal.name}</span> o motivo da pausa/rejeição. Ele deverá corrigir os pontos citados e reenviar a candidatura.</p>
 
                                     <textarea
                                         value={rejectionMessage}
                                         onChange={(e) => setRejectionMessage(e.target.value)}
-                                        placeholder="Ex: Seu perfil ainda não atende aos requisitos mínimos de experiência..."
+                                        placeholder="Ex: Sua foto de perfil não está clara. Por favor, atualize."
                                         className="w-full h-32 bg-white/5 border border-white/10 rounded-xl p-4 text-white placeholder-slate-600 focus:border-red-500/50 outline-none transition-all resize-none text-sm"
                                     />
 
@@ -486,7 +474,7 @@ export default function AdminOraculistasPage() {
                                             disabled={isProcessingStatus || !rejectionMessage.trim()}
                                             className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all disabled:opacity-50"
                                         >
-                                            {isProcessingStatus ? 'Processando...' : 'Confirmar Rejeição'}
+                                            {isProcessingStatus ? 'Processando...' : 'Confirmar Pausa'}
                                         </button>
                                     </div>
                                 </div>

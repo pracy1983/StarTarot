@@ -15,7 +15,8 @@ import {
     Power,
     CheckCircle2,
     XCircle,
-    Radio
+    Radio,
+    Info
 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { motion } from 'framer-motion'
@@ -129,6 +130,65 @@ export default function OracleDashboard() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
+            {/* Alert for Rejected/Paused Status */}
+            {(profile?.application_status === 'rejected' || (profile?.suspended_until && new Date(profile.suspended_until) > new Date())) && (
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="bg-orange-500/20 border border-orange-500/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(249,115,22,0.15)] mb-8"
+                >
+                    <div className="flex items-center space-x-4">
+                        <div className="p-3 bg-orange-500 rounded-xl text-white">
+                            <Info size={24} />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-white">Atenção: Ação Necessária</h3>
+                            <p className="text-sm text-slate-300">
+                                {profile.rejection_reason
+                                    ? `Motivo: ${profile.rejection_reason}`
+                                    : 'Seu perfil precisa de ajustes para continuar atendendo.'}
+                            </p>
+                        </div>
+                    </div>
+                    <div className="flex space-x-3">
+                        <NeonButton
+                            variant="white"
+                            size="sm"
+                            onClick={() => router.push('/app/perfil')}
+                        >
+                            Editar Perfil
+                        </NeonButton>
+                        {profile.application_status === 'rejected' && (
+                            <NeonButton
+                                variant="gold"
+                                size="sm"
+                                onClick={async () => {
+                                    if (!confirm('Você confirma que realizou os ajustes necessários?')) return
+                                    try {
+                                        const { error } = await supabase
+                                            .from('profiles')
+                                            .update({ application_status: 'pending' })
+                                            .eq('id', profile.id)
+
+                                        if (error) throw error
+
+                                        toast.success('Candidatura reenviada com sucesso!')
+                                        // Update local state
+                                        useAuthStore.getState().setProfile({ ...profile, application_status: 'pending' })
+                                        setPendingConsultations([]) // Force re-render or just let state handle it
+                                        // Ideally redirect or show "Under Review"
+                                    } catch (err) {
+                                        toast.error('Erro ao reenviar candidatura')
+                                    }
+                                }}
+                            >
+                                Reenviar Candidatura
+                            </NeonButton>
+                        )}
+                    </div>
+                </motion.div>
+            )}
+
             {/* Alert for Pending Consultations */}
             {pendingConsultations.length > 0 && (
                 <motion.div
