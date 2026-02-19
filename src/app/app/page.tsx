@@ -17,11 +17,13 @@ export default function MarketplacePage() {
     const [loading, setLoading] = useState(true)
     const [filter, setFilter] = useState('all')
     const [searchTerm, setSearchTerm] = useState('')
-    const [specialtyFilter, setSpecialtyFilter] = useState('all')
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+    const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
     const [filterVideo, setFilterVideo] = useState(false)
     const [filterMessage, setFilterMessage] = useState(false)
     const [favorites, setFavorites] = useState<string[]>([])
 
+    const [categories, setCategories] = useState<string[]>([]) // Added categories state
     const [specialties, setSpecialties] = useState<string[]>([])
 
     useEffect(() => {
@@ -36,14 +38,17 @@ export default function MarketplacePage() {
     }, [profile?.id])
 
     const fetchSpecialties = async () => {
-        const { data } = await supabase
+        const { data: specs } = await supabase
             .from('specialties')
             .select('name')
             .eq('active', true)
             .order('name', { ascending: true })
-        if (data) {
-            setSpecialties(data.map(s => s.name))
+        if (specs) {
+            setSpecialties(specs.map(s => s.name))
         }
+
+        // Mock Categories for now or fetch if table exists
+        setCategories(['Tarot', 'Astrologia', 'Terapia', 'Baralho Cigano', 'Runas', 'Numerologia'])
     }
 
     const fetchFavorites = async () => {
@@ -178,14 +183,23 @@ export default function MarketplacePage() {
             }
         }
 
+
+
+        // Categories Filter
+        let matchesCategory = true
+        if (selectedCategories.length > 0) {
+            // Check if oracle has at least one of the selected categories
+            // Assuming oracle has a 'categories' array or 'category' string
+            // If single category string:
+            // matchesCategory = selectedCategories.includes(o.category)
+            // If array:
+            matchesCategory = selectedCategories.some(c => o.categories?.includes(c))
+        }
+
         // Specialty Filter
         let matchesSpecialty = true
-        if (specialtyFilter !== 'all') {
-            if (specialtyFilter === 'OUTROS') {
-                matchesSpecialty = !specialties.some(s => s.toLowerCase() === o.specialty?.toLowerCase())
-            } else {
-                matchesSpecialty = o.specialty?.toLowerCase() === specialtyFilter.toLowerCase()
-            }
+        if (selectedSpecialties.length > 0) {
+            matchesSpecialty = selectedSpecialties.some(s => o.specialty?.toLowerCase() === s.toLowerCase() || o.specialties?.includes(s))
         }
 
         // Capabilities Filter
@@ -196,7 +210,7 @@ export default function MarketplacePage() {
             if (filterMessage && o.allows_text) matchesCapabilities = true
         }
 
-        return matchesSearch && matchesStatus && matchesSpecialty && matchesCapabilities
+        return matchesSearch && matchesStatus && matchesCategory && matchesSpecialty && matchesCapabilities
     })
 
     // Paginação
@@ -305,8 +319,11 @@ export default function MarketplacePage() {
                     setFilter={setFilter}
                     searchTerm={searchTerm}
                     setSearchTerm={setSearchTerm}
-                    specialtyFilter={specialtyFilter}
-                    setSpecialtyFilter={setSpecialtyFilter}
+                    selectedCategories={selectedCategories}
+                    setSelectedCategories={setSelectedCategories}
+                    selectedSpecialties={selectedSpecialties}
+                    setSelectedSpecialties={setSelectedSpecialties}
+                    categories={categories}
                     specialties={specialties}
                     filterVideo={filterVideo}
                     setFilterVideo={setFilterVideo}
