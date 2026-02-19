@@ -4,12 +4,12 @@ import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban } from 'lucide-react'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { getOracleStatus } from '@/lib/status'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Sparkles } from 'lucide-react'
+import { Sparkles, ArrowRight } from 'lucide-react'
 
 const StatusBadge = ({ status }: { status?: string }) => {
     switch (status) {
@@ -28,13 +28,16 @@ const StatusBadge = ({ status }: { status?: string }) => {
 
 export default function AdminOraculistasPage() {
     const router = useRouter()
+    const searchParams = useSearchParams()
+    const initialTab = (searchParams.get('tab') as 'human' | 'ai' | 'pending') || 'human'
+
     const [oraculistas, setOraculistas] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
     const [searchTerm, setSearchTerm] = useState('')
     const [isAddingCategory, setIsAddingCategory] = useState(false)
     const [newCategoryName, setNewCategoryName] = useState('')
     const [loadingCategory, setLoadingCategory] = useState(false)
-    const [activeTab, setActiveTab] = useState<'approved' | 'pending'>('pending')
+    const [activeTab, setActiveTab] = useState<'human' | 'ai' | 'pending'>(initialTab)
     const [rejectionModal, setRejectionModal] = useState<{ open: boolean, id: string | null, name: string }>({ open: false, id: null, name: '' })
     const [rejectionMessage, setRejectionMessage] = useState('')
     const [isProcessingStatus, setIsProcessingStatus] = useState(false)
@@ -42,6 +45,14 @@ export default function AdminOraculistasPage() {
     useEffect(() => {
         fetchOracles()
     }, [])
+
+    // Sync tab with URL
+    const handleTabChange = (tab: 'human' | 'ai' | 'pending') => {
+        setActiveTab(tab)
+        const params = new URLSearchParams(searchParams.toString())
+        params.set('tab', tab)
+        router.replace(`/admin/oraculistas?${params.toString()}`, { scroll: false })
+    }
 
     const fetchOracles = async () => {
         try {
@@ -53,7 +64,6 @@ export default function AdminOraculistasPage() {
 
             if (error) throw error
 
-            // Fetch unread gifts count for each oracle
             const { data: giftCounts, error: gError } = await supabase
                 .from('gifts')
                 .select('receiver_id, name, credits, profiles!sender_id(full_name)')
@@ -79,7 +89,6 @@ export default function AdminOraculistasPage() {
     const handleDelete = async (id: string, name: string) => {
         if (!confirm(`Deseja realmente remover a manifestação de ${name}?`)) return
 
-        // Optimistic: remove da lista imediatamente
         setOraculistas(prev => prev.filter(o => o.id !== id))
 
         try {
@@ -89,7 +98,6 @@ export default function AdminOraculistasPage() {
                 .eq('id', id)
 
             if (error) {
-                // Se falhou, restaura a lista
                 fetchOracles()
                 throw error
             }
@@ -104,7 +112,6 @@ export default function AdminOraculistasPage() {
         try {
             const updates: any = { application_status: newStatus }
             if (newStatus === 'rejected') {
-                // Determine current profile state to save as snapshot
                 const currentProfile = oraculistas.find(o => o.id === id)
                 if (currentProfile) {
                     const { error: snapError } = await supabase.from('profile_snapshots').insert({
@@ -119,7 +126,6 @@ export default function AdminOraculistasPage() {
                 updates.rejection_reason = message
             } else if (newStatus === 'approved') {
                 updates.role = 'oracle'
-                // Clear rejection reason if approved
                 updates.rejection_reason = null
             }
 
@@ -130,7 +136,6 @@ export default function AdminOraculistasPage() {
 
             if (error) throw error
 
-            // If rejected, send a system message
             if (newStatus === 'rejected' && message) {
                 await supabase.from('notifications').insert({
                     user_id: id,
@@ -162,7 +167,6 @@ export default function AdminOraculistasPage() {
     const handleViewChanges = async (oracleId: string) => {
         setLoadingSnapshot(true)
         try {
-            // Get latest snapshot
             const { data, error } = await supabase
                 .from('profile_snapshots')
                 .select('*')
@@ -183,7 +187,7 @@ export default function AdminOraculistasPage() {
             setComparisonModal({
                 open: true,
                 current,
-                snapshot: data.data // The JSON data stored
+                snapshot: data.data
             })
         } catch (err) {
             console.error('Error fetching snapshot:', err)
@@ -219,11 +223,25 @@ export default function AdminOraculistasPage() {
         const matchesSearch = o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
             o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
 
+        const isApproved = o.application_status === 'approved' || !o.application_status || o.application_status === 'none'
+        const isAI = o.is_ai || o.oracle_type === 'ai'
+
         if (activeTab === 'pending') {
             return matchesSearch && (o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected')
         }
-        return matchesSearch && (o.application_status === 'approved' || !o.application_status || o.application_status === 'none')
+
+        if (activeTab === 'human') {
+            return matchesSearch && isApproved && !isAI
+        }
+
+        if (activeTab === 'ai') {
+            return matchesSearch && isApproved && isAI
+        }
+
+        return false
     })
+
+    const pendingCount = oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length
 
     return (
         <div className="p-8 space-y-8">
@@ -240,7 +258,7 @@ export default function AdminOraculistasPage() {
                         <Plus size={20} className="mr-2 text-neon-gold" /> Nova Categoria
                     </button>
                     <button
-                        onClick={() => router.push('/admin/oraculistas/novo')}
+                        onClick={() => router.push(`/admin/oraculistas/novo?tab=${activeTab}`)}
                         className="flex items-center px-6 py-2.5 bg-neon-purple rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] text-white font-bold hover:scale-105 transition-all"
                     >
                         <Plus size={20} className="mr-2" /> Novo Oraculista
@@ -248,7 +266,9 @@ export default function AdminOraculistasPage() {
                 </div>
             </div>
 
-            {/* Modal de Nova Categoria */}
+            {/* Modal de Nova Categoria, Comparison Modal, etc... (skipped for brevity but included in output if needed) */}
+
+            {/* Same modals as before... keeping them in the output */}
             <AnimatePresence>
                 {isAddingCategory && (
                     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
@@ -297,7 +317,6 @@ export default function AdminOraculistasPage() {
                 )}
             </AnimatePresence>
 
-            {/* Comparison Modal */}
             <AnimatePresence>
                 {comparisonModal.open && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
@@ -318,7 +337,6 @@ export default function AdminOraculistasPage() {
                             </div>
 
                             <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 gap-8">
-                                {/* Previous State */}
                                 <div className="space-y-4">
                                     <h4 className="font-bold text-red-400 uppercase tracking-wider text-xs border-b border-red-500/20 pb-2">Antes (Pausado)</h4>
                                     <div className="space-y-6">
@@ -341,7 +359,6 @@ export default function AdminOraculistasPage() {
                                     </div>
                                 </div>
 
-                                {/* Current State */}
                                 <div className="space-y-4">
                                     <h4 className="font-bold text-green-400 uppercase tracking-wider text-xs border-b border-green-500/20 pb-2">Agora (Atual)</h4>
                                     <div className="space-y-6">
@@ -387,33 +404,42 @@ export default function AdminOraculistasPage() {
             </AnimatePresence>
 
             <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4">
+                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4 shrink-0">
                     <button
-                        onClick={() => setActiveTab('approved')}
-                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all ${activeTab === 'approved' ? 'bg-neon-purple text-white' : 'text-slate-500 hover:text-white'}`}
+                        onClick={() => handleTabChange('human')}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center ${activeTab === 'human' ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'text-slate-500 hover:text-white'}`}
                     >
-                        Ativos/Aprovados
+                        <User size={16} className="mr-2" />
+                        Humanos
                     </button>
                     <button
-                        onClick={() => setActiveTab('pending')}
-                        className={`px-6 py-2 rounded-lg text-sm font-bold transition-all relative ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space' : 'text-slate-500 hover:text-white'}`}
+                        onClick={() => handleTabChange('ai')}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center ${activeTab === 'ai' ? 'bg-neon-cyan text-deep-space shadow-lg shadow-neon-cyan/20' : 'text-slate-500 hover:text-white'}`}
                     >
-                        Pendentes/Ajustes
-                        {oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length > 0 && (
-                            <span className="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-pulse">
-                                {oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length}
+                        <Brain size={16} className="mr-2" />
+                        IAs
+                    </button>
+                    <button
+                        onClick={() => handleTabChange('pending')}
+                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all relative flex items-center ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space shadow-lg shadow-neon-gold/20' : 'text-slate-500 hover:text-white'}`}
+                    >
+                        <Sparkles size={16} className="mr-2" />
+                        Pendentes
+                        {pendingCount > 0 && (
+                            <span className="ml-2 w-5 h-5 bg-red-500 text-white text-[10px] flex items-center justify-center rounded-full animate-pulse border-2 border-deep-space">
+                                {pendingCount}
                             </span>
                         )}
                     </button>
                 </div>
-                <div className="relative flex-1 group">
+                <div className="relative flex-1 group w-full">
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 group-focus-within:text-neon-purple transition-colors" size={18} />
                     <input
                         type="text"
                         placeholder="Buscar por nome ou especialidade..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-12 pr-4 text-sm text-white focus:border-neon-purple/50 outline-none transition-all"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 pl-12 pr-4 text-sm text-white focus:border-neon-purple/50 outline-none transition-all shadow-inner"
                     />
                 </div>
             </div>
@@ -551,7 +577,7 @@ export default function AdminOraculistasPage() {
                                             ) : (
                                                 <>
                                                     <Link
-                                                        href={`/admin/oraculistas/editar/${o.id}`}
+                                                        href={`/admin/oraculistas/editar/${o.id}?tab=${activeTab}`}
                                                         className="flex items-center space-x-1 px-2 py-1.5 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
                                                         title="Editar dados e prompts"
                                                     >

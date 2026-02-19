@@ -10,12 +10,14 @@ import { User, Mail, Sparkles, Brain, Clock, ShieldCheck, Image as ImageIcon, Ar
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
-import { useRouter, useParams } from 'next/navigation'
+import { useRouter, useParams, useSearchParams } from 'next/navigation'
 
 export default function EditOraclePage() {
     const router = useRouter()
     const params = useParams()
     const oracleId = params.id as string
+    const searchParams = useSearchParams()
+    const backTab = searchParams.get('tab') || 'human'
 
     const [isAI, setIsAI] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -209,7 +211,7 @@ export default function EditOraclePage() {
             }
 
             toast.success('Oraculista atualizado com sucesso!')
-            router.push('/admin/oraculistas')
+            router.push(`/admin/oraculistas?tab=${backTab}`)
         } catch (err: any) {
             console.error('Erro ao atualizar:', err)
             toast.error(err.message || 'Erro ao salvar alterações.')
@@ -241,7 +243,7 @@ export default function EditOraclePage() {
 
             <div className="mb-8">
                 <button
-                    onClick={() => router.push('/admin/oraculistas')}
+                    onClick={() => router.push(`/admin/oraculistas?tab=${backTab}`)}
                     className="flex items-center text-slate-400 hover:text-white transition-colors mb-4 text-sm"
                 >
                     <ArrowLeft size={16} className="mr-2" /> Voltar à lista
@@ -485,7 +487,7 @@ export default function EditOraclePage() {
                         <div className="flex justify-end pt-4 gap-4">
                             <button
                                 type="button"
-                                onClick={() => router.push('/admin/oraculistas')}
+                                onClick={() => router.push(`/admin/oraculistas?tab=${backTab}`)}
                                 className="px-6 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white hover:bg-white/5 transition-all font-bold"
                             >
                                 Cancelar

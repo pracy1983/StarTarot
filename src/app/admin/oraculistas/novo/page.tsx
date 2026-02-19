@@ -11,10 +11,12 @@ import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
-import { useRouter } from 'next/navigation' // Assuming useRouter is needed for router.push
+import { useRouter, useSearchParams } from 'next/navigation' // Assuming useRouter is needed for router.push
 
 export default function NewOraclePage() {
-    const router = useRouter() // Initialize useRouter
+    const router = useRouter()
+    const searchParams = useSearchParams()
+    const backTab = searchParams.get('tab') || 'human' // Initialize useRouter
     const [isAI, setIsAI] = useState(false)
     const [loading, setLoading] = useState(false)
     const [specialties, setSpecialties] = useState<any[]>([])
@@ -162,7 +164,7 @@ export default function NewOraclePage() {
                 }
 
                 toast.success('Oraculista Digital (IA) ativado com sucesso!')
-                router.push('/admin/oraculistas')
+                router.push(`/admin/oraculistas?tab=${backTab}`)
             }
         } catch (err: any) {
             console.error('Erro no cadastro:', err)
