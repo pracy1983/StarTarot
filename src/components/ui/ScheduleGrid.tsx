@@ -43,7 +43,7 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-3">
                 {DAYS.map((dayName, dayIndex) => {
                     const dayData = schedule[dayIndex] || []
                     const isActive = dayData.length > 0 && dayData[0].active
@@ -71,24 +71,24 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                                 {isActive && (
                                     <div className="space-y-3">
                                         {dayData.map((slot, idx) => (
-                                            <div key={idx} className="flex items-center gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
-                                                <div className="flex-1 min-w-[85px]">
-                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Início</label>
+                                            <div key={idx} className="flex items-center gap-1.5 bg-black/20 p-2 rounded-lg border border-white/5 overflow-hidden">
+                                                <div className="flex-1 min-w-0">
+                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1 truncate">Início</label>
                                                     <input
                                                         type="time"
                                                         value={slot.start}
                                                         onChange={(e) => updateTime(dayIndex, idx, 'start', e.target.value)}
-                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
                                                     />
                                                 </div>
-                                                <div className="pt-4 text-slate-600 font-black text-[10px] mx-1">:</div>
-                                                <div className="flex-1 min-w-[85px]">
-                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Fim</label>
+                                                <div className="pt-4 text-slate-600 font-black text-[10px]">:</div>
+                                                <div className="flex-1 min-w-0">
+                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1 truncate">Fim</label>
                                                     <input
                                                         type="time"
                                                         value={slot.end}
                                                         onChange={(e) => updateTime(dayIndex, idx, 'end', e.target.value)}
-                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-[11px] text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
                                                     />
                                                 </div>
                                             </div>
@@ -103,7 +103,7 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                                     onClick={() => replicateToAll(dayIndex)}
                                     className="text-[9px] text-neon-cyan/60 hover:text-neon-cyan font-bold uppercase tracking-widest pt-4 transition-colors"
                                 >
-                                    Replicar para todos os dias
+                                    Replicar para todos
                                 </button>
                             )}
                         </div>
