@@ -316,8 +316,12 @@ export default function OracleSignupPage() {
                             </header>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {categoriesList.map(item => {
+                                {[...categoriesList, ...formData.categories
+                                    .filter(c => !categoriesList.find(cl => cl.name === c) && c !== 'Outros')
+                                    .map(c => ({ id: c, name: c }))
+                                ].map(item => {
                                     const isSelected = formData.categories.includes(item.name)
+                                    const isGhost = !categoriesList.find(cl => cl.name === item.name)
                                     return (
                                         <button
                                             key={item.id}
@@ -331,9 +335,9 @@ export default function OracleSignupPage() {
                                                     toast.error('Escolha no máximo 3 categorias.')
                                                 }
                                             }}
-                                            className={`p-4 rounded-xl border text-left transition-all group ${isSelected ? 'bg-neon-purple/20 border-neon-purple/50 text-white shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/20'}`}
+                                            className={`p-4 rounded-xl border text-left transition-all group ${isSelected ? 'bg-neon-purple/20 border-neon-purple/50 text-white shadow-[0_0_20px_rgba(168,85,247,0.1)]' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/20'} ${isGhost ? 'border-dashed opacity-80' : ''}`}
                                         >
-                                            <span className="text-xs font-bold leading-tight">{item.name}</span>
+                                            <span className="text-xs font-bold leading-tight">{item.name} {isGhost && '(Outra)'}</span>
                                         </button>
                                     )
                                 })}
@@ -363,8 +367,12 @@ export default function OracleSignupPage() {
                             </header>
 
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {topicsList.map(item => {
+                                {[...topicsList, ...formData.topics
+                                    .filter(t => !topicsList.find(tl => tl.name === t) && t !== 'Outros')
+                                    .map(t => ({ id: t, name: t }))
+                                ].map(item => {
                                     const isSelected = formData.topics.includes(item.name)
+                                    const isGhost = !topicsList.find(tl => tl.name === item.name)
                                     return (
                                         <button
                                             key={item.id}
@@ -378,9 +386,9 @@ export default function OracleSignupPage() {
                                                     toast.error('Escolha no máximo 3 temas.')
                                                 }
                                             }}
-                                            className={`p-4 rounded-xl border text-left transition-all group ${isSelected ? 'bg-neon-cyan/20 border-neon-cyan/50 text-white shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/20'}`}
+                                            className={`p-4 rounded-xl border text-left transition-all group ${isSelected ? 'bg-neon-cyan/20 border-neon-cyan/50 text-white shadow-[0_0_20px_rgba(6,182,212,0.1)]' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10 hover:border-white/20'} ${isGhost ? 'border-dashed opacity-80' : ''}`}
                                         >
-                                            <span className="text-xs font-bold leading-tight">{item.name}</span>
+                                            <span className="text-xs font-bold leading-tight">{item.name} {isGhost && '(Outra)'}</span>
                                         </button>
                                     )
                                 })}
