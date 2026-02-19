@@ -227,18 +227,31 @@ export default function OracleProfilePage() {
             <GlassCard className="relative overflow-hidden border-white/5" hover={false}>
                 <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-neon-purple/10 to-transparent" />
                 <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6 p-5">
-                    {/* Avatar */}
+                    {/* Avatar Container */}
                     <div className="relative flex-shrink-0">
-                        <div className="absolute inset-0 rounded-full bg-neon-purple blur-xl opacity-20" />
-                        <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-neon-purple to-neon-cyan relative z-10 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+                        {/* Rating Badge - Top Left */}
+                        {oracle.rating && (
+                            <div className="absolute -top-1 -left-1 z-30 flex items-center bg-white px-2 py-0.5 rounded-full shadow-xl border border-white/20">
+                                <Star size={10} className="text-neon-gold fill-neon-gold mr-1" />
+                                <span className="text-[10px] font-black text-deep-space">{oracle.rating.toFixed(1)}</span>
+                            </div>
+                        )}
+
+                        {/* Outer Glow for Online Status */}
+                        {isOnline && (
+                            <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-6 bg-green-500/60 blur-xl rounded-full z-10 animate-pulse" />
+                        )}
+
+                        <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-neon-purple to-neon-cyan relative z-10 shadow-[0_0_20px_rgba(168,85,247,0.2)] overflow-visible">
                             <img
                                 src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7&size=256`}
                                 alt={oracle.full_name}
-                                className="w-full h-full rounded-full object-cover"
+                                className="w-full h-full rounded-full object-cover border-2 border-[#0f0f2d]"
                             />
                         </div>
+
                         {/* Status Capsule Badge */}
-                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full border border-white/20 z-20 flex items-center justify-center whitespace-nowrap ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]'}`}>
+                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full border-2 border-[#0f0f2d] z-20 flex items-center justify-center whitespace-nowrap shadow-xl ${isOnline ? 'bg-green-500' : 'bg-red-500'}`}>
                             <span className="text-[9px] font-black text-white uppercase tracking-widest leading-none">
                                 {isOnline ? 'Online' : 'Offline'}
                             </span>

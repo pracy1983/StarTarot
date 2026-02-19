@@ -332,32 +332,35 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
             )}
 
-            {/* Rating Stars - Top Right (Below Zero Fee or Top) */}
-            {oracle.rating ? (
-                <div className={`absolute right-4 z-20 group/rating ${isZeroFee ? 'top-[100px]' : (profile?.id !== oracle.id ? 'top-[100px]' : 'top-4')}`} title={`Avaliação: ${oracle.rating.toFixed(1)}`}>
-                    <div className="flex items-center space-x-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded-full border border-white/5 cursor-pointer hover:bg-black/60 transition-colors">
-                        <Star size={10} className="text-neon-gold fill-neon-gold" />
-                        <span className="text-[10px] font-bold text-white ml-1">{oracle.rating.toFixed(1)}</span>
-                    </div>
-                </div>
-            ) : null}
-
             <div className="flex flex-col items-center text-center space-y-3 pt-4">
-                {/* Avatar container with status capsule */}
+                {/* Avatar container with status capsule and rating */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500/20'
+                    {/* Rating Badge - Top Left of Avatar */}
+                    {oracle.rating && (
+                        <div className="absolute -top-1 -left-1 z-30 flex items-center bg-white px-1.5 py-0.5 rounded-full shadow-lg border border-white/20">
+                            <Star size={8} className="text-neon-gold fill-neon-gold mr-0.5" />
+                            <span className="text-[9px] font-black text-deep-space">{oracle.rating.toFixed(1)}</span>
+                        </div>
+                    )}
+
+                    {/* Outer Glow Wrapper (for online pulse without transparency) */}
+                    {status === 'online' && (
+                        <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 w-16 h-5 bg-green-500/60 blur-xl rounded-full z-10 animate-pulse" />
+                    )}
+
+                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500/10'
                         }`} />
                     <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
                             src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7`}
                             alt={oracle.full_name}
-                            className="w-full h-full rounded-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all"
+                            className="w-full h-full rounded-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all border-2 border-[#0f0f2d]"
                         />
                     </div>
 
                     {/* Centered Status Capsule */}
-                    <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full border border-white/20 z-20 flex items-center justify-center whitespace-nowrap shadow-lg ${status === 'online' ? 'bg-green-500 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'}`}>
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">
+                    <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full border-2 border-[#0f0f2d] z-20 flex items-center justify-center whitespace-nowrap shadow-lg ${status === 'online' ? 'bg-green-500' : 'bg-red-500'}`}>
+                        <span className="text-[9px] font-black text-white uppercase tracking-widest leading-none">
                             {status === 'online' ? 'Online' : 'Offline'}
                         </span>
                     </div>

@@ -43,7 +43,7 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
 
     return (
         <div className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-3">
                 {DAYS.map((dayName, dayIndex) => {
                     const dayData = schedule[dayIndex] || []
                     const isActive = dayData.length > 0 && dayData[0].active
@@ -51,50 +51,60 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                     return (
                         <div
                             key={dayIndex}
-                            className={`p-3 sm:p-4 rounded-xl border transition-all duration-300 ${isActive ? 'bg-neon-purple/5 border-neon-purple/30' : 'bg-white/5 border-white/10 opacity-60'
+                            className={`p-4 rounded-xl border transition-all duration-300 flex flex-col justify-between ${isActive ? 'bg-neon-purple/5 border-neon-purple/30 shadow-[0_0_15px_rgba(168,85,247,0.05)]' : 'bg-white/5 border-white/10 opacity-60'
                                 }`}
                         >
-                            <div className="flex items-center justify-between mb-3">
-                                <span className={`font-semibold ${isActive ? 'text-neon-purple' : 'text-slate-400'}`}>
-                                    {dayName}
-                                </span>
-                                <button
-                                    type="button"
-                                    onClick={() => toggleDayActive(dayIndex)}
-                                    className={`w-10 h-5 rounded-full relative transition-colors ${isActive ? 'bg-neon-purple' : 'bg-slate-700'}`}
-                                >
-                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${isActive ? 'right-1' : 'left-1'}`} />
-                                </button>
+                            <div>
+                                <div className="flex items-center justify-between mb-4">
+                                    <span className={`font-bold tracking-tight ${isActive ? 'text-white' : 'text-slate-500'}`}>
+                                        {dayName}
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleDayActive(dayIndex)}
+                                        className={`w-10 h-5 rounded-full relative transition-colors ${isActive ? 'bg-neon-purple' : 'bg-slate-700'}`}
+                                    >
+                                        <div className={`absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all ${isActive ? 'right-0.5' : 'left-0.5'}`} />
+                                    </button>
+                                </div>
+
+                                {isActive && (
+                                    <div className="space-y-3">
+                                        {dayData.map((slot, idx) => (
+                                            <div key={idx} className="flex items-center gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
+                                                <div className="flex-1">
+                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Início</label>
+                                                    <input
+                                                        type="time"
+                                                        value={slot.start}
+                                                        onChange={(e) => updateTime(dayIndex, idx, 'start', e.target.value)}
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all"
+                                                    />
+                                                </div>
+                                                <div className="pt-4 text-slate-600 font-black text-[10px]">:</div>
+                                                <div className="flex-1">
+                                                    <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Fim</label>
+                                                    <input
+                                                        type="time"
+                                                        value={slot.end}
+                                                        onChange={(e) => updateTime(dayIndex, idx, 'end', e.target.value)}
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all"
+                                                    />
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
 
                             {isActive && (
-                                <div className="space-y-3">
-                                    {dayData.map((slot, idx) => (
-                                        <div key={idx} className="flex items-center justify-between gap-2">
-                                            <input
-                                                type="time"
-                                                value={slot.start}
-                                                onChange={(e) => updateTime(dayIndex, idx, 'start', e.target.value)}
-                                                className="bg-deep-space border border-white/10 rounded px-1.5 py-1 text-[11px] text-white w-[75px] outline-none focus:border-neon-purple/50"
-                                            />
-                                            <span className="text-slate-500 text-[10px] font-bold uppercase">às</span>
-                                            <input
-                                                type="time"
-                                                value={slot.end}
-                                                onChange={(e) => updateTime(dayIndex, idx, 'end', e.target.value)}
-                                                className="bg-deep-space border border-white/10 rounded px-1.5 py-1 text-[11px] text-white w-[75px] outline-none focus:border-neon-purple/50"
-                                            />
-                                        </div>
-                                    ))}
-
-                                    <button
-                                        type="button"
-                                        onClick={() => replicateToAll(dayIndex)}
-                                        className="text-[10px] text-neon-cyan hover:underline w-full text-left mt-2 block"
-                                    >
-                                        Replicar para todos os dias
-                                    </button>
-                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => replicateToAll(dayIndex)}
+                                    className="text-[9px] text-neon-cyan/60 hover:text-neon-cyan font-bold uppercase tracking-widest pt-4 transition-colors"
+                                >
+                                    Replicar para todos os dias
+                                </button>
                             )}
                         </div>
                     )
