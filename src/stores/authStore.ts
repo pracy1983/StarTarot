@@ -49,6 +49,10 @@ interface Profile {
   allows_text?: boolean
   whatsapp_notification_enabled?: boolean
   suspended_until?: string | null
+  categories?: string[]
+  topics?: string[]
+  custom_category?: string | null
+  custom_topic?: string | null
   metadata?: any
 }
 

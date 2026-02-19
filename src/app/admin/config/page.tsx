@@ -11,7 +11,8 @@ import toast from 'react-hot-toast'
 export default function AdminConfigPage() {
     const [masterPrompt, setMasterPrompt] = useState('')
     const [commission, setCommission] = useState('70')
-    const [creditPrice, setCreditPrice] = useState('0.20')
+    const [creditPrice, setCreditPrice] = useState('0.10')
+    const [signupBonus, setSignupBonus] = useState('50')
     const [updatingRules, setUpdatingRules] = useState(false)
     const [saving, setSaving] = useState(false)
     const [loading, setLoading] = useState(true)
@@ -43,9 +44,11 @@ export default function AdminConfigPage() {
         try {
             const { data: comm } = await supabase.from('global_settings').select('value').eq('key', 'oracle_commission_pc').maybeSingle()
             const { data: price } = await supabase.from('global_settings').select('value').eq('key', 'credit_price_brl').maybeSingle()
+            const { data: bonus } = await supabase.from('global_settings').select('value').eq('key', 'signup_bonus_credits').maybeSingle()
 
             if (comm) setCommission(comm.value)
             if (price) setCreditPrice(price.value)
+            if (bonus) setSignupBonus(bonus.value)
         } catch (err) {
             console.error('Error fetching business rules:', err)
         }
@@ -56,7 +59,8 @@ export default function AdminConfigPage() {
         try {
             await supabase.from('global_settings').upsert([
                 { key: 'oracle_commission_pc', value: commission },
-                { key: 'credit_price_brl', value: creditPrice }
+                { key: 'credit_price_brl', value: creditPrice },
+                { key: 'signup_bonus_credits', value: signupBonus }
             ])
             toast.success('Regras de negócio atualizadas!')
         } catch (err: any) {
@@ -180,6 +184,15 @@ export default function AdminConfigPage() {
                                 type="number"
                                 value={commission}
                                 onChange={e => setCommission(e.target.value)}
+                                className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-neon-purple/50 outline-none"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <label className="text-xs font-bold text-slate-500 uppercase">Bônus Boas-vindas (Créditos)</label>
+                            <input
+                                type="number"
+                                value={signupBonus}
+                                onChange={e => setSignupBonus(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-sm text-white focus:border-neon-purple/50 outline-none"
                             />
                         </div>

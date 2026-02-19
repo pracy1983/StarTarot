@@ -5,7 +5,7 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Video, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus, Loader2 } from 'lucide-react'
+import { User, Mail, Camera, Phone, Book, Star, MessageSquare, Video, Briefcase, ToggleLeft, ToggleRight, Calendar, Clock, CreditCard, X, Scissors, Sparkles, Plus, Loader2, Layers, BookOpen } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
@@ -28,10 +28,8 @@ export default function OracleProfilePage() {
     const [zoom, setZoom] = useState(1)
     const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
     const [showCropModal, setShowCropModal] = useState(false)
-    const [specialtiesList, setSpecialtiesList] = useState<any[]>([])
-
-    // ... (rest of states) ... 
-    const [newCategoryName, setNewCategoryName] = useState('')
+    const [categoriesList, setCategoriesList] = useState<any[]>([])
+    const [topicsList, setTopicsList] = useState<any[]>([])
 
     const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
         0: [], 1: [], 2: [], 3: [], 4: [], 5: [], 6: []
@@ -42,8 +40,10 @@ export default function OracleProfilePage() {
         name_fantasy: '',
         phone: '',
         bio: '',
-        specialty: '',
-        custom_specialty: '',
+        categories: [] as string[],
+        topics: [] as string[],
+        custom_category: '',
+        custom_topic: '',
         personality: '',
         price_brl_per_minute: 5.00,
         initial_fee_brl: 0.00,
@@ -67,7 +67,7 @@ export default function OracleProfilePage() {
     })
 
     useEffect(() => {
-        fetchSpecialties()
+        fetchData()
         fetchAverages()
     }, [])
 
@@ -76,13 +76,13 @@ export default function OracleProfilePage() {
         if (data) setAverages(data)
     }
 
-    const fetchSpecialties = async () => {
-        const { data } = await supabase
-            .from('specialties')
-            .select('*')
-            .eq('active', true)
-            .order('name', { ascending: true })
-        if (data) setSpecialtiesList(data)
+    const fetchData = async () => {
+        const [cats, tops] = await Promise.all([
+            supabase.from('oracle_categories').select('*').eq('active', true).order('name'),
+            supabase.from('oracle_specialties').select('*').eq('active', true).order('name')
+        ])
+        if (cats.data) setCategoriesList(cats.data)
+        if (tops.data) setTopicsList(tops.data)
     }
 
     useEffect(() => {
@@ -92,8 +92,10 @@ export default function OracleProfilePage() {
                 name_fantasy: profile.name_fantasy || '',
                 phone: profile.phone || '',
                 bio: profile.bio || '',
-                specialty: profile.specialty || '',
-                custom_specialty: '',
+                categories: profile.categories || [],
+                topics: profile.topics || [],
+                custom_category: profile.custom_category || '',
+                custom_topic: profile.custom_topic || '',
                 personality: profile.personality || '',
                 price_brl_per_minute: profile.price_brl_per_minute || 5.00,
                 initial_fee_brl: profile.initial_fee_brl || 0.00,
@@ -155,7 +157,10 @@ export default function OracleProfilePage() {
                     name_fantasy: formData.name_fantasy,
                     phone: formData.phone,
                     bio: formData.bio,
-                    specialty: formData.specialty === 'Outros' ? formData.custom_specialty : formData.specialty,
+                    categories: formData.categories,
+                    topics: formData.topics,
+                    custom_category: formData.custom_category,
+                    custom_topic: formData.custom_topic,
                     personality: formData.personality,
                     price_brl_per_minute: formData.price_brl_per_minute,
                     initial_fee_brl: formData.initial_fee_brl,
@@ -601,31 +606,84 @@ export default function OracleProfilePage() {
                                     onChange={e => setFormData({ ...formData, name_fantasy: e.target.value })}
                                 />
 
-                                <div className="md:col-span-2 space-y-3">
+                                {/* Categorias (Ferramentas) */}
+                                <div className="md:col-span-2 space-y-4">
                                     <label className="text-sm font-bold text-slate-300 flex items-center">
-                                        <Star size={16} className="mr-2 text-neon-gold" />
-                                        Especialidade Principal
+                                        <Layers size={16} className="mr-2 text-neon-purple" />
+                                        Categorias / Ferramentas (Máx. 3)
                                     </label>
-                                    <div className="relative group">
-                                        <select
-                                            value={formData.specialty}
-                                            onChange={e => setFormData({ ...formData, specialty: e.target.value })}
-                                            className="w-full appearance-none bg-deep-space border border-white/10 rounded-xl p-4 text-white focus:border-neon-purple/50 outline-none transition-all cursor-pointer hover:bg-white/5 shadow-lg"
-                                        >
-                                            <option value="" className="text-slate-500">Selecione sua especialidade...</option>
-                                            {specialtiesList.map(s => (
-                                                <option key={s.id} value={s.name} className="bg-deep-space text-white py-2">
-                                                    {s.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        <div className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500 group-hover:text-neon-gold transition-colors">
-                                            <MessageSquare size={18} />
-                                        </div>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {categoriesList.map(item => {
+                                            const isSelected = formData.categories.includes(item.name)
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setFormData(p => ({ ...p, categories: p.categories.filter(c => c !== item.name) }))
+                                                        } else if (formData.categories.length < 3) {
+                                                            setFormData(p => ({ ...p, categories: [...p.categories, item.name] }))
+                                                        } else {
+                                                            toast.error('Selecione no máximo 3 categorias.')
+                                                        }
+                                                    }}
+                                                    className={`p-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-neon-purple/20 border-neon-purple/50 text-white' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10'}`}
+                                                >
+                                                    <span className="text-sm font-medium">{item.name}</span>
+                                                </button>
+                                            )
+                                        })}
                                     </div>
-                                    <p className="text-xs text-slate-500 px-1">
-                                        * Apenas categorias oficiais do sistema. Para sugerir novas, contate a administração.
-                                    </p>
+                                    {formData.categories.includes('Outros') && (
+                                        <div className="mt-2 animate-in fade-in slide-in-from-top-2">
+                                            <GlowInput
+                                                placeholder="Qual ferramenta? (Máx 20 caracteres)"
+                                                value={formData.custom_category}
+                                                onChange={e => setFormData({ ...formData, custom_category: e.target.value.substring(0, 20) })}
+                                            />
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Especialidades (Tópicos) */}
+                                <div className="md:col-span-2 space-y-4">
+                                    <label className="text-sm font-bold text-slate-300 flex items-center">
+                                        <BookOpen size={16} className="mr-2 text-neon-cyan" />
+                                        Especialidades / Assuntos (Máx. 3)
+                                    </label>
+                                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                        {topicsList.map(item => {
+                                            const isSelected = formData.topics.includes(item.name)
+                                            return (
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    onClick={() => {
+                                                        if (isSelected) {
+                                                            setFormData(p => ({ ...p, topics: p.topics.filter(t => t !== item.name) }))
+                                                        } else if (formData.topics.length < 3) {
+                                                            setFormData(p => ({ ...p, topics: [...p.topics, item.name] }))
+                                                        } else {
+                                                            toast.error('Selecione no máximo 3 especialidades.')
+                                                        }
+                                                    }}
+                                                    className={`p-3 rounded-xl border text-left transition-all ${isSelected ? 'bg-neon-cyan/20 border-neon-cyan/50 text-white' : 'bg-white/5 border-white/10 text-slate-500 hover:bg-white/10'}`}
+                                                >
+                                                    <span className="text-sm font-medium">{item.name}</span>
+                                                </button>
+                                            )
+                                        })}
+                                    </div>
+                                    {formData.topics.includes('Outros') && (
+                                        <div className="mt-2 animate-in fade-in slide-in-from-top-2">
+                                            <GlowInput
+                                                placeholder="Qual assunto? (Máx 20 caracteres)"
+                                                value={formData.custom_topic}
+                                                onChange={e => setFormData({ ...formData, custom_topic: e.target.value.substring(0, 20) })}
+                                            />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 

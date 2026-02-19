@@ -7,7 +7,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { motion, AnimatePresence } from 'framer-motion'
-import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck, Search, Moon, Sun, Star, LogIn, LayoutDashboard, ChevronDown, Check } from 'lucide-react'
+import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck, Search, Moon, Sun, Star, LogIn, LayoutDashboard, ChevronDown, Check, X, Clock, MessageSquare, Video, Smartphone } from 'lucide-react'
 import { whatsappService } from '@/lib/whatsapp'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
@@ -40,21 +40,49 @@ export default function LandingPage() {
   const [specialties, setSpecialties] = useState<string[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
 
+  // Global Settings
+  const [settings, setSettings] = useState({
+    commission: 70,
+    signupBonus: 50
+  })
+  const [showGanhosModal, setShowGanhosModal] = useState(false)
+
 
   useEffect(() => {
     checkAuth()
     fetchOracles()
     fetchSpecialties()
+    fetchGlobalSettings()
     if (isAuthenticated) fetchFavorites()
   }, [checkAuth, isAuthenticated])
 
+  const fetchGlobalSettings = async () => {
+    try {
+      const { data } = await supabase.from('global_settings').select('key, value')
+      if (data) {
+        const commission = data.find(s => s.key === 'oracle_commission_pc')?.value
+        const bonus = data.find(s => s.key === 'signup_bonus_credits')?.value
+        setSettings({
+          commission: commission ? parseInt(commission) : 70,
+          signupBonus: bonus ? parseInt(bonus) : 50
+        })
+      }
+    } catch (err) {
+      console.error('Error fetching settings:', err)
+    }
+  }
+
   const fetchSpecialties = async () => {
-    const { data } = await supabase
-      .from('specialties')
-      .select('name')
-      .eq('active', true)
-      .order('name', { ascending: true })
-    if (data) setSpecialties(data.map(s => s.name))
+    const [cats, tops] = await Promise.all([
+      supabase.from('oracle_categories').select('name').eq('active', true).order('name'),
+      supabase.from('oracle_specialties').select('name').eq('active', true).order('name')
+    ])
+
+    const combined = Array.from(new Set([
+      ...(cats.data || []).map(s => s.name),
+      ...(tops.data || []).map(s => s.name)
+    ]))
+    setSpecialties(combined)
   }
 
   const fetchFavorites = async () => {
@@ -130,8 +158,12 @@ export default function LandingPage() {
 
   const filteredOracles = getSortedOracles(oracles
     .filter(o => {
-      const matchesSearch = (o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        o.specialty?.toLowerCase().includes(searchTerm.toLowerCase()))
+      const matchesSearch = (
+        (o.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.specialty || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (o.categories || []).some((c: string) => c.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        (o.topics || []).some((t: string) => t.toLowerCase().includes(searchTerm.toLowerCase()))
+      )
 
       let matchesStatus = true
       if (filter === 'online') {
@@ -140,11 +172,11 @@ export default function LandingPage() {
 
       let matchesSpecialty = true
       if (specialtyFilter !== 'all') {
-        if (specialtyFilter === 'OUTROS') {
-          matchesSpecialty = !specialties.some(s => s.toLowerCase() === o.specialty?.toLowerCase())
-        } else {
-          matchesSpecialty = o.specialty?.toLowerCase() === specialtyFilter.toLowerCase()
-        }
+        matchesSpecialty = (
+          (o.categories || []).includes(specialtyFilter) ||
+          (o.topics || []).includes(specialtyFilter) ||
+          o.specialty === specialtyFilter
+        )
       }
 
       return matchesSearch && matchesStatus && matchesSpecialty
@@ -270,20 +302,36 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* CTA Banner Section */}
+        {/* CTA Banner Section - Coupon Style */}
         {!isAuthenticated && (
-          <section className="mt-24 relative rounded-[40px] overflow-hidden p-12 text-center md:text-left">
-            <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/20 to-neon-cyan/20 backdrop-blur-2xl z-0" />
-            <div className="absolute inset-0 border border-white/10 rounded-[40px] pointer-events-none" />
+          <section className="mt-24 relative rounded-[40px] overflow-hidden p-8 md:p-12 text-center md:text-left">
+            {/* Background with Coupon Border Effect */}
+            <div className="absolute inset-0 bg-gradient-to-br from-[#1e1e3f] to-[#0a0a1a] z-0" />
+            <div className="absolute inset-2 border-2 border-dashed border-neon-gold/30 rounded-[32px] pointer-events-none" />
+
+            {/* Coupon Cutouts */}
+            <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-deep-space rounded-full z-10 hidden md:block" />
+            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-deep-space rounded-full z-10 hidden md:block" />
 
             <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-10">
-              <div className="max-w-xl">
-                <h2 className="text-3xl md:text-4xl font-bold text-white mb-4">Sua primeira consulta <br /><span className="text-neon-gold">pode mudar tudo.</span></h2>
-                <p className="text-slate-300">Cadastre-se hoje e ganhe bônus de créditos para sua primeira orientação.</p>
+              <div className="max-w-xl space-y-4">
+                <div className="inline-flex items-center space-x-2 text-neon-gold bg-neon-gold/10 px-3 py-1 rounded-full border border-neon-gold/20">
+                  <Sparkles size={14} />
+                  <span className="text-[10px] font-bold uppercase tracking-widest">Oferta de Boas-vindas</span>
+                </div>
+                <h2 className="text-3xl md:text-5xl font-bold text-white tracking-tight leading-tight">
+                  Sua primeira consulta <br />
+                  <span className="neon-text-gold">sai por nossa conta.</span>
+                </h2>
+                <p className="text-slate-400 text-lg">
+                  Cadastre-se hoje e ganhe <span className="text-white font-bold">{settings.signupBonus} créditos</span> de bônus imediato para sua primeira orientação.
+                </p>
               </div>
-              <NeonButton variant="gold" size="lg" className="px-10" onClick={() => openAuth('client', true)}>
-                Resgatar Bônus Agora
-              </NeonButton>
+              <div className="shrink-0">
+                <NeonButton variant="gold" size="lg" className="px-12 py-6 text-lg shadow-[0_0_30px_rgba(234,179,8,0.2)]" onClick={() => openAuth('client', true)}>
+                  Resgatar Meus {settings.signupBonus} Créditos
+                </NeonButton>
+              </div>
             </div>
           </section>
         )}
@@ -292,42 +340,172 @@ export default function LandingPage() {
         {(!isAuthenticated || (profile?.role !== 'oracle' && profile?.role !== 'owner')) && (
           <section className="mt-32 pb-20">
             <GlassCard className="p-12 border-white/5 relative overflow-hidden" hover={false}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/10 blur-[100px] -z-10" />
+              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/20 blur-[100px] -z-10" />
               <div className="flex flex-col md:flex-row items-center gap-12">
                 <div className="flex-1 space-y-6">
                   <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-[10px] font-bold uppercase tracking-widest">
                     <Sparkles size={12} />
-                    <span>Oportunidade</span>
+                    <span>Compartilhe seu Dom</span>
                   </div>
-                  <h2 className="text-3xl md:text-4xl font-bold text-white leading-tight">
+                  <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight">
                     Seja um Oraculista no <br />
-                    <span className="neon-text-cyan">StarTarot</span>
+                    <span className="neon-text-purple">StarTarot</span>
                   </h2>
                   <p className="text-slate-400 text-lg leading-relaxed">
-                    Transforme seu dom em uma fonte de renda. Atenda clientes de todo o país através de chat e vídeo com total segurança e suporte.
+                    Transforme sua sabedoria em prosperidade. Atenda de onde estiver, pelo celular ou computador, com as melhores taxas do mercado.
                   </p>
+
+                  <div className="grid grid-cols-2 gap-4 py-4">
+                    <div className="flex items-start space-x-3">
+                      <div className="mt-1 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                        <Check size={12} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">Tarifa Dinâmica</p>
+                        <p className="text-xs text-slate-500">Você fica com {settings.commission}% do valor</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start space-x-3">
+                      <div className="mt-1 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
+                        <Check size={12} />
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-white">Liberdade Total</p>
+                        <p className="text-xs text-slate-500">Responda pelo celular</p>
+                      </div>
+                    </div>
+                  </div>
+
                   <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    <NeonButton variant="cyan" size="lg" onClick={() => openAuth('oracle', true)}>
-                      Cadastrar como Oraculista
+                    <NeonButton variant="purple" size="lg" onClick={() => openAuth('oracle', true)} className="px-8">
+                      Começar a Atender Agora
                     </NeonButton>
-                    <button className="text-sm font-bold text-slate-400 hover:text-white transition-colors px-6">
+                    <button
+                      onClick={() => setShowGanhosModal(true)}
+                      className="text-sm font-bold text-slate-400 hover:text-white transition-all px-6 py-3 border border-white/10 rounded-2xl hover:bg-white/5"
+                    >
                       Saiba mais sobre ganhos
                     </button>
                   </div>
                 </div>
-                <div className="flex-shrink-0 w-full md:w-80 h-80 relative group">
-                  <div className="absolute inset-0 bg-neon-cyan/20 blur-3xl rounded-full group-hover:bg-neon-cyan/30 transition-all" />
+                <div className="flex-shrink-0 w-full md:w-[400px] h-[400px] relative group">
+                  <div className="absolute inset-0 bg-neon-purple/20 blur-3xl rounded-full group-hover:bg-neon-purple/30 transition-all" />
                   <img
-                    src="https://images.unsplash.com/photo-1515940175183-6798529cb860?auto=format&fit=crop&q=80&w=800"
-                    alt="Oracle"
-                    className="w-full h-full object-cover rounded-3xl relative z-10 border border-white/10"
+                    src="https://images.unsplash.com/photo-1635817215354-93e114002e26?auto=format&fit=crop&q=80&w=800"
+                    alt="Tarot Oracle Mystical"
+                    className="w-full h-full object-cover rounded-[40px] relative z-10 border border-white/10 shadow-2xl"
                   />
+                  <div className="absolute -bottom-6 -right-6 glass p-6 rounded-3xl z-20 border border-white/10 shadow-2xl animate-pulse">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-full bg-neon-gold/20 flex items-center justify-center text-neon-gold">
+                        <Star size={24} className="fill-neon-gold" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-tighter text-slate-500 leading-none mb-1">Potencial Médio</p>
+                        <p className="text-xl font-bold text-white leading-none">R$ 3.500+</p>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </GlassCard>
           </section>
         )}
       </main>
+
+      {/* Ganhos Modal */}
+      <AnimatePresence>
+        {showGanhosModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center px-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowGanhosModal(false)}
+              className="absolute inset-0 bg-black/90 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-2xl bg-[#0a0a1a] border border-white/10 rounded-[40px] overflow-hidden shadow-2xl"
+            >
+              <div className="p-8 md:p-12 space-y-8 max-h-[90vh] overflow-y-auto">
+                <button
+                  onClick={() => setShowGanhosModal(false)}
+                  className="absolute top-8 right-8 text-slate-500 hover:text-white transition-colors"
+                >
+                  <X size={24} />
+                </button>
+
+                <header>
+                  <div className="inline-flex items-center space-x-2 text-neon-purple mb-2">
+                    <Sparkles size={16} />
+                    <span className="text-xs font-bold uppercase tracking-widest">Simulador de Prosperidade</span>
+                  </div>
+                  <h3 className="text-3xl font-bold text-white">Sua carreira como <span className="neon-text-purple">Oraculista</span></h3>
+                  <p className="text-slate-400 mt-2 italic">Trabalhe de onde quiser, com a liberdade que você merece.</p>
+                </header>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                    <div className="flex items-center gap-3 text-neon-cyan">
+                      <Smartphone size={20} />
+                      <h4 className="font-bold text-white">Mobilidade Total</h4>
+                    </div>
+                    <p className="text-sm text-slate-400 leading-relaxed">Não precisa estar no computador. Responda mensagens e atenda vídeos direto pelo seu celular.</p>
+                  </div>
+
+                  <div className="glass p-6 rounded-3xl border-white/5 space-y-4">
+                    <div className="flex items-center gap-3 text-neon-gold">
+                      <Star size={20} />
+                      <h4 className="font-bold text-white">{settings.commission}% de Repasse</h4>
+                    </div>
+                    <p className="text-sm text-slate-400 leading-relaxed">Sua comissão é automática. Tudo o que você atende entra na hora para sua carteira virtual.</p>
+                  </div>
+                </div>
+
+                <div className="bg-neon-purple/5 border border-neon-purple/20 p-6 rounded-3xl">
+                  <h4 className="font-bold text-white mb-6 flex items-center gap-2">
+                    <Clock size={18} className="text-neon-gold" />
+                    Exemplo de Ganhos Possíveis
+                  </h4>
+                  <div className="space-y-4">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Atendimento em Vídeo (2h/dia x 20 dias)</span>
+                      <span className="text-white font-mono">R$ 6.000,00*</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-slate-400">Respostas p/ Mensagem (10/dia x 20 dias)</span>
+                      <span className="text-white font-mono">R$ 2.400,00*</span>
+                    </div>
+                    <div className="h-px bg-white/10 my-4" />
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <p className="text-[10px] text-neon-gold font-black uppercase tracking-widest">Seu Ganho Líquido ({settings.commission}%)</p>
+                        <p className="text-2xl font-black text-white leading-none mt-1">R$ {(8400 * (settings.commission / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-[10px] text-slate-500 uppercase font-bold">Por apenas</p>
+                        <p className="text-sm font-bold text-slate-300">40h/mês dedicadas</p>
+                      </div>
+                    </div>
+                    <p className="text-[9px] text-slate-600 mt-4 italic leading-relaxed">
+                      * Estimativas baseadas em tarifas médias. Como oraculista, você é livre para definir seus próprios preços por minuto e por mensagem.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex gap-4">
+                  <NeonButton variant="purple" fullWidth size="lg" onClick={() => { setShowGanhosModal(false); openAuth('oracle', true); }}>
+                    Candidate-se Agora
+                  </NeonButton>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Footer Minimalist */}
       <footer className="py-12 px-6 border-t border-white/5 mt-24 text-center space-y-6">
@@ -340,3 +518,4 @@ export default function LandingPage() {
     </div >
   )
 }
+

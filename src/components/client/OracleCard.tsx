@@ -32,6 +32,10 @@ interface OracleCardProps {
         rating?: number
         is_owner?: boolean
         last_heartbeat_at?: string
+        categories?: string[]
+        topics?: string[]
+        custom_category?: string | null
+        custom_topic?: string | null
     }
 }
 
@@ -370,8 +374,15 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     <h3 className="text-lg font-bold text-white group-hover:text-neon-purple transition-colors duration-300 leading-tight">
                         {oracle.name_fantasy || oracle.full_name}
                     </h3>
-                    <p className="text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em]">
-                        {oracle.specialty}
+                    <p className="text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em] line-clamp-1 px-4">
+                        {oracle.categories && oracle.categories.length > 0
+                            ? oracle.categories.map(c => c === 'Outros' ? oracle.custom_category : c).join(' • ')
+                            : oracle.specialty}
+                    </p>
+                    <p className="text-slate-500 text-[9px] uppercase tracking-widest line-clamp-1 px-4">
+                        {oracle.topics && oracle.topics.length > 0
+                            ? oracle.topics.map(t => t === 'Outros' ? oracle.custom_topic : t).join(' • ')
+                            : ''}
                     </p>
                 </div>
 
