@@ -31,8 +31,8 @@ export default function OracleSignupPage() {
     useEffect(() => {
         const fetchContent = async () => {
             const [cats, tops] = await Promise.all([
-                supabase.from('oracle_categories').select('*').eq('active', true).order('name'),
-                supabase.from('oracle_specialties').select('*').eq('active', true).order('name')
+                supabase.from('categories').select('*').eq('active', true).order('name'),
+                supabase.from('specialties').select('*').eq('active', true).order('name')
             ])
             if (cats.data) setCategoriesList(cats.data)
             if (tops.data) setTopicsList(tops.data)

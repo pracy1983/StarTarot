@@ -160,7 +160,7 @@ export default function AdminConsultationsPage() {
             ['Cliente', 'Email', 'Oraculista', 'Canal', 'Tipo', 'Detalhes', 'Créditos', 'Status', 'Data'].join(','),
             ...filteredConsultations.map(c => {
                 const status = getStatusInfo(c).label
-                const type = c.type === 'video' ? 'Vídeo' : 'Chat'
+                const type = c.type === 'video' ? 'Vídeo' : 'Mensagem'
                 const details = c.type === 'video' ? formatDuration(c.duration_seconds) : `${c.total_questions} msgs`
                 return [
                     c.client?.full_name || 'N/A',
@@ -303,7 +303,7 @@ export default function AdminConsultationsPage() {
                     >
                         <option value="">Todos os canais</option>
                         <option value="video">Vídeo</option>
-                        <option value="message">Chat/Mensagem</option>
+                        <option value="message">Mensagem</option>
                     </select>
 
                     <div className="flex space-x-2">
@@ -381,11 +381,11 @@ export default function AdminConsultationsPage() {
                                             <td className="px-6 py-4 text-center">
                                                 <div className="flex items-center justify-center">
                                                     <span className={`text-xs px-2 py-1 rounded border uppercase font-bold tracking-wider flex items-center gap-1 ${c.type === 'video'
-                                                            ? 'border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan'
-                                                            : 'border-fuchsia-400/30 bg-fuchsia-400/5 text-fuchsia-400'
+                                                        ? 'border-neon-cyan/30 bg-neon-cyan/5 text-neon-cyan'
+                                                        : 'border-fuchsia-400/30 bg-fuchsia-400/5 text-fuchsia-400'
                                                         }`}>
                                                         {c.type === 'video' ? <Video size={10} /> : <MessageSquare size={10} />}
-                                                        {c.type === 'video' ? 'VÍDEO' : 'CHAT'}
+                                                        {c.type === 'video' ? 'VÍDEO' : 'MENSAGEM'}
                                                     </span>
                                                 </div>
                                             </td>

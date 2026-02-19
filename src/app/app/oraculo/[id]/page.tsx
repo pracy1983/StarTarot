@@ -99,7 +99,7 @@ export default function OracleProfilePage() {
                 { data: ratingsData },
                 { data: qData } // For response time
             ] = await Promise.all([
-                supabase.from('oracle_schedules').select('*').eq('oracle_id', id).eq('is_active', true),
+                supabase.from('schedules').select('*').eq('oracle_id', id),
                 supabase.from('consultations').select('id', { count: 'exact', head: true }).eq('oracle_id', id).eq('status', 'answered'),
                 supabase.from('ratings').select('*, client:client_id(full_name, avatar_url)').eq('oracle_id', id).order('created_at', { ascending: false }),
                 !isAI ? supabase.from('consultations').select('created_at, answered_at').eq('oracle_id', id).eq('status', 'answered').not('answered_at', 'is', null).limit(20) : Promise.resolve({ data: null })
@@ -316,6 +316,15 @@ export default function OracleProfilePage() {
                         <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto md:mx-0">
                             {oracle.bio || 'Este oraculista ainda não adicionou uma descrição.'}
                         </p>
+
+                        {!isOnline && oracle.allows_text && (
+                            <div className="mt-4 p-3 bg-neon-purple/5 border border-neon-purple/20 rounded-2xl flex items-center space-x-3">
+                                <MessageSquare size={16} className="text-neon-purple" />
+                                <p className="text-[11px] text-slate-300 font-medium">
+                                    O oraculista não está online no momento, mas <span className="text-white font-bold">você pode enviar uma mensagem</span> e ele responderá assim que possível.
+                                </p>
+                            </div>
+                        )}
                     </div>
                 </div>
             </GlassCard>

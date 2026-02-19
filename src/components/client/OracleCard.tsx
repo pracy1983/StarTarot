@@ -463,7 +463,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                     className="h-9 px-0"
                                 >
                                     <MessageSquare size={14} className="mr-1" />
-                                    <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Chat' : 'Mensagem'}</span>
+                                    <span className="text-[10px] whitespace-nowrap">Mensagem</span>
                                 </NeonButton>
                             </div>
                         ) : (
@@ -481,7 +481,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         className="h-9 w-1/2"
                                     >
                                         <MessageSquare size={14} className="mr-1" />
-                                        <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Chat' : 'Mensagem'}</span>
+                                        <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Mensagem' : 'Mensagem'}</span>
                                     </NeonButton>
                                 ) : (
                                     <NeonButton

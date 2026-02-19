@@ -23,7 +23,7 @@ export default function AdminCategoriesPage() {
 
     const fetchData = async () => {
         setLoading(true)
-        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const table = activeTab === 'categories' ? 'categories' : 'specialties'
         const customCol = activeTab === 'categories' ? 'custom_category' : 'custom_topic'
 
         try {
@@ -74,7 +74,7 @@ export default function AdminCategoriesPage() {
 
     const handleAddItem = async (name: string) => {
         if (!name.trim()) return
-        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const table = activeTab === 'categories' ? 'categories' : 'specialties'
 
         try {
             const { error } = await supabase
@@ -95,7 +95,7 @@ export default function AdminCategoriesPage() {
         const typeLabel = activeTab === 'categories' ? 'categoria' : 'especialidade'
         if (!confirm(`Tem certeza que deseja remover a ${typeLabel} "${name}"?`)) return
 
-        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const table = activeTab === 'categories' ? 'categories' : 'specialties'
 
         try {
             const { error: deleteError } = await supabase

@@ -75,8 +75,8 @@ export default function LandingPage() {
   const fetchSpecialties = async () => {
     // Correct table names: specialties and categories
     const [cats, tops] = await Promise.all([
-      supabase.from('categories').select('name').order('name'),
-      supabase.from('specialties').select('name').order('name')
+      supabase.from('categories').select('name').eq('active', true).order('name'),
+      supabase.from('specialties').select('name').eq('active', true).order('name')
     ])
 
     const combined = Array.from(new Set([
@@ -261,6 +261,44 @@ export default function LandingPage() {
             Conecte-se com os melhores oraculistas em consultas em tempo real ou mensagens exclusivas.
           </motion.p>
         </header>
+        {/* Como Funciona Section - Moved up for visibility */}
+        <section className="mt-12 mb-20 py-16 border-y border-white/5 relative bg-white/[0.02] rounded-[40px] px-8">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/5 via-transparent to-neon-cyan/5 pointer-events-none rounded-[40px]" />
+
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center justify-center">
+              <Sparkles className="text-neon-gold mr-3" size={24} />
+              Como o <span className="neon-text-purple ml-2">Templo</span> Funciona
+            </h2>
+            <p className="text-slate-400 mt-2 text-sm">Siga os passos abaixo para iniciar sua jornada espiritual</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
+            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
+              <div className="w-20 h-20 bg-neon-purple/10 rounded-3xl flex items-center justify-center text-neon-purple shadow-[0_0_20px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">
+                <Search size={32} />
+              </div>
+              <h3 className="font-bold text-white text-xl">1. Escolha seu Guia</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Navegue pelos perfis e veja as especialidades de cada oraculista. Leia suas bios e avaliações.</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
+              <div className="w-20 h-20 bg-neon-cyan/10 rounded-3xl flex items-center justify-center text-neon-cyan shadow-[0_0_20px_rgba(34,211,238,0.1)] group-hover:scale-110 transition-transform">
+                <Sparkles size={32} />
+              </div>
+              <h3 className="font-bold text-white text-xl">2. Adicione Créditos</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Carregue sua carteira via PIX ou Cartão de forma rápida. Seus créditos nunca expiram.</p>
+            </div>
+
+            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
+              <div className="w-20 h-20 bg-neon-gold/10 rounded-3xl flex items-center justify-center text-neon-gold shadow-[0_0_20px_rgba(251,191,36,0.1)] group-hover:scale-110 transition-transform">
+                <MessageSquare size={32} />
+              </div>
+              <h3 className="font-bold text-white text-xl">3. Inicie a Jornada</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Inicie sua consulta por Mensagem ou Vídeo com total privacidade e segurança.</p>
+            </div>
+          </div>
+        </section>
 
         {/* Marketplace Filter */}
         <section className="space-y-8">
@@ -413,39 +451,6 @@ export default function LandingPage() {
           </section>
         )}
 
-        {/* Como Funciona Section */}
-        <section className="mt-20 py-10">
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Como o <span className="neon-text-purple">StarTarot</span> Funciona</h2>
-            <p className="text-slate-400 text-sm max-w-2xl mx-auto">Tudo o que você precisa para sua jornada espiritual em um só lugar.</p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
-              <div className="w-14 h-14 bg-neon-purple/10 rounded-2xl flex items-center justify-center text-neon-purple mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Search size={24} />
-              </div>
-              <h3 className="font-bold text-white">1. Escolha seu Guia</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Navegue pelos perfis, veja especialidades e avaliações reais de outros consulentes.</p>
-            </div>
-
-            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
-              <div className="w-14 h-14 bg-neon-cyan/10 rounded-2xl flex items-center justify-center text-neon-cyan mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <Sparkles size={24} />
-              </div>
-              <h3 className="font-bold text-white">2. Carregue Créditos</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Adicione créditos de forma segura via PIX ou Cartão para usar no seu próprio ritmo.</p>
-            </div>
-
-            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
-              <div className="w-14 h-14 bg-neon-gold/10 rounded-2xl flex items-center justify-center text-neon-gold mx-auto mb-4 group-hover:scale-110 transition-transform">
-                <MessageSquare size={24} />
-              </div>
-              <h3 className="font-bold text-white">3. Inicie a Consulta</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Escolha entre Chat por Mensagem ou Chamada de Vídeo Privada com total sigilo.</p>
-            </div>
-          </div>
-        </section>
       </main>
 
       {/* Ganhos Modal */}

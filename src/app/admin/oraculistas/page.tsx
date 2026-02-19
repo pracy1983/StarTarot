@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare, History, RefreshCw } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare, History, RefreshCw, Layers, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -42,12 +42,14 @@ export default function AdminOraculistasPage() {
     const [rejectionMessage, setRejectionMessage] = useState('')
     const [isProcessingStatus, setIsProcessingStatus] = useState(false)
 
-    // Specialties Management
+    // Specialties & Categories Management
     const [isManagingSpecialties, setIsManagingSpecialties] = useState(false)
+    const [activeManageTab, setActiveManageTab] = useState<'specialties' | 'categories'>('categories')
     const [specialties, setSpecialties] = useState<any[]>([])
-    const [editingSpecialty, setEditingSpecialty] = useState<any>(null)
-    const [specialtyName, setSpecialtyName] = useState('')
-    const [isDeletingSpecialty, setIsDeletingSpecialty] = useState(false)
+    const [categories, setCategories] = useState<any[]>([])
+    const [editingItem, setEditingItem] = useState<any>(null)
+    const [itemName, setItemName] = useState('')
+    const [isDeletingItem, setIsDeletingItem] = useState(false)
 
     // Reviews Management
     const [reviewsModal, setReviewsModal] = useState<{ open: boolean, oracleId: string | null, name: string }>({ open: false, oracleId: null, name: '' })
@@ -60,11 +62,13 @@ export default function AdminOraculistasPage() {
     }, [])
 
     const fetchSpecialties = async () => {
-        const { data, error } = await supabase
-            .from('specialties')
-            .select('*')
-            .order('name', { ascending: true })
-        if (data) setSpecialties(data)
+        const [specRes, catRes] = await Promise.all([
+            supabase.from('specialties').select('*').order('name', { ascending: true }),
+            supabase.from('categories').select('*').order('name', { ascending: true })
+        ])
+
+        if (specRes.data) setSpecialties(specRes.data)
+        if (catRes.data) setCategories(catRes.data)
     }
 
     // Sync tab with URL
@@ -218,68 +222,64 @@ export default function AdminOraculistasPage() {
         }
     }
 
-    const handleSaveSpecialty = async () => {
-        if (!specialtyName.trim()) return
+    const handleSaveItem = async () => {
+        if (!itemName.trim()) return
         setLoadingCategory(true)
-        try {
-            const slug = specialtyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
+        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
 
-            if (editingSpecialty) {
+        try {
+            const slug = itemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
+
+            if (editingItem) {
                 // Update
                 const { error } = await supabase
-                    .from('specialties')
-                    .update({ name: specialtyName, slug })
-                    .eq('id', editingSpecialty.id)
+                    .from(table)
+                    .update({ name: itemName, slug })
+                    .eq('id', editingItem.id)
                 if (error) throw error
-                toast.success('Categoria atualizada!')
+                toast.success('Item atualizado!')
             } else {
                 // Insert
-                const { error } = await supabase.from('specialties').insert({
-                    name: specialtyName,
+                const { error } = await supabase.from(table).insert({
+                    name: itemName,
                     slug,
                     active: true
                 })
                 if (error) throw error
-                toast.success('Categoria adicionada!')
+                toast.success('Item adicionado!')
             }
 
-            setSpecialtyName('')
-            setEditingSpecialty(null)
+            setItemName('')
+            setEditingItem(null)
             fetchSpecialties()
         } catch (err: any) {
-            toast.error('Erro ao salvar categoria: ' + err.message)
+            toast.error('Erro ao salvar: ' + err.message)
         } finally {
             setLoadingCategory(false)
         }
     }
 
-    const handleDeleteSpecialty = async (id: string, name: string) => {
-        if (!confirm(`Deseja realmente excluir a categoria "${name}"? Todos os oraculistas desta categoria serão movidos para "Outros".`)) return
+    const handleDeleteItem = async (id: string, name: string) => {
+        const label = activeManageTab === 'categories' ? 'categoria' : 'especialidade'
+        if (!confirm(`Deseja realmente excluir a ${label} "${name}"?`)) return
 
-        setIsDeletingSpecialty(true)
+        setIsDeletingItem(true)
+        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
+
         try {
-            // 1. Move oracles to "Outros"
-            const { error: updateError } = await supabase
-                .from('profiles')
-                .update({ specialty: 'Outros' })
-                .eq('specialty', name)
-
-            if (updateError) throw updateError
-
-            // 2. Delete specialty
             const { error: deleteError } = await supabase
-                .from('specialties')
+                .from(table)
                 .delete()
                 .eq('id', id)
 
             if (deleteError) throw deleteError
 
-            toast.success('Categoria excluída e oraculistas movidos.')
+            toast.success(`${label.charAt(0).toUpperCase() + label.slice(1)} excluída com sucesso.`)
             fetchSpecialties()
         } catch (err: any) {
-            toast.error('Erro ao excluir categoria: ' + err.message)
+            toast.error('Erro ao excluir: ' + err.message)
         } finally {
-            setIsDeletingSpecialty(false)
+            setIsDeletingItem(false)
         }
     }
 
@@ -385,8 +385,8 @@ export default function AdminOraculistasPage() {
                                 <button
                                     onClick={() => {
                                         setIsManagingSpecialties(false)
-                                        setEditingSpecialty(null)
-                                        setSpecialtyName('')
+                                        setEditingItem(null)
+                                        setItemName('')
                                     }}
                                     className="p-2 hover:bg-white/10 rounded-full transition-colors"
                                 >
@@ -394,32 +394,50 @@ export default function AdminOraculistasPage() {
                                 </button>
                             </div>
 
+                            {/* Tabs Inside Modal */}
+                            <div className="bg-white/5 p-4 border-b border-white/10 flex justify-center gap-4">
+                                <button
+                                    onClick={() => { setActiveManageTab('categories'); setEditingItem(null); setItemName('') }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeManageTab === 'categories' ? 'bg-neon-purple text-white' : 'text-slate-500 hover:text-white'}`}
+                                >
+                                    <Layers size={14} className="inline mr-2" />
+                                    Categorias
+                                </button>
+                                <button
+                                    onClick={() => { setActiveManageTab('specialties'); setEditingItem(null); setItemName('') }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all ${activeManageTab === 'specialties' ? 'bg-neon-cyan text-deep-space' : 'text-slate-500 hover:text-white'}`}
+                                >
+                                    <BookOpen size={14} className="inline mr-2" />
+                                    Especialidades
+                                </button>
+                            </div>
+
                             <div className="flex-1 overflow-y-auto p-6 space-y-6">
                                 {/* Form Section */}
                                 <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-4">
                                     <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">
-                                        {editingSpecialty ? 'Editar Categoria' : 'Nova Categoria'}
+                                        {editingItem ? `Editar ${activeManageTab === 'categories' ? 'Categoria' : 'Especialidade'}` : `Nova ${activeManageTab === 'categories' ? 'Categoria' : 'Especialidade'}`}
                                     </h4>
                                     <div className="flex gap-3">
                                         <input
                                             type="text"
-                                            placeholder="Nome da categoria..."
-                                            value={specialtyName}
-                                            onChange={e => setSpecialtyName(e.target.value)}
+                                            placeholder={`Nome da ${activeManageTab === 'categories' ? 'categoria' : 'especialidade'}...`}
+                                            value={itemName}
+                                            onChange={e => setItemName(e.target.value)}
                                             className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-neon-gold/50 transition-all"
                                         />
                                         <button
-                                            onClick={handleSaveSpecialty}
-                                            disabled={loadingCategory || !specialtyName.trim()}
-                                            className="px-6 py-2 bg-neon-gold text-deep-space rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50"
+                                            onClick={handleSaveItem}
+                                            disabled={loadingCategory || !itemName.trim()}
+                                            className={`px-6 py-2 rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50 ${activeManageTab === 'categories' ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'bg-neon-cyan text-deep-space shadow-lg shadow-neon-cyan/20'}`}
                                         >
-                                            {loadingCategory ? '...' : editingSpecialty ? 'Atualizar' : 'Adicionar'}
+                                            {loadingCategory ? '...' : editingItem ? 'Atualizar' : 'Adicionar'}
                                         </button>
-                                        {editingSpecialty && (
+                                        {editingItem && (
                                             <button
                                                 onClick={() => {
-                                                    setEditingSpecialty(null)
-                                                    setSpecialtyName('')
+                                                    setEditingItem(null)
+                                                    setItemName('')
                                                 }}
                                                 className="px-4 py-2 bg-white/10 text-white rounded-xl font-bold hover:bg-white/20 transition-all"
                                             >
@@ -427,28 +445,33 @@ export default function AdminOraculistasPage() {
                                             </button>
                                         )}
                                     </div>
+                                    <p className="text-[10px] text-slate-500 italic">
+                                        {activeManageTab === 'categories' ? '* Categorias principais como Saúde, Amor, Prosperidade.' : '* Especialidades e métodos como Tarot, Búzios, Astrologia.'}
+                                    </p>
                                 </div>
 
                                 {/* List Section */}
                                 <div className="space-y-2">
-                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Categorias Existentes</h4>
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">
+                                        {activeManageTab === 'categories' ? 'Categorias de Atendimento' : 'Métodos / Especialidades'}
+                                    </h4>
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                        {specialties.map(s => (
+                                        {(activeManageTab === 'categories' ? categories : specialties).map(s => (
                                             <div key={s.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-white/20 transition-all">
                                                 <span className="text-white font-medium">{s.name}</span>
-                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <div className="flex items-center gap-1 opacity-10 md:opacity-0 group-hover:opacity-100 transition-opacity">
                                                     <button
                                                         onClick={() => {
-                                                            setEditingSpecialty(s)
-                                                            setSpecialtyName(s.name)
+                                                            setEditingItem(s)
+                                                            setItemName(s.name)
                                                         }}
                                                         className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all"
                                                     >
                                                         <Edit2 size={14} />
                                                     </button>
                                                     <button
-                                                        onClick={() => handleDeleteSpecialty(s.id, s.name)}
-                                                        disabled={isDeletingSpecialty}
+                                                        onClick={() => handleDeleteItem(s.id, s.name)}
+                                                        disabled={isDeletingItem}
                                                         className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
                                                     >
                                                         <Trash2 size={14} />

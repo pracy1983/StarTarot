@@ -45,9 +45,9 @@ export default function OracleProfilePage() {
         custom_category: '',
         custom_topic: '',
         personality: '',
-        price_brl_per_minute: 5.00,
+        price_brl_per_minute: 3.00,
         initial_fee_brl: 0.00,
-        price_per_message: 10,
+        price_per_message: 150,
         requires_birthdate: false,
         requires_birthtime: false,
         whatsapp_notification_enabled: false,
@@ -56,7 +56,7 @@ export default function OracleProfilePage() {
     })
 
     const [priceInputs, setPriceInputs] = useState({
-        price_brl_per_minute: '5.00',
+        price_brl_per_minute: '3.00',
         initial_fee_brl: '0.00'
     })
 
@@ -78,8 +78,8 @@ export default function OracleProfilePage() {
 
     const fetchData = async () => {
         const [cats, tops] = await Promise.all([
-            supabase.from('oracle_categories').select('*').eq('active', true).order('name'),
-            supabase.from('oracle_specialties').select('*').eq('active', true).order('name')
+            supabase.from('categories').select('*').eq('active', true).order('name'),
+            supabase.from('specialties').select('*').eq('active', true).order('name')
         ])
         if (cats.data) setCategoriesList(cats.data)
         if (tops.data) setTopicsList(tops.data)

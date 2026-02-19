@@ -246,68 +246,143 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </span>
                 </div>
 
-                <div className="flex-1 max-w-md mx-4 md:mx-8 hidden lg:flex items-center">
-                    <h2 className="text-lg font-bold text-white flex items-center truncate">
-                        <Sparkles className={`mr-3 shrink-0 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={18} />
-                        Olá, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
-                            {isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]}
-                        </span>!
-                    </h2>
-                </div>
-
-                <div className="flex items-center space-x-3 md:space-x-4">
-                    {/* Wallet/Credits Display */}
-                    <motion.div
-                        key={walletBalance}
-                        initial={{ scale: 1 }}
-                        animate={{ scale: [1, 1.1, 1] }}
-                        transition={{ duration: 0.3 }}
-                        onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard/ganhos' : '/app/carteira')}
-                        className="flex items-center px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all shrink-0"
-                    >
-                        <div className="flex flex-col items-end leading-none">
-                            <span className="text-[11px] md:text-xs font-bold text-neon-gold flex items-center">
-                                <Sparkles size={10} className="mr-1" />
-                                {walletBalance} <span className="ml-1 opacity-70 font-medium">créditos</span>
-                            </span>
+                {profile ? (
+                    <>
+                        <div className="flex-1 max-w-md mx-4 md:mx-8 hidden lg:flex items-center">
+                            <h2 className="text-lg font-bold text-white flex items-center truncate">
+                                <Sparkles className={`mr-3 shrink-0 ${isOracleView ? 'text-neon-purple' : 'text-neon-cyan'}`} size={18} />
+                                Olá, <span className={`${isOracleView ? 'neon-text-purple' : 'neon-text-cyan'} ml-2`}>
+                                    {isOracleView ? profile?.name_fantasy : profile?.full_name?.split(' ')[0]}
+                                </span>!
+                            </h2>
                         </div>
-                    </motion.div>
 
-                    {/* Consolidated Profile Menu */}
-                    <ProfileMenu
-                        isOnline={isOnline}
-                        toggleOnline={toggleOnline}
-                    />
-                </div>
+                        <div className="flex items-center space-x-3 md:space-x-4">
+                            {/* Wallet/Credits Display */}
+                            <motion.div
+                                key={walletBalance}
+                                initial={{ scale: 1 }}
+                                animate={{ scale: [1, 1.1, 1] }}
+                                transition={{ duration: 0.3 }}
+                                onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard/ganhos' : '/app/carteira')}
+                                className="flex items-center px-3 py-1.5 rounded-xl bg-white/5 border border-white/10 cursor-pointer hover:bg-white/10 transition-all shrink-0"
+                            >
+                                <div className="flex flex-col items-end leading-none">
+                                    <span className="text-[11px] md:text-xs font-bold text-neon-gold flex items-center">
+                                        <Sparkles size={10} className="mr-1" />
+                                        {walletBalance} <span className="ml-1 opacity-70 font-medium">créditos</span>
+                                    </span>
+                                </div>
+                            </motion.div>
+
+                            {/* Consolidated Profile Menu */}
+                            <ProfileMenu
+                                isOnline={isOnline}
+                                toggleOnline={toggleOnline}
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <div className="flex items-center space-x-4">
+                        <button
+                            onClick={() => useAuthStore.getState().setShowAuthModal(true)}
+                            className={`px-6 py-2 rounded-xl font-bold text-white border border-${themeColor}/30 hover:bg-${themeColor}/10 transition-all`}
+                        >
+                            Entrar / Cadastrar
+                        </button>
+                    </div>
+                )}
             </header>
 
             <div className="flex flex-1 relative">
                 {/* Desktop Sidebar */}
-                <aside className="w-20 lg:w-64 border-r border-white/5 glass flex flex-col sticky top-20 h-[calc(100vh-80px)] hidden md:flex">
-                    <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
+                {profile && (
+                    <aside className="w-20 lg:w-64 border-r border-white/5 glass flex flex-col sticky top-20 h-[calc(100vh-80px)] hidden md:flex">
+                        <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
+                            {navItems.map((item) => {
+                                const isActive = pathname === item.href
+                                return (
+                                    <button
+                                        key={item.label}
+                                        onClick={() => handleSafeNavigation(item.href)}
+                                        className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group relative ${isActive
+                                            ? isAdminView ? 'bg-neon-gold/20 text-white shadow-[0_0_20px_rgba(234,179,8,0.15)] border border-neon-gold/30'
+                                                : isOracleView ? 'bg-neon-purple/20 text-white shadow-[0_0_20px_rgba(168,85,247,0.15)] border border-neon-purple/30'
+                                                    : 'bg-neon-cyan/20 text-white shadow-[0_0_20px_rgba(34,211,238,0.15)] border border-neon-cyan/30'
+                                            : 'text-slate-400 hover:text-white hover:bg-white/5'
+                                            }`}
+                                    >
+                                        <span className={`${isActive
+                                            ? isAdminView ? 'text-neon-gold' : isOracleView ? 'text-neon-purple' : 'text-neon-cyan'
+                                            : isAdminView ? 'group-hover:text-neon-gold' : isOracleView ? 'group-hover:text-neon-purple' : 'group-hover:text-neon-cyan'
+                                            } transition-colors`}>
+                                            {item.icon}
+                                        </span>
+                                        <span className={`text-sm font-medium hidden lg:block text-left`}>{item.label}</span>
+                                        {isActive && <motion.div layoutId="nav-glow" className={`absolute right-0 w-1 h-8 ${isAdminView ? 'bg-neon-gold' : isOracleView ? 'bg-neon-purple' : 'bg-neon-cyan'} rounded-l-full`} />}
+                                        {item.label === 'Mensagens' && unreadCount > 0 && (
+                                            <div className="absolute right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                                                {unreadCount}
+                                            </div>
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </nav>
+
+                        {/* Become Oracle Button (Discrete) */}
+                        {!isOracleView && (
+                            <div className="px-4 mb-2">
+                                {!profile?.application_status && profile?.role === 'client' ? (
+                                    <button
+                                        onClick={() => router.push('/app/tornar-se-oraculo')}
+                                        className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
+                                    >
+                                        <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
+                                        <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
+                                    </button>
+                                ) : hasOracleAccess ? (
+                                    <button
+                                        onClick={() => router.push('/app/dashboard')}
+                                        className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-400 hover:text-neon-purple hover:bg-white/5 transition-all group border border-white/5 hover:border-neon-purple/30 bg-neon-purple/5"
+                                    >
+                                        <LayoutDashboard size={16} className="group-hover:text-neon-purple transition-colors" />
+                                        <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Minha Central</span>
+                                    </button>
+                                ) : null}
+                            </div>
+                        )}
+
+
+                        <div className="p-4 border-t border-white/5">
+                            <button
+                                onClick={handleLogout}
+                                className="w-full flex items-center space-x-4 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-400/5 transition-all group"
+                            >
+                                <LogOut size={22} className="group-hover:scale-110 transition-transform" />
+                                <span className="text-sm font-medium hidden lg:block">Sair</span>
+                            </button>
+                        </div>
+                    </aside>
+                )}
+
+                {/* Mobile Bottom Nav */}
+                {profile && (
+                    <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 glass border-t border-white/10 z-50 flex items-center justify-around px-4">
                         {navItems.map((item) => {
                             const isActive = pathname === item.href
                             return (
                                 <button
                                     key={item.label}
                                     onClick={() => handleSafeNavigation(item.href)}
-                                    className={`w-full flex items-center space-x-4 px-4 py-3 rounded-2xl transition-all group relative ${isActive
-                                        ? isAdminView ? 'bg-neon-gold/20 text-white shadow-[0_0_20px_rgba(234,179,8,0.15)] border border-neon-gold/30'
-                                            : isOracleView ? 'bg-neon-purple/20 text-white shadow-[0_0_20px_rgba(168,85,247,0.15)] border border-neon-purple/30'
-                                                : 'bg-neon-cyan/20 text-white shadow-[0_0_20px_rgba(34,211,238,0.15)] border border-neon-cyan/30'
-                                        : 'text-slate-400 hover:text-white hover:bg-white/5'
-                                        }`}
-                                >
-                                    <span className={`${isActive
+                                    className={`flex flex-col items-center justify-center space-y-1 ${isActive
                                         ? isAdminView ? 'text-neon-gold' : isOracleView ? 'text-neon-purple' : 'text-neon-cyan'
-                                        : isAdminView ? 'group-hover:text-neon-gold' : isOracleView ? 'group-hover:text-neon-purple' : 'group-hover:text-neon-cyan'
-                                        } transition-colors`}>
-                                        {item.icon}
-                                    </span>
-                                    <span className={`text-sm font-medium hidden lg:block text-left`}>{item.label}</span>
-                                    {isActive && <motion.div layoutId="nav-glow" className={`absolute right-0 w-1 h-8 ${isAdminView ? 'bg-neon-gold' : isOracleView ? 'bg-neon-purple' : 'bg-neon-cyan'} rounded-l-full`} />}
+                                        : 'text-slate-500'}`}
+                                >
+                                    {item.icon}
+                                    <span className="text-[10px] font-medium">{item.label}</span>
                                     {item.label === 'Mensagens' && unreadCount > 0 && (
-                                        <div className="absolute right-4 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full animate-bounce">
+                                        <div className="absolute top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">
                                             {unreadCount}
                                         </div>
                                     )}
@@ -315,65 +390,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                             )
                         })}
                     </nav>
-
-                    {/* Become Oracle Button (Discrete) */}
-                    {!isOracleView && (
-                        <div className="px-4 mb-2">
-                            {!profile?.application_status && profile?.role === 'client' ? (
-                                <button
-                                    onClick={() => router.push('/app/tornar-se-oraculo')}
-                                    className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
-                                >
-                                    <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
-                                </button>
-                            ) : hasOracleAccess ? (
-                                <button
-                                    onClick={() => router.push('/app/dashboard')}
-                                    className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-400 hover:text-neon-purple hover:bg-white/5 transition-all group border border-white/5 hover:border-neon-purple/30 bg-neon-purple/5"
-                                >
-                                    <LayoutDashboard size={16} className="group-hover:text-neon-purple transition-colors" />
-                                    <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Minha Central</span>
-                                </button>
-                            ) : null}
-                        </div>
-                    )}
-
-
-                    <div className="p-4 border-t border-white/5">
-                        <button
-                            onClick={handleLogout}
-                            className="w-full flex items-center space-x-4 px-4 py-3 rounded-2xl text-red-400 hover:bg-red-400/5 transition-all group"
-                        >
-                            <LogOut size={22} className="group-hover:scale-110 transition-transform" />
-                            <span className="text-sm font-medium hidden lg:block">Sair</span>
-                        </button>
-                    </div>
-                </aside>
-
-                {/* Mobile Bottom Nav */}
-                <nav className="md:hidden fixed bottom-0 left-0 right-0 h-16 glass border-t border-white/10 z-50 flex items-center justify-around px-4">
-                    {navItems.map((item) => {
-                        const isActive = pathname === item.href
-                        return (
-                            <button
-                                key={item.label}
-                                onClick={() => handleSafeNavigation(item.href)}
-                                className={`flex flex-col items-center justify-center space-y-1 ${isActive
-                                    ? isAdminView ? 'text-neon-gold' : isOracleView ? 'text-neon-purple' : 'text-neon-cyan'
-                                    : 'text-slate-500'}`}
-                            >
-                                {item.icon}
-                                <span className="text-[10px] font-medium">{item.label}</span>
-                                {item.label === 'Mensagens' && unreadCount > 0 && (
-                                    <div className="absolute top-1 right-1/4 bg-red-500 text-white text-[8px] font-bold px-1 rounded-full">
-                                        {unreadCount}
-                                    </div>
-                                )}
-                            </button>
-                        )
-                    })}
-                </nav>
+                )}
 
                 {/* Main Content */}
                 <main className="flex-1 p-4 md:p-8 pb-24 md:pb-8 overflow-y-auto overflow-x-hidden">
