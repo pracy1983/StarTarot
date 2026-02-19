@@ -36,11 +36,7 @@ export const OracleFilters = ({
 
     return (
         <div className="space-y-6">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                <h2 className="text-2xl font-bold text-white flex items-center">
-                    <Sun className="mr-3 text-neon-gold" /> Oraculistas Online
-                </h2>
-
+            <div className="flex flex-col md:flex-row md:items-center justify-end gap-6">
                 {/* Status & Search */}
                 <div className="flex flex-col md:flex-row items-center gap-4">
                     {/* Status Tabs */}

@@ -352,12 +352,12 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 <span>{status === 'online' ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4 pt-4">
+            <div className="flex flex-col items-center text-center space-y-3 pt-4">
                 {/* Avatar */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-xl opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-slate-500'
+                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-slate-500'
                         }`} />
-                    <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10">
+                    <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
                             src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7`}
                             alt={oracle.full_name}
@@ -366,39 +366,39 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </div>
                 </div>
 
-                <div>
-                    <h3 className="text-xl font-bold text-white group-hover:text-neon-purple transition-colors duration-300">
+                <div className="space-y-1">
+                    <h3 className="text-lg font-bold text-white group-hover:text-neon-purple transition-colors duration-300 leading-tight">
                         {oracle.name_fantasy || oracle.full_name}
                     </h3>
-                    <p className="text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em] mt-1">
+                    <p className="text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em]">
                         {oracle.specialty}
                     </p>
                 </div>
 
                 {/* Info Tags */}
-                <div className="flex flex-col items-center space-y-1">
+                <div className="flex flex-col items-center space-y-0.5">
                     {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
-                        <div className={`flex items-center text-[10px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
-                            <Video size={12} className="mr-1" />
-                            {oracle.credits_per_minute} | MINUTO (VÍDEO)
+                        <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
+                            <Video size={10} className="mr-1" />
+                            {oracle.credits_per_minute} <span className="opacity-60 ml-1">cr/min</span>
                         </div>
                     )}
                     {oracle.allows_text && (
-                        <div className={`flex items-center text-[10px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-purple' : 'text-slate-500'}`}>
-                            <MessageSquare size={12} className="mr-1" />
-                            {oracle.price_per_message || 10} | MENSAGEM
+                        <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-purple' : 'text-slate-500'}`}>
+                            <MessageSquare size={10} className="mr-1" />
+                            {oracle.price_per_message || 10} <span className="opacity-60 ml-1">cr/txt</span>
                         </div>
                     )}
                 </div>
 
-                <p className="text-slate-400 text-sm line-clamp-2 min-h-[40px] px-2 leading-relaxed">
+                <p className="text-slate-400 text-[13px] line-clamp-2 min-h-[40px] px-1 leading-relaxed">
                     {oracle.bio}
                 </p>
 
                 {/* Schedule info */}
-                <div className="flex items-start space-x-2 px-3 py-2 rounded-lg bg-white/5 border border-white/5 w-full min-h-[44px]">
-                    <Clock size={12} className="text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-[10px] text-slate-400 font-medium leading-relaxed text-left flex-1">
+                <div className="flex items-start space-x-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 w-full">
+                    <Clock size={11} className="text-slate-500 shrink-0 mt-0.5" />
+                    <span className="text-[9px] text-slate-400 font-medium leading-relaxed text-left flex-1 line-clamp-1">
                         {getScheduleSummary()}
                     </span>
                 </div>

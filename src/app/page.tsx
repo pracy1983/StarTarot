@@ -201,34 +201,32 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Content */}
-      <main className="max-w-7xl mx-auto px-6 pt-12 pb-24 relative z-10">
-        <header className="text-center mb-16">
+      <main className="max-w-7xl mx-auto px-6 pt-8 pb-16 relative z-10">
+        <header className="text-center mb-12">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-neon-gold text-[10px] uppercase font-bold tracking-[0.2em] mb-6"
+            className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-neon-gold text-[9px] uppercase font-bold tracking-[0.2em] mb-4"
           >
-            <Sparkles size={12} />
+            <Sparkles size={10} />
             <span>Bem-vindo ao Novo Amanhecer</span>
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-5xl md:text-7xl font-bold font-raleway text-white mb-6 leading-[1.1]"
+            className="text-4xl md:text-6xl font-bold font-raleway text-white mb-4 leading-[1.2] tracking-tight"
           >
             A orientação cósmica que <br />
-            <span className="neon-text-purple">você busca está aqui.</span>
+            <span className="neon-text-purple text-3xl md:text-5xl">você busca está aqui.</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto mb-10"
+            className="text-slate-400 text-base md:text-lg max-w-xl mx-auto mb-8"
           >
-            Conecte-se com os melhores oraculistas do Brasil em consultas em tempo real ou mensagens exclusivas.
+            Conecte-se com os melhores oraculistas em consultas em tempo real ou mensagens exclusivas.
           </motion.p>
-
-          {/* Iniciar Minha Jornada button removed as requested */}
         </header>
 
         {/* Marketplace Filter */}

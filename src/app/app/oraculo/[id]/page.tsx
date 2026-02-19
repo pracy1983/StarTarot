@@ -80,73 +80,53 @@ export default function OracleProfilePage() {
 
     const fetchOracle = async () => {
         try {
-            const { data, error } = await supabase
+            // 1. Fetch profile first to check if AI
+            const { data: profileData, error: pError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('id', id)
                 .single()
 
-            if (error) throw error
-            setOracle(data)
+            if (pError) throw pError
+            setOracle(profileData)
 
-            // Buscar horários
-            const { data: scheduleData } = await supabase
-                .from('oracle_schedules')
-                .select('*')
-                .eq('oracle_id', id)
-                .eq('is_active', true)
+            const isAI = profileData.is_ai || profileData.oracle_type === 'ai'
+
+            // 2. Fetch everything else in parallel
+            const [
+                { data: scheduleData },
+                { count: consultationsDone },
+                { data: ratingsData },
+                { data: qData } // For response time
+            ] = await Promise.all([
+                supabase.from('oracle_schedules').select('*').eq('oracle_id', id).eq('is_active', true),
+                supabase.from('consultations').select('id', { count: 'exact', head: true }).eq('oracle_id', id).eq('status', 'answered'),
+                supabase.from('ratings').select('*, client:client_id(full_name, avatar_url)').eq('oracle_id', id).order('created_at', { ascending: false }),
+                !isAI ? supabase.from('consultations').select('created_at, answered_at').eq('oracle_id', id).eq('status', 'answered').not('answered_at', 'is', null).limit(20) : Promise.resolve({ data: null })
+            ])
 
             setSchedules(scheduleData || [])
+            setConsultationCount(consultationsDone || 0)
+            setRatings(ratingsData || [])
 
-            const isAI = data.is_ai || data.oracle_type === 'ai'
-
-            // Calcular média de resposta
+            // Calculate response time
             if (isAI) {
-                // Estável baseado no ID
                 const oracleIdStr = String(id)
                 const hash = oracleIdStr.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0)
                 const stableRandom = (hash % (40 - 15 + 1)) + 15
                 setAvgResponseTime(`${stableRandom} minutos`)
+            } else if (qData && qData.length > 0) {
+                const diffs = qData.map(c => {
+                    const start = new Date(c.created_at).getTime()
+                    const end = new Date((c as any).answered_at).getTime()
+                    return end - start
+                })
+                const avgMs = diffs.reduce((a, b) => a + b, 0) / diffs.length
+                const avgMin = Math.round(avgMs / (1000 * 60))
+                setAvgResponseTime(`${avgMin > 0 ? avgMin : 15} minutos`)
             } else {
-                const { data: qData } = await supabase
-                    .from('consultations')
-                    .select('created_at, answered_at')
-                    .eq('oracle_id', id)
-                    .eq('status', 'answered')
-                    .not('answered_at', 'is', null)
-                    .limit(20)
-
-                if (qData && qData.length > 0) {
-                    const diffs = qData.map(c => {
-                        const start = new Date(c.created_at).getTime()
-                        const end = new Date(c.answered_at).getTime()
-                        return end - start
-                    })
-                    const avgMs = diffs.reduce((a, b) => a + b, 0) / diffs.length
-                    const avgMin = Math.round(avgMs / (1000 * 60))
-                    setAvgResponseTime(`${avgMin > 0 ? avgMin : 15} minutos`)
-                } else {
-                    setAvgResponseTime('30 minutos')
-                }
+                setAvgResponseTime('30 minutos')
             }
-
-            // Contar consultas realizadas
-            const { count } = await supabase
-                .from('consultations')
-                .select('id', { count: 'exact', head: true })
-                .eq('oracle_id', id)
-                .eq('status', 'answered')
-
-            setConsultationCount(count || 0)
-
-            // Buscar avaliações
-            const { data: ratingsData } = await supabase
-                .from('ratings')
-                .select('*, client:client_id(full_name, avatar_url)')
-                .eq('oracle_id', id)
-                .order('created_at', { ascending: false })
-
-            setRatings(ratingsData || [])
         } catch (err) {
             console.error('Erro ao carregar oráculo:', err)
         } finally {
@@ -245,162 +225,126 @@ export default function OracleProfilePage() {
 
             {/* Hero Card */}
             <GlassCard className="relative overflow-hidden border-white/5" hover={false}>
-                <div className="absolute inset-0 bg-gradient-to-br from-neon-purple/5 to-transparent" />
-                <div className="relative flex flex-col md:flex-row items-center md:items-start gap-8 p-6">
+                <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-neon-purple/10 to-transparent" />
+                <div className="relative flex flex-col md:flex-row items-center md:items-start gap-6 p-5">
                     {/* Avatar */}
                     <div className="relative flex-shrink-0">
-                        <div className="absolute inset-0 rounded-full bg-neon-purple blur-2xl opacity-20" />
-                        <div className="w-32 h-32 rounded-full p-1 bg-gradient-to-tr from-neon-purple to-neon-cyan relative z-10">
+                        <div className="absolute inset-0 rounded-full bg-neon-purple blur-xl opacity-20" />
+                        <div className="w-24 h-24 rounded-full p-1 bg-gradient-to-tr from-neon-purple to-neon-cyan relative z-10 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
                             <img
                                 src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7&size=256`}
                                 alt={oracle.full_name}
                                 className="w-full h-full rounded-full object-cover"
                             />
                         </div>
-                        {/* Status */}
-                        <div className={`absolute bottom-1 right-1 w-6 h-6 rounded-full border-4 border-deep-space z-20 ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`} />
+                        {/* Status Dot */}
+                        <div className={`absolute bottom-0 right-1 w-5 h-5 rounded-full border-[3px] border-[#0f0f2d] z-20 ${isOnline ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-slate-500 shadow-[0_0_10px_rgba(148,163,184,0.3)]'}`} />
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 text-center md:text-left">
-                        <div className="flex items-center justify-center md:justify-start space-x-3 mb-2">
-                            <h1 className="text-2xl font-bold text-white">{oracle.full_name}</h1>
+                        <div className="flex flex-col md:flex-row md:items-center justify-center md:justify-between gap-4 mb-3">
+                            <div>
+                                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.full_name}</h1>
+                                <p className="text-neon-cyan text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
+                                    {oracle.specialty}
+                                </p>
+                            </div>
 
-                            {/* Favorite & Notify Icons */}
+                            {/* Actions Group */}
                             {!isAI && profile?.id && profile.id !== oracle.id && (
-                                <div className="flex items-center space-x-3 ml-4">
+                                <div className="flex items-center justify-center space-x-2">
                                     <button
                                         onClick={toggleFavorite}
                                         disabled={isUpdatingMeta}
-                                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all ${isFavorite ? 'bg-neon-gold/20 border-neon-gold text-neon-gold' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                                        className={`p-2 rounded-xl border transition-all ${isFavorite ? 'bg-neon-gold/10 border-neon-gold/50 text-neon-gold' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'}`}
                                         title={isFavorite ? 'Remover dos favoritos' : 'Adicionar aos favoritos'}
                                     >
                                         <Star size={18} className={isFavorite ? 'fill-neon-gold' : ''} />
-                                        <span className="text-[10px] font-bold uppercase hidden sm:inline">{isFavorite ? 'Favorito' : 'Favoritar'}</span>
                                     </button>
 
                                     <button
                                         onClick={toggleNotify}
                                         disabled={isUpdatingMeta}
-                                        className={`flex items-center space-x-2 px-3 py-1.5 rounded-full border backdrop-blur-md transition-all ${notifyOnline ? 'bg-neon-cyan/20 border-neon-cyan text-neon-cyan' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white hover:bg-white/10'}`}
+                                        className={`p-2 rounded-xl border transition-all ${notifyOnline ? 'bg-neon-cyan/10 border-neon-cyan/50 text-neon-cyan' : 'bg-white/5 border-white/10 text-slate-500 hover:text-white'}`}
                                         title={notifyOnline ? 'Desativar notificações' : 'Me avisar quando online'}
                                     >
-                                        <Bell size={18} className={notifyOnline ? 'fill-neon-cyan/60' : ''} />
-                                        <span className="text-[10px] font-bold uppercase hidden sm:inline">{notifyOnline ? 'Avisar' : 'Me Avise'}</span>
+                                        {notifyOnline ? <Bell size={18} /> : <BellOff size={18} />}
                                     </button>
                                 </div>
                             )}
-
-                            {/* Removed IA Badge */}
                         </div>
 
-                        {favCount > 0 && (
-                            <div className="flex items-center space-x-1 text-xs text-neon-gold mb-4 justify-center md:justify-start">
-                                <Star size={12} className="fill-neon-gold" />
-                                <span>{favCount} {favCount === 1 ? 'pessoa favoritou' : 'pessoas favoritaram'}</span>
-                            </div>
-                        )}
-
-                        <p className="text-neon-cyan text-sm font-medium uppercase tracking-widest mb-4">
-                            {oracle.specialty}
-                        </p>
-
-                        <div className="flex flex-col space-y-2 mb-6">
+                        <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-4">
                             {!isAI && oracle.allows_video && (
-                                <div className="flex items-center justify-center md:justify-start text-slate-400 text-sm">
-                                    <Video size={16} className="mr-2 text-neon-cyan" />
-                                    {oracle.credits_per_minute} créditos por vídeo (minuto)
+                                <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                                    <Video size={14} className="mr-2 text-neon-cyan" />
+                                    {oracle.credits_per_minute} <span className="opacity-60 ml-1">cr/min</span>
                                 </div>
                             )}
                             {oracle.allows_text && (
-                                <div className="flex items-center justify-center md:justify-start text-slate-400 text-sm">
-                                    <MessageSquare size={16} className="mr-2 text-neon-purple" />
-                                    {(oracle.price_per_message || 10)} créditos por mensagem
+                                <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                                    <MessageSquare size={14} className="mr-2 text-neon-purple" />
+                                    {(oracle.price_per_message || 10)} <span className="opacity-60 ml-1">cr/txt</span>
                                 </div>
                             )}
+                            <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">
+                                <Clock size={14} className="mr-2 text-neon-gold" />
+                                {avgResponseTime} <span className="opacity-60 ml-1">média</span>
+                            </div>
                         </div>
 
-                        <p className="text-slate-300 text-sm leading-relaxed">
+                        <p className="text-slate-400 text-sm leading-relaxed max-w-xl mx-auto md:mx-0">
                             {oracle.bio || 'Este oraculista ainda não adicionou uma descrição.'}
                         </p>
                     </div>
                 </div>
             </GlassCard>
 
-            {/* Personality section hidden for client to obscure AI nature */}
-
-            <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
-                <div className={`p-4 rounded-full relative ${isOnline ? 'bg-green-500/10' : 'bg-slate-700/10'}`}>
-                    <div className={`w-3 h-3 rounded-full ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_10px_#22c55e]' : 'bg-slate-500'}`} />
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-white">{isOnline ? 'Online Agora' : 'Offline'}</p>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Status Atual</p>
-                </div>
-            </GlassCard>
-
-            <GlassCard className="flex items-center space-x-4 border-white/5" hover={false}>
-                <div className="p-3 rounded-xl bg-neon-cyan/10 text-neon-cyan">
-                    <Clock size={24} />
-                </div>
-                <div>
-                    <p className="text-sm font-bold text-white">{avgResponseTime}</p>
-                    <p className="text-[10px] text-slate-500 uppercase tracking-wider">Média de Resposta</p>
-                </div>
-            </GlassCard>
-
             {/* Iniciar Consulta Buttons */}
-            {
-                profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        {!isAI && oracle.allows_video && (
-                            <NeonButton
-                                variant="green"
-                                size="lg"
-                                className="px-8 py-6 h-auto"
-                                disabled={!isOnline}
-                                onClick={() => {
-                                    if (!profile?.id) {
-                                        setShowAuthModal(true)
-                                        return
-                                    }
-                                    router.push(`/app/consulta/${oracle.id}?type=video`)
-                                }}
-                            >
-                                <div className="flex flex-col items-center">
-                                    <div className="flex items-center mb-1">
-                                        <Video size={20} className="mr-2" />
-                                        <span className="font-bold">Vídeo Chamada</span>
-                                    </div>
-                                    <span className="text-[10px] opacity-70">Atendimento em tempo real</span>
-                                </div>
-                            </NeonButton>
-                        )}
-                        {oracle.allows_text && (
-                            <NeonButton
-                                variant="purple"
-                                size="lg"
-                                className="px-8 py-6 h-auto"
-                                onClick={() => {
-                                    if (!profile?.id) {
-                                        setShowAuthModal(true)
-                                        return
-                                    }
-                                    router.push(`/app/consulta/${oracle.id}?type=message`)
-                                }}
-                            >
-                                <div className="flex flex-col items-center">
-                                    <div className="flex items-center mb-1">
-                                        <MessageSquare size={20} className="mr-2" />
-                                        <span className="font-bold">Enviar Mensagem</span>
-                                    </div>
-                                    <span className="text-[10px] opacity-70">Receba sua resposta no chat</span>
-                                </div>
-                            </NeonButton>
-                        )}
-                    </div>
-                )
-            }
+            {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {!isAI && oracle.allows_video && (
+                        <NeonButton
+                            variant="green"
+                            size="md"
+                            disabled={!isOnline}
+                            onClick={() => {
+                                if (!profile?.id) {
+                                    setShowAuthModal(true)
+                                    return
+                                }
+                                router.push(`/app/consulta/${oracle.id}?type=video`)
+                            }}
+                            className="py-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <Video size={18} />
+                                <span className="font-bold">Vídeo Chamada</span>
+                            </div>
+                        </NeonButton>
+                    )}
+                    {oracle.allows_text && (
+                        <NeonButton
+                            variant="purple"
+                            size="md"
+                            onClick={() => {
+                                if (!profile?.id) {
+                                    setShowAuthModal(true)
+                                    return
+                                }
+                                router.push(`/app/consulta/${oracle.id}?type=message`)
+                            }}
+                            className="py-4"
+                        >
+                            <div className="flex items-center space-x-2">
+                                <MessageSquare size={18} />
+                                <span className="font-bold">Enviar Mensagem</span>
+                            </div>
+                        </NeonButton>
+                    )}
+                </div>
+            )}
 
             {/* If it's the oracle themselves */}
             {

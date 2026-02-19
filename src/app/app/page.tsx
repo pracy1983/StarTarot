@@ -201,7 +201,7 @@ export default function MarketplacePage() {
     return (
         <div className="space-y-6 md:space-y-10 max-w-full overflow-x-hidden">
             {/* Hero / Intro */}
-            <section className="relative py-8 md:py-12 px-4 md:px-8 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
+            <section className="relative py-6 md:py-10 px-4 md:px-8 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-neon-purple/10 blur-[100px] z-0" />
                 <div className="absolute bottom-0 left-0 w-1/3 h-full bg-neon-cyan/10 blur-[100px] z-0" />
 
@@ -209,16 +209,16 @@ export default function MarketplacePage() {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center space-x-2 text-neon-gold mb-4"
+                        className="flex items-center space-x-2 text-neon-gold mb-3"
                     >
-                        <Sparkles size={18} />
-                        <span className="text-xs font-bold uppercase tracking-[0.3em]">O Templo dos Arcanos</span>
+                        <Sparkles size={16} />
+                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">O Templo dos Arcanos</span>
                     </motion.div>
                     <motion.h1
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-3xl md:text-5xl font-bold font-raleway text-white mb-4 md:mb-6 leading-tight"
+                        className="text-2xl md:text-4xl font-bold font-raleway text-white mb-3 md:mb-4 leading-tight"
                     >
                         A resposta que você busca está <span className="neon-text-purple">escrita nas estrelas.</span>
                     </motion.h1>
@@ -226,7 +226,7 @@ export default function MarketplacePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 text-sm md:text-lg leading-relaxed mb-4 md:mb-8"
+                        className="text-slate-400 text-xs md:text-base leading-relaxed mb-4 md:mb-6"
                     >
                         Escolha seu guia, concentre sua energia e inicie sua jornada de autoconhecimento agora mesmo.
                     </motion.p>
