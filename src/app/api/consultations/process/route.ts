@@ -163,6 +163,33 @@ export async function POST(req: Request) {
             throw new Error('DEEPSEEK_API_KEY não configurada')
         }
 
+        // 6.7. Buscar histórico de conversas anteriores para memória/coerência
+        const { data: pastQuestions } = await supabaseAdmin
+            .from('consultation_questions')
+            .select(`
+                question_text, 
+                answer_text, 
+                created_at,
+                consultations!inner(client_id, oracle_id)
+            `)
+            .not('answer_text', 'is', null)
+            .eq('consultations.client_id', consultation.client_id)
+            .eq('consultations.oracle_id', consultation.oracle_id)
+            .neq('consultations.id', consultationId) // Excluir a atual
+            .order('created_at', { ascending: false })
+            .limit(10)
+
+        // Formatar o histórico como um contexto de memória
+        let memoryHistory = ''
+        if (pastQuestions && pastQuestions.length > 0) {
+            const historyText = pastQuestions
+                .reverse()
+                .map((q: any) => `P: ${q.question_text}\nR: ${q.answer_text}`)
+                .join('\n\n')
+
+            memoryHistory = `\n\nHISTÓRICO DE ATENDIMENTOS ANTERIORES COM ESTE CLIENTE (MEMÓRIA):\n${historyText}\n\n---`
+        }
+
         const metadata = consultation.metadata || {}
         const subjectData = metadata.subject || {}
 
@@ -181,6 +208,8 @@ ${subjectContext}
 
         const systemMessage = `
 ${masterPrompt}
+
+${memoryHistory}
 
 DADOS PARA A LEITURA:
 ${clientBirthInfo}
@@ -216,7 +245,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${apiKey} `
                     },
                     body: JSON.stringify({
                         model: 'deepseek-chat',
@@ -254,7 +283,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 if (updateError) throw updateError
 
             } catch (err: any) {
-                console.error(`Error processing question ${question.id}:`, err)
+                console.error(`Error processing question ${question.id}: `, err)
                 hasError = true
                 await supabaseAdmin
                     .from('consultation_questions')
@@ -277,7 +306,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             recipient_id: consultation.client_id,
             sender_id: oracle.id,
             title: `✨ Sua consulta com ${oracle.full_name} foi respondida!`,
-            content: `O oraculista respondeu todas as suas ${questions.length} pergunta(s). Clique para ver as respostas.`,
+            content: `O oraculista respondeu todas as suas ${questions.length} pergunta(s).Clique para ver as respostas.`,
             metadata: { consultation_id: consultationId, type: 'consultation_answered' }
         })
 
@@ -307,7 +336,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 type: 'consultation_charge',
                 amount: consultation.total_credits,
                 status: 'confirmed',
-                description: `Consulta com ${oracle.full_name}`,
+                description: `Consulta com ${oracle.full_name} `,
                 metadata: { consultation_id: consultationId, oracle_id: oracle.id }
             },
             {
@@ -315,7 +344,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 type: 'earnings',
                 amount: oracleEarnings,
                 status: 'confirmed',
-                description: `Ganhos: Consulta de ${client.full_name}`,
+                description: `Ganhos: Consulta de ${client.full_name} `,
                 metadata: { consultation_id: consultationId, client_id: consultation.client_id, commission_pc: commissionPc }
             }
         ])
