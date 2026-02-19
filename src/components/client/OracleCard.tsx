@@ -339,9 +339,9 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             <div className="flex flex-col items-center text-center space-y-3 pt-4">
                 {/* Avatar container with status capsule and rating */}
                 <div className="relative">
-                    {/* Rating Badge - Top Left of Avatar */}
+                    {/* Rating Badge - Top Right of Avatar */}
                     {oracle.rating && (
-                        <div className="absolute -top-1 -left-1 z-30 flex items-center bg-white px-1.5 py-0.5 rounded-full shadow-lg border border-white/20">
+                        <div className="absolute -top-1 -right-1 z-30 flex items-center bg-white/90 backdrop-blur-sm px-1.5 py-0.5 rounded-full shadow-lg border border-white/20">
                             <Star size={8} className="text-neon-gold fill-neon-gold mr-0.5" />
                             <span className="text-[9px] font-black text-deep-space">{oracle.rating.toFixed(1)}</span>
                         </div>
@@ -409,7 +409,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 {/* Schedule info */}
                 <div className="flex items-start space-x-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 w-full">
                     <Clock size={11} className="text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-[9px] text-slate-400 font-medium leading-relaxed text-left flex-1 line-clamp-1">
+                    <span className="text-[9px] text-slate-400 font-medium leading-relaxed text-left flex-1">
                         {getScheduleSummary()}
                     </span>
                 </div>

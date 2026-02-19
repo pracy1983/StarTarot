@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -48,6 +48,11 @@ export default function AdminOraculistasPage() {
     const [editingSpecialty, setEditingSpecialty] = useState<any>(null)
     const [specialtyName, setSpecialtyName] = useState('')
     const [isDeletingSpecialty, setIsDeletingSpecialty] = useState(false)
+
+    // Reviews Management
+    const [reviewsModal, setReviewsModal] = useState<{ open: boolean, oracleId: string | null, name: string }>({ open: false, oracleId: null, name: '' })
+    const [oracleReviews, setOracleReviews] = useState<any[]>([])
+    const [loadingReviews, setLoadingReviews] = useState(false)
 
     useEffect(() => {
         fetchOracles()
@@ -275,6 +280,43 @@ export default function AdminOraculistasPage() {
             toast.error('Erro ao excluir categoria: ' + err.message)
         } finally {
             setIsDeletingSpecialty(false)
+        }
+    }
+
+    const fetchOracleReviews = async (oracleId: string, name: string) => {
+        setLoadingReviews(true)
+        setReviewsModal({ open: true, oracleId, name })
+        try {
+            const { data, error } = await supabase
+                .from('ratings')
+                .select('*, client:client_id(full_name, avatar_url)')
+                .eq('oracle_id', oracleId)
+                .order('created_at', { ascending: false })
+
+            if (error) throw error
+            setOracleReviews(data || [])
+        } catch (err) {
+            console.error('Error fetching reviews:', err)
+            toast.error('Erro ao carregar avaliações')
+        } finally {
+            setLoadingReviews(false)
+        }
+    }
+
+    const handleDeleteReview = async (reviewId: string) => {
+        if (!confirm('Deseja realmente excluir esta avaliação?')) return
+        try {
+            const { error } = await supabase
+                .from('ratings')
+                .delete()
+                .eq('id', reviewId)
+
+            if (error) throw error
+            setOracleReviews(prev => prev.filter(r => r.id !== reviewId))
+            toast.success('Avaliação excluída')
+        } catch (err) {
+            console.error('Error deleting review:', err)
+            toast.error('Erro ao excluir avaliação')
         }
     }
 
@@ -647,6 +689,15 @@ export default function AdminOraculistasPage() {
                                                 <span className="text-[10px] font-bold uppercase">Ver</span>
                                             </Link>
 
+                                            <button
+                                                onClick={() => fetchOracleReviews(o.id, o.full_name)}
+                                                className="flex items-center space-x-1 px-2 py-1.5 text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
+                                                title="Gerenciar Avaliações"
+                                            >
+                                                <MessageSquare size={14} />
+                                                <span className="text-[10px] font-bold uppercase">Avaliações</span>
+                                            </button>
+
                                             {/* Tab Specific Actions */}
                                             {activeTab === 'pending' ? (
                                                 <>
@@ -756,6 +807,81 @@ export default function AdminOraculistasPage() {
                                     </div>
                                 </div>
                             </GlassCard>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Reviews Management Modal */}
+            <AnimatePresence>
+                {reviewsModal.open && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-[#0f172a] rounded-2xl border border-white/10 shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                <h3 className="text-xl font-bold text-white flex items-center">
+                                    <Star className="mr-3 text-neon-gold fill-neon-gold" />
+                                    Avaliações de {reviewsModal.name}
+                                </h3>
+                                <button
+                                    onClick={() => setReviewsModal({ open: false, oracleId: null, name: '' })}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <X size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                {loadingReviews ? (
+                                    <div className="flex justify-center py-20">
+                                        <div className="w-8 h-8 border-4 border-neon-purple border-t-transparent rounded-full animate-spin" />
+                                    </div>
+                                ) : oracleReviews.length === 0 ? (
+                                    <div className="text-center py-20 text-slate-500">Nenhuma avaliação encontrada.</div>
+                                ) : (
+                                    oracleReviews.map(r => (
+                                        <div key={r.id} className="p-4 bg-white/5 border border-white/5 rounded-xl flex justify-between items-start group">
+                                            <div className="space-y-2">
+                                                <div className="flex items-center space-x-3">
+                                                    <div className="w-8 h-8 rounded-full bg-deep-space overflow-hidden border border-white/10">
+                                                        <img src={r.client?.avatar_url || `https://ui-avatars.com/api/?name=${r.client?.full_name || 'A'}&background=random`} alt="" className="w-full h-full object-cover" />
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-white">{r.client?.full_name || 'Anônimo'}</p>
+                                                        <div className="flex space-x-1">
+                                                            {[...Array(5)].map((_, i) => (
+                                                                <Star key={i} size={10} className={i < r.stars ? "text-neon-gold fill-neon-gold" : "text-slate-700"} />
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <p className="text-sm text-slate-400 italic">"{r.comment || 'Sem comentário'}"</p>
+                                                <p className="text-[10px] text-slate-600">{new Date(r.created_at).toLocaleString('pt-BR')}</p>
+                                            </div>
+                                            <button
+                                                onClick={() => handleDeleteReview(r.id)}
+                                                className="p-2 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                title="Excluir Avaliação"
+                                            >
+                                                <Trash2 size={16} />
+                                            </button>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+
+                            <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end">
+                                <button
+                                    onClick={() => setReviewsModal({ open: false, oracleId: null, name: '' })}
+                                    className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
+                                >
+                                    Fechar
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}

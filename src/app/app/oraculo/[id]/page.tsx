@@ -320,6 +320,41 @@ export default function OracleProfilePage() {
                 </div>
             </GlassCard>
 
+            {/* Horários de Atendimento */}
+            {schedules.length > 0 && (
+                <GlassCard className="border-white/5 p-6" hover={false}>
+                    <div className="flex items-center space-x-3 mb-6">
+                        <div className="p-2 bg-neon-purple/20 rounded-lg text-neon-purple">
+                            <Clock size={20} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white uppercase tracking-wider">Horários de Atendimento</h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {[1, 2, 3, 4, 5, 6, 0].map(day => {
+                            const daySchedules = schedules.filter(s => s.day_of_week === day);
+                            if (daySchedules.length === 0) return null;
+
+                            const dayName = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'][day];
+
+                            return (
+                                <div key={day} className="p-4 bg-white/5 border border-white/5 rounded-2xl flex flex-col space-y-2">
+                                    <span className="text-xs font-black text-neon-cyan uppercase tracking-widest">{dayName}</span>
+                                    <div className="space-y-1">
+                                        {daySchedules.map((s, idx) => (
+                                            <div key={idx} className="flex items-center text-sm text-slate-300 font-mono">
+                                                <Sparkles size={12} className="mr-2 text-neon-gold" />
+                                                {s.start_time.slice(0, 5)} - {s.end_time.slice(0, 5)}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </GlassCard>
+            )}
+
             {/* Iniciar Consulta Buttons */}
             {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
