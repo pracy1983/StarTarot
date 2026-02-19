@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { OracleCard } from '@/components/client/OracleCard'
 import { OracleFilters } from '@/components/client/OracleFilters'
 import { supabase } from '@/lib/supabase'
-import { Sparkles, Search, Star } from 'lucide-react'
+import { Sparkles, Search, Star, Clock } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 import { useAuthStore } from '@/stores/authStore'
@@ -237,6 +237,65 @@ export default function MarketplacePage() {
                     </motion.p>
                 </div>
             </section>
+
+            {/* How it Works Section - Visible only for new/unauthenticated users */}
+            {!profile && (
+                <motion.section
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.3 }}
+                    className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                >
+                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-purple/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-purple/5 blur-3xl group-hover:bg-neon-purple/20 transition-all" />
+                        <div className="w-12 h-12 rounded-2xl bg-neon-purple/10 flex items-center justify-center text-neon-purple mb-4 group-hover:scale-110 transition-transform">
+                            <Search size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">1. Escolha seu Guia</h3>
+                        <p className="text-sm text-slate-400 leading-relaxed">
+                            Navegue pelos perfis e encontre o oraculista que mais ressoa com sua energia. Filtre por especialidade, preço ou modalidade.
+                        </p>
+                    </div>
+
+                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-cyan/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-cyan/5 blur-3xl group-hover:bg-neon-cyan/20 transition-all" />
+                        <div className="w-12 h-12 rounded-2xl bg-neon-cyan/10 flex items-center justify-center text-neon-cyan mb-4 group-hover:scale-110 transition-transform">
+                            <Star size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">2. Defina o Formato</h3>
+                        <p className="text-sm text-slate-400 leading-relaxed">
+                            Prefere o olho no olho? Escolha <b>Vídeo</b>. Quer algo mais discreto ou detalhado? Envie uma <b>Mensagem</b> direta ao guia.
+                        </p>
+                    </div>
+
+                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-gold/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-gold/5 blur-3xl group-hover:bg-neon-gold/20 transition-all" />
+                        <div className="w-12 h-12 rounded-2xl bg-neon-gold/10 flex items-center justify-center text-neon-gold mb-4 group-hover:scale-110 transition-transform">
+                            <Clock size={24} />
+                        </div>
+                        <h3 className="text-lg font-bold text-white mb-2">3. Resposta Garantida</h3>
+                        <p className="text-sm text-slate-400 leading-relaxed">
+                            Se o guia estiver offline, deixe sua pergunta! Você só é cobrado quando receber a resposta. Simples, justo e transparente.
+                        </p>
+                    </div>
+                </motion.section>
+            )}
+
+            {!profile && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex justify-center pb-4"
+                >
+                    <button
+                        onClick={() => useAuthStore.getState().setShowAuthModal(true)}
+                        className="text-xs md:text-sm text-slate-500 hover:text-neon-purple transition-colors flex items-center gap-2 group"
+                    >
+                        Dúvidas sobre como funciona? <span className="text-neon-purple font-bold underline underline-offset-4 group-hover:no-underline">Comece criando sua conta grátis</span> e ganhe bônus de boas-vindas!
+                    </button>
+                </motion.div>
+            )}
 
             {/* Advanced Filters & Search */}
             {/* Marketplace Filter */}
