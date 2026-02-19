@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useState } from 'react'
-import { Plus, X, Sparkles, Calendar, User as UserIcon } from 'lucide-react'
+import { Plus, X, Sparkles, Calendar, User as UserIcon, MapPin, Clock } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
 interface QuestionInputProps {
@@ -96,9 +96,11 @@ interface SubjectInfoProps {
     subjectName: string
     subjectBirthdate: string
     subjectBirthtime?: string
+    subjectBirthplace?: string
     onNameChange: (value: string) => void
     onBirthdateChange: (value: string) => void
     onBirthtimeChange?: (value: string) => void
+    onBirthplaceChange?: (value: string) => void
     isMandatory?: boolean
 }
 
@@ -106,9 +108,11 @@ export const SubjectInfo = ({
     subjectName,
     subjectBirthdate,
     subjectBirthtime = '',
+    subjectBirthplace = '',
     onNameChange,
     onBirthdateChange,
     onBirthtimeChange,
+    onBirthplaceChange,
     isMandatory = false
 }: SubjectInfoProps) => {
     return (
@@ -126,7 +130,7 @@ export const SubjectInfo = ({
                 )}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                     <label className="text-xs text-slate-500 font-medium flex items-center">
                         Nome Completo {isMandatory && <span className="text-neon-purple ml-1">*</span>}
@@ -161,8 +165,8 @@ export const SubjectInfo = ({
                 </div>
 
                 <div className="space-y-2">
-                    <label className="text-xs text-slate-500 font-medium">
-                        Hora de nascimento (opcional)
+                    <label className="text-xs text-slate-500 font-medium flex items-center">
+                        Hora de nascimento
                     </label>
                     <div className="relative">
                         <Clock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
@@ -172,11 +176,26 @@ export const SubjectInfo = ({
                             onChange={(e) => onBirthtimeChange?.(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
                         />
-                        <p className="text-[10px] text-slate-500 mt-1 italic pl-1">Use formato 24h (ex: 17:30)</p>
+                    </div>
+                    <p className="text-[10px] text-slate-500 mt-1 italic pl-1">Use formato 24h (ex: 17:30)</p>
+                </div>
+
+                <div className="space-y-2">
+                    <label className="text-xs text-slate-500 font-medium flex items-center">
+                        Local de nascimento
+                    </label>
+                    <div className="relative">
+                        <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" size={18} />
+                        <input
+                            type="text"
+                            value={subjectBirthplace}
+                            onChange={(e) => onBirthplaceChange?.(e.target.value)}
+                            placeholder="Ex: São Paulo, SP"
+                            className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
+                        />
                     </div>
                 </div>
             </div>
         </div>
     )
 }
-import { Clock } from 'lucide-react'

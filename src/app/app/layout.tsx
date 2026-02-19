@@ -235,7 +235,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
             <div className={`stars-overlay ${isOracleView ? 'opacity-30' : 'opacity-20'}`} />
 
             {/* Top Header */}
-            <header className="h-20 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass sticky top-0 z-40">
+            <header className="h-20 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass fixed top-0 left-0 right-0 z-[100]">
                 <div className="flex items-center space-x-3 cursor-pointer shrink-0" onClick={() => handleSafeNavigation(isOracleView ? '/app/dashboard' : '/app')}>
                     <div className="w-10 h-10 relative">
                         <div className={`absolute inset-0 bg-${themeColor} blur-lg opacity-40 animate-pulse`} />
@@ -294,7 +294,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 )}
             </header>
 
-            <div className="flex flex-1 relative">
+            <div className="flex flex-1 relative pt-20">
                 {/* Desktop Sidebar */}
                 {profile && (
                     <aside className="w-20 lg:w-64 border-r border-white/5 glass flex flex-col sticky top-20 h-[calc(100vh-80px)] hidden md:flex">

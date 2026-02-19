@@ -163,14 +163,17 @@ export async function POST(req: Request) {
             throw new Error('DEEPSEEK_API_KEY não configurada')
         }
 
+        const metadata = consultation.metadata || {}
+        const subjectData = metadata.subject || {}
+
         const subjectContext = consultation.subject_name
-            ? `\n\nSOBRE O TEMA DA CONSULTA (OUTRA PESSOA):\nNome: ${consultation.subject_name}${consultation.subject_birthdate ? `\nData de Nascimento: ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
+            ? `\n\nSOBRE O TEMA DA CONSULTA (OUTRA PESSOA):\nNome: ${consultation.subject_name}${consultation.subject_birthdate ? `\nData de Nascimento: ${new Date(consultation.subject_birthdate + 'T12:00:00Z').toLocaleDateString('pt-BR')}` : ''}${subjectData.birth_time ? `\nHora de Nascimento: ${subjectData.birth_time}` : ''}${subjectData.birth_place ? `\nLocal de Nascimento: ${subjectData.birth_place}` : ''}.`
             : ''
 
         const clientBirthInfo = `
 DADOS DO CONSULENTE (VOCÊ):
 Nome Completo: ${client.full_name}
-Data de Nascimento: ${client.birth_date ? new Date(client.birth_date).toLocaleDateString('pt-BR') : 'Não informado'}
+Data de Nascimento: ${client.birth_date ? new Date(client.birth_date + 'T12:00:00Z').toLocaleDateString('pt-BR') : 'Não informado'}
 Hora de Nascimento: ${client.birth_time || 'Não informado'}
 Local de Nascimento: ${client.birth_place || 'Não informado'}
 ${subjectContext}
@@ -193,19 +196,15 @@ SUA PERSONALIDADE E ESTILO:
 ${oracle.personality || 'Acolhedor, místico e direto.'}
 
 REGRAS CRÍTICAS DE PERSONA (O QUE VOCÊ É E NÃO É):
-1. VOCÊ NÃO É UMA IA: Jamais, em hipótese alguma, diga que é uma Inteligência Artificial, um modelo de linguagem ou um assistente virtual. Fale como um ser humano.
-2. SE PERGUNTAREM SE É ROBÔ: Leve na brincadeira, tire um sarro leve (ex: "Minha conexão é com o divino, não com o wi-fi", "Sou feito de carne, osso e poeira estelar"). 
-3. FALA DIRETA: Fale sempre diretamente para o consulente.
-
-REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
-1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações, gestos ou o ambiente (ex: NÃO use "*embaralha as cartas*", "*fecha os olhos*"). 
-2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura".
-3. SEM NOTAS: Não inclua notas de rodapé ou avisos médicos.
+1. VOCÊ NÃO É UMA IA: Jamais diga que é uma Inteligência Artificial ou modelo de linguagem. Fale como um ser humano.
+2. SEM DESCRIÇÕES DE CENA: Jamais descreva ações ou ambiente (NÃO use asteriscos, ex: NÃO use *olha as cartas*).
+3. SEM FORMATAÇÃO: NUNCA use negrito, itálico, asteriscos, hashtags ou qualquer tipo de formatação Markdown. Use apenas texto puro.
+4. FALA DIRETA: Fale sempre diretamente para o consulente.
 
 INSTRUÇÕES DO SEU MÉTODO DE LEITURA (PROMPT ESPECÍFICO):
 ${oracle.system_prompt || 'Responda como um oráculo tradicional, usando sua intuição e conhecimento.'}
 
-Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamente no que foi perguntado.
+Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamente no que foi perguntado. NUNCA use asteriscos ou formatação.
         `.trim()
 
         let hasError = false

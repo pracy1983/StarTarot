@@ -27,6 +27,7 @@ export default function NewConsultationPage() {
     const [subjectName, setSubjectName] = useState('')
     const [subjectBirthdate, setSubjectBirthdate] = useState('')
     const [subjectBirthtime, setSubjectBirthtime] = useState('')
+    const [subjectBirthplace, setSubjectBirthplace] = useState('')
 
     // Client Info (Eu mesmo)
     const [clientBirthDate, setClientBirthDate] = useState('')
@@ -278,7 +279,8 @@ export default function NewConsultationPage() {
                 subject: subjectName ? {
                     name: subjectName,
                     birth_date: subjectBirthdate,
-                    birth_time: formatDescriptiveTime(subjectBirthtime)
+                    birth_time: formatDescriptiveTime(subjectBirthtime),
+                    birth_place: subjectBirthplace
                 } : null
             }
 
@@ -517,9 +519,11 @@ export default function NewConsultationPage() {
                             subjectName={subjectName}
                             subjectBirthdate={subjectBirthdate}
                             subjectBirthtime={subjectBirthtime}
+                            subjectBirthplace={subjectBirthplace}
                             onNameChange={setSubjectName}
                             onBirthdateChange={setSubjectBirthdate}
                             onBirthtimeChange={setSubjectBirthtime}
+                            onBirthplaceChange={setSubjectBirthplace}
                             isMandatory={false}
                         />
 
