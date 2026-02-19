@@ -78,6 +78,28 @@ export default function WalletPage() {
                 }))
             }
         }
+
+        // Realtime Subscription
+        const channel = supabase
+            .channel('wallet_realtime')
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'transactions', filter: `user_id=eq.${profile?.id}` },
+                () => {
+                    fetchTransactions()
+                    fetchWalletData()
+                }
+            )
+            .on(
+                'postgres_changes',
+                { event: '*', schema: 'public', table: 'wallets', filter: `user_id=eq.${profile?.id}` },
+                () => fetchWalletData()
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [profile])
 
     const fetchWalletData = async () => {
@@ -248,6 +270,7 @@ export default function WalletPage() {
                 setPixData(data)
                 setStep('pix')
                 toast.success('PIX gerado com sucesso!')
+                fetchTransactions() // Update history immediately
             } else {
                 // Redirecionar para invoice (Boleto ou Cartão)
                 if (data.invoiceUrl) {
@@ -255,6 +278,7 @@ export default function WalletPage() {
                 } else {
                     toast.success('Pagamento criado. Verifique seu email.')
                     setStep('selection')
+                    fetchTransactions() // Update history immediately
                 }
             }
         } catch (err: any) {
@@ -517,7 +541,10 @@ export default function WalletPage() {
                                         <Clock size={14} className="mr-2" />
                                         Expira em 24 horas
                                     </div>
-                                    <NeonButton variant="purple" fullWidth onClick={() => setStep('selection')}>
+                                    <NeonButton variant="purple" fullWidth onClick={() => {
+                                        setStep('selection')
+                                        fetchTransactions()
+                                    }}>
                                         Já paguei, voltar
                                     </NeonButton>
                                     <p className="text-[10px] text-slate-600 italic">
@@ -608,17 +635,28 @@ export default function WalletPage() {
                     {transactions.length > 0 ? transactions.map((t, i) => (
                         <div key={i} className="flex items-center justify-between p-4 bg-white/5 rounded-xl border border-white/5">
                             <div className="flex items-center space-x-3">
-                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
-                                    {t.amount > 0 ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
-                                </div>
+                                {t.status === 'pending' ? (
+                                    <div className="w-10 h-10 rounded-full flex items-center justify-center bg-yellow-500/10 text-yellow-500 animate-pulse">
+                                        <Clock size={18} />
+                                    </div>
+                                ) : (
+                                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${t.amount > 0 ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}`}>
+                                        {t.amount > 0 ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+                                    </div>
+                                )}
                                 <div>
-                                    <p className="text-sm font-bold text-white">{t.description || t.metadata?.description || 'Transação'}</p>
-                                    <p className="text-xs text-slate-500">{new Date(t.created_at).toLocaleDateString()}</p>
+                                    <p className="text-sm font-bold text-white">
+                                        {t.status === 'pending' ? 'Processando Pagamento' : (t.description || t.metadata?.description || (t.amount > 0 ? 'Créditos Adicionados' : 'Uso de Créditos'))}
+                                    </p>
+                                    <p className="text-xs text-slate-500 flex items-center gap-1">
+                                        {new Date(t.created_at).toLocaleDateString()}
+                                        {t.status === 'pending' && <span className="text-yellow-500 font-bold">• Aguardando confirmação</span>}
+                                    </p>
                                 </div>
                             </div>
                             <div className="text-right">
-                                <span className={`font-bold block ${t.amount > 0 ? 'text-green-500' : 'text-slate-400'}`}>
-                                    {t.amount > 0 ? '+' : ''}{t.amount} Créditos
+                                <span className={`font-bold block ${t.status === 'pending' ? 'text-yellow-500' : (t.amount > 0 ? 'text-green-500' : 'text-slate-400')}`}>
+                                    {t.status === 'pending' ? '...' : (t.amount > 0 ? '+' : '')}{t.amount} Créditos
                                 </span>
                                 {t.metadata?.brl_amount && (
                                     <span className="text-[10px] text-slate-500 block">
