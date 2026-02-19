@@ -343,19 +343,17 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
             ) : null}
 
             {/* Status Badge - Top Left */}
-            <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-[9px] font-bold uppercase tracking-widest z-10 border shadow-lg ${status === 'online' ? 'bg-green-500/10 text-green-400 border-green-500/20 shadow-green-500/10' :
-                'bg-red-500/10 text-red-500 border-red-500/20 shadow-red-500/10'
+            <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.1em] z-10 border shadow-lg ${status === 'online' ? 'bg-green-500 text-white border-green-500/20 shadow-green-500/20' :
+                'bg-red-500 text-white border-red-500/20 shadow-red-500/10'
                 }`}>
-                <div className={`w-1.5 h-1.5 rounded-full ${status === 'online' ? 'bg-green-400 animate-pulse ring-2 ring-green-500/50' :
-                    'bg-red-500 animate-pulse ring-2 ring-red-500/50'
-                    }`} />
+                <div className={`w-1.5 h-1.5 rounded-full bg-white ${status === 'online' ? 'animate-pulse' : ''}`} />
                 <span>{status === 'online' ? 'ONLINE' : 'OFFLINE'}</span>
             </div>
 
             <div className="flex flex-col items-center text-center space-y-3 pt-4">
                 {/* Avatar */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-slate-500'
+                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500'
                         }`} />
                     <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
@@ -364,6 +362,12 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                             className="w-full h-full rounded-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all"
                         />
                     </div>
+                    {/* Pulsing online indicator on avatar */}
+                    {status === 'online' && (
+                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-[#0f0f2d] z-20 flex items-center justify-center">
+                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                        </div>
+                    )}
                 </div>
 
                 <div className="space-y-1">
@@ -422,39 +426,74 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 )}
 
                 {profile?.id !== oracle.id ? (
-                    <div className="mt-2 flex gap-2 w-full">
-                        {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
-                            <NeonButton
-                                variant="green"
-                                fullWidth
-                                size="sm"
-                                disabled={status !== 'online'}
-                                className={status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}
-                                onClick={(e) => {
-                                    if (status !== 'online') return
-                                    e.stopPropagation()
-                                    if (!isAuthenticated) return handleStartConsultation(e)
-                                    router.push(`/app/consulta/${oracle.id}?type=video`)
-                                }}
-                            >
-                                <Video size={16} className="mr-1" />
-                                Vídeo
-                            </NeonButton>
-                        )}
-                        {oracle.allows_text && (
-                            <NeonButton
-                                variant={status === 'online' ? "purple" : "gold"}
-                                fullWidth
-                                size="sm"
-                                onClick={(e) => {
-                                    e.stopPropagation()
-                                    if (!isAuthenticated) return handleStartConsultation(e)
-                                    router.push(`/app/consulta/${oracle.id}?type=message`)
-                                }}
-                            >
-                                <MessageSquare size={16} className="mr-1" />
-                                {status === 'online' ? 'Chat' : 'Deixar Mensagem'}
-                            </NeonButton>
+                    <div className="mt-2 w-full">
+                        {(!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video) && oracle.allows_text ? (
+                            /* Human with both options */
+                            <div className="grid grid-cols-2 gap-2">
+                                <NeonButton
+                                    variant="green"
+                                    size="sm"
+                                    disabled={status !== 'online'}
+                                    className={`h-9 px-0 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                                    onClick={(e) => {
+                                        if (status !== 'online') return
+                                        e.stopPropagation()
+                                        if (!isAuthenticated) return handleStartConsultation(e)
+                                        router.push(`/app/consulta/${oracle.id}?type=video`)
+                                    }}
+                                >
+                                    <Video size={14} className="mr-1" />
+                                    <span className="text-[10px]">Vídeo</span>
+                                </NeonButton>
+                                <NeonButton
+                                    variant={status === 'online' ? "purple" : "gold"}
+                                    size="sm"
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        if (!isAuthenticated) return handleStartConsultation(e)
+                                        router.push(`/app/consulta/${oracle.id}?type=message`)
+                                    }}
+                                    className="h-9 px-0"
+                                >
+                                    <MessageSquare size={14} className="mr-1" />
+                                    <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Chat' : 'Mensagem'}</span>
+                                </NeonButton>
+                            </div>
+                        ) : (
+                            /* Only one option (AI or limited Human) - Centered and half width */
+                            <div className="flex justify-center">
+                                {oracle.allows_text ? (
+                                    <NeonButton
+                                        variant={status === 'online' ? "purple" : "gold"}
+                                        size="sm"
+                                        onClick={(e) => {
+                                            e.stopPropagation()
+                                            if (!isAuthenticated) return handleStartConsultation(e)
+                                            router.push(`/app/consulta/${oracle.id}?type=message`)
+                                        }}
+                                        className="h-9 w-1/2"
+                                    >
+                                        <MessageSquare size={14} className="mr-1" />
+                                        <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Chat' : 'Mensagem'}</span>
+                                    </NeonButton>
+                                ) : (
+                                    <NeonButton
+                                        variant="green"
+                                        size="sm"
+                                        disabled={status !== 'online'}
+                                        className={`h-9 w-1/2 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                                        onClick={(e) => {
+                                            if (status !== 'online') return
+                                            e.stopPropagation()
+                                            if (!isAuthenticated) return handleStartConsultation(e)
+                                            router.push(`/app/consulta/${oracle.id}?type=video`)
+                                        }}
+                                    >
+                                        <Video size={14} className="mr-1" />
+                                        <span className="text-[10px]">Vídeo</span>
+                                    </NeonButton>
+                                )}
+                            </div>
                         )}
                     </div>
                 ) : (

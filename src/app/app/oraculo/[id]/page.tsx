@@ -238,14 +238,25 @@ export default function OracleProfilePage() {
                             />
                         </div>
                         {/* Status Dot */}
-                        <div className={`absolute bottom-0 right-1 w-5 h-5 rounded-full border-[3px] border-[#0f0f2d] z-20 ${isOnline ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-slate-500 shadow-[0_0_10px_rgba(148,163,184,0.3)]'}`} />
+                        <div className={`absolute bottom-0 right-1 px-2 py-0.5 rounded-full border-[3px] border-[#0f0f2d] z-20 flex items-center space-x-1 ${isOnline ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`}>
+                            <div className={`w-2 h-2 rounded-full bg-white ${isOnline ? 'animate-pulse' : ''}`} />
+                            {isOnline && <span className="text-[8px] font-black text-white uppercase tracking-tighter">Online</span>}
+                        </div>
                     </div>
 
                     {/* Info */}
                     <div className="flex-1 text-center md:text-left">
                         <div className="flex flex-col md:flex-row md:items-center justify-center md:justify-between gap-4 mb-3">
                             <div>
-                                <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.full_name}</h1>
+                                <div className="flex items-center justify-center md:justify-start space-x-2">
+                                    <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.full_name}</h1>
+                                    {isOnline && (
+                                        <div className="flex items-center px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20">
+                                            <div className="w-1 h-1 rounded-full bg-green-500 animate-ping mr-1.5" />
+                                            <span className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Ativo</span>
+                                        </div>
+                                    )}
+                                </div>
                                 <p className="text-neon-cyan text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
                                     {oracle.specialty}
                                 </p>
@@ -303,7 +314,7 @@ export default function OracleProfilePage() {
 
             {/* Iniciar Consulta Buttons */}
             {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
                     {!isAI && oracle.allows_video && (
                         <NeonButton
                             variant="green"
@@ -316,7 +327,7 @@ export default function OracleProfilePage() {
                                 }
                                 router.push(`/app/consulta/${oracle.id}?type=video`)
                             }}
-                            className="py-4"
+                            className="py-4 w-full sm:w-64"
                         >
                             <div className="flex items-center space-x-2">
                                 <Video size={18} />
@@ -335,7 +346,7 @@ export default function OracleProfilePage() {
                                 }
                                 router.push(`/app/consulta/${oracle.id}?type=message`)
                             }}
-                            className="py-4"
+                            className="py-4 w-full sm:w-64"
                         >
                             <div className="flex items-center space-x-2">
                                 <MessageSquare size={18} />
