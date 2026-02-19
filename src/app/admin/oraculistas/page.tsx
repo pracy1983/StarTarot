@@ -95,7 +95,7 @@ export default function AdminOraculistasPage() {
                 .select('receiver_id, name, credits, profiles!sender_id(full_name)')
                 .eq('is_seen_by_admin', false)
 
-            const oracleWithGifts = data.map(o => {
+            const profilesWithGifts = data.map(o => {
                 const unreadGifts = giftCounts?.filter(g => g.receiver_id === o.id) || []
                 return {
                     ...o,
@@ -103,7 +103,18 @@ export default function AdminOraculistasPage() {
                 }
             })
 
-            setOraculistas(oracleWithGifts || [])
+            // Secondary sorting for Pending tab: First-In First-Out (created_at ASC)
+            // For other tabs, we can keep the default full_name or name_fantasy sort
+            const sorted = profilesWithGifts.sort((a, b) => {
+                if (activeTab === 'pending') {
+                    return new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                }
+                const nameA = a.name_fantasy || a.full_name || ''
+                const nameB = b.name_fantasy || b.full_name || ''
+                return nameA.localeCompare(nameB)
+            })
+
+            setOraculistas(sorted)
         } catch (err: any) {
             console.error('Erro ao buscar oraculistas:', err)
             toast.error('Erro ao carregar lista de guias')
@@ -322,10 +333,13 @@ export default function AdminOraculistasPage() {
     }
 
     const filteredOracles = oraculistas.filter(o => {
-        const matchesSearch = o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            o.specialty?.toLowerCase().includes(searchTerm.toLowerCase())
+        const matchesSearch = (o.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            o.name_fantasy?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            o.specialty?.toLowerCase().includes(searchTerm.toLowerCase()))
 
-        const isApproved = o.application_status === 'approved' || !o.application_status || o.application_status === 'none'
+        // STRICT APPROVAL: Only 'approved' is considered approved. 
+        // No more fallback to null/none.
+        const isApproved = o.application_status === 'approved'
         const isAI = o.is_ai || o.oracle_type === 'ai'
 
         if (activeTab === 'pending') {
@@ -658,7 +672,12 @@ export default function AdminOraculistasPage() {
                                                 </motion.div>
                                             )}
                                         </div>
-                                        <span className="text-sm font-medium text-white">{o.full_name}</span>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-bold text-white">{o.name_fantasy || o.full_name}</span>
+                                            {o.name_fantasy && o.name_fantasy !== o.full_name && (
+                                                <span className="text-[10px] text-slate-500 font-medium">{o.full_name}</span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${o.is_ai ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'}`}>

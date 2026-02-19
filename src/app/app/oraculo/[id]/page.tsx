@@ -263,7 +263,7 @@ export default function OracleProfilePage() {
                         <div className="flex flex-col md:flex-row md:items-center justify-center md:justify-between gap-4 mb-3">
                             <div>
                                 <div className="flex items-center justify-center md:justify-start space-x-2">
-                                    <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.full_name}</h1>
+                                    <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.name_fantasy || oracle.full_name}</h1>
                                 </div>
                                 <p className="text-neon-cyan text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
                                     {oracle.specialty}

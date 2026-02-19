@@ -5,11 +5,12 @@ import { useAuthStore } from '@/stores/authStore'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { User, Mail, Camera, Wallet, Phone, Calendar, Clock, MapPin, FileText, AlertTriangle } from 'lucide-react'
+import { User, Mail, Camera, Wallet, Phone, Calendar, Clock, MapPin, FileText, AlertTriangle, X, Scissors, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
+import Cropper from 'react-easy-crop'
 
 export default function PerfilPage() {
     const { profile, setProfile, logout } = useAuthStore()
@@ -31,6 +32,13 @@ export default function PerfilPage() {
         city: profile?.city || '',
         state: profile?.state || ''
     })
+
+    // Avatar Crop States
+    const [imageSource, setImageSource] = useState<string | null>(null)
+    const [crop, setCrop] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+    const [showCropModal, setShowCropModal] = useState(false)
 
     const handleCepLookup = async (cep: string) => {
         const cleanCep = cep.replace(/\D/g, '')
@@ -76,6 +84,82 @@ export default function PerfilPage() {
         }
     }
 
+    const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels)
+    }
+
+    const createImage = (url: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+            const image = new Image()
+            image.addEventListener('load', () => resolve(image))
+            image.addEventListener('error', (error) => reject(error))
+            image.setAttribute('crossOrigin', 'anonymous')
+            image.src = url
+        })
+
+    const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob | null> => {
+        const image = await createImage(imageSrc)
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) return null
+
+        canvas.width = pixelCrop.width
+        canvas.height = pixelCrop.height
+
+        ctx.drawImage(
+            image,
+            pixelCrop.x,
+            pixelCrop.y,
+            pixelCrop.width,
+            pixelCrop.height,
+            0,
+            0,
+            pixelCrop.width,
+            pixelCrop.height
+        )
+
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob)
+            }, 'image/jpeg')
+        })
+    }
+
+    const handleUploadAvatar = async (fileBlob: Blob) => {
+        setSaving(true)
+        try {
+            const fileName = `${profile?.id}-${Math.random()}.jpg`
+            const filePath = `avatars/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, fileBlob)
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath)
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl })
+                .eq('id', profile!.id)
+
+            if (updateError) throw updateError
+
+            setProfile({ ...profile!, avatar_url: publicUrl })
+            toast.success('Foto atualizada!')
+        } catch (error: any) {
+            console.error('Error uploading avatar:', error)
+            toast.error('Erro no upload: ' + error.message)
+        } finally {
+            setSaving(false)
+            setShowCropModal(false)
+        }
+    }
+
     const handleDeleteAccount = async () => {
         setDeleteLoading(true)
         try {
@@ -103,15 +187,47 @@ export default function PerfilPage() {
                 {/* Avatar Sidebar */}
                 <div className="space-y-6">
                     <GlassCard className="text-center p-8 border-white/5">
-                        <div className="relative inline-block group cursor-pointer">
+                        <div className="relative inline-block group">
                             <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-neon-purple to-neon-cyan p-1">
-                                <div className="w-full h-full rounded-full bg-deep-space overflow-hidden flex items-center justify-center">
-                                    <img src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${profile?.full_name}&size=128&background=0a0a1a&color=a855f7`} alt="Avatar" />
+                                <div className="w-full h-full rounded-full bg-deep-space overflow-hidden flex items-center justify-center relative">
+                                    <img
+                                        src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${profile?.full_name}&size=128&background=0a0a1a&color=a855f7`}
+                                        alt="Avatar"
+                                        className={`w-full h-full object-cover transition-opacity ${saving ? 'opacity-50' : 'group-hover:opacity-75'}`}
+                                    />
+                                    {saving && (
+                                        <div className="absolute inset-0 flex items-center justify-center">
+                                            <Loader2 size={24} className="text-white animate-spin" />
+                                        </div>
+                                    )}
                                 </div>
                             </div>
-                            <div className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <label
+                                htmlFor="client-avatar-upload"
+                                className="absolute inset-0 bg-black/60 rounded-full opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity cursor-pointer"
+                            >
                                 <Camera className="text-white" size={24} />
-                            </div>
+                                <input
+                                    id="client-avatar-upload"
+                                    type="file"
+                                    accept="image/*"
+                                    className="hidden"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        if (file.size > 5 * 1024 * 1024) {
+                                            toast.error('Imagem muito grande (máx 5MB)')
+                                            return
+                                        }
+                                        const reader = new FileReader()
+                                        reader.addEventListener('load', () => {
+                                            setImageSource(reader.result?.toString() || null)
+                                            setShowCropModal(true)
+                                        })
+                                        reader.readAsDataURL(file)
+                                    }}
+                                />
+                            </label>
                         </div>
                         <h2 className="mt-4 text-xl font-bold text-white">{profile?.full_name}</h2>
                         <p className="text-xs text-slate-500 uppercase tracking-widest font-bold mt-1">{profile?.role}</p>
@@ -301,6 +417,80 @@ export default function PerfilPage() {
                                     </div>
                                 </div>
                             </GlassCard>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+            {/* Avatar Crop Modal */}
+            <AnimatePresence>
+                {showCropModal && imageSource && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-deep-space border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <h3 className="text-xl font-bold text-white flex items-center">
+                                    <Scissors size={20} className="mr-3 text-neon-purple" />
+                                    Ajustar Foto de Perfil
+                                </h3>
+                                <button onClick={() => setShowCropModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="relative h-[400px] w-full bg-black/40">
+                                <Cropper
+                                    image={imageSource}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    onCropChange={setCrop}
+                                    onCropComplete={onCropComplete}
+                                    onZoomChange={setZoom}
+                                />
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
+                                        <span>Zoom</span>
+                                        <span>{Math.round(zoom * 100)}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        value={zoom}
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-purple"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowCropModal(false)}
+                                        className="flex-1 py-3 px-6 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <NeonButton
+                                        loading={saving}
+                                        onClick={async () => {
+                                            if (croppedAreaPixels && imageSource) {
+                                                const blob = await getCroppedImg(imageSource, croppedAreaPixels)
+                                                if (blob) handleUploadAvatar(blob)
+                                            }
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        Salvar Foto
+                                    </NeonButton>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}

@@ -3,12 +3,14 @@
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, Send, User, Book, MessageSquare, Info, Star, Layers, BookOpen } from 'lucide-react'
+import { Sparkles, Send, User, Book, MessageSquare, Info, Star, Layers, BookOpen, Camera, Scissors, X, Loader2 } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { GlowInput } from '@/components/ui/GlowInput'
+import { motion, AnimatePresence } from 'framer-motion'
+import Cropper from 'react-easy-crop'
 
 export default function OracleSignupPage() {
     const { profile, setProfile } = useAuthStore()
@@ -17,8 +19,17 @@ export default function OracleSignupPage() {
     const [categoriesList, setCategoriesList] = useState<any[]>([])
     const [topicsList, setTopicsList] = useState<any[]>([])
 
+    // Avatar Crop States
+    const [imageSource, setImageSource] = useState<string | null>(null)
+    const [crop, setCrop] = useState({ x: 0, y: 0 })
+    const [zoom, setZoom] = useState(1)
+    const [croppedAreaPixels, setCroppedAreaPixels] = useState<any>(null)
+    const [showCropModal, setShowCropModal] = useState(false)
+    const [uploadingPhoto, setUploadingPhoto] = useState(false)
+
     const [formData, setFormData] = useState({
         full_name: profile?.full_name || '',
+        name_fantasy: profile?.name_fantasy || '',
         categories: [] as string[],
         topics: [] as string[],
         custom_category: '',
@@ -51,6 +62,7 @@ export default function OracleSignupPage() {
         try {
             const { error } = await supabase.rpc('update_oracle_application', {
                 p_full_name: formData.full_name,
+                p_name_fantasy: formData.name_fantasy,
                 p_categories: formData.categories,
                 p_topics: formData.topics,
                 p_bio: formData.bio,
@@ -79,6 +91,82 @@ export default function OracleSignupPage() {
         }
     }
 
+    const onCropComplete = (croppedArea: any, croppedAreaPixels: any) => {
+        setCroppedAreaPixels(croppedAreaPixels)
+    }
+
+    const createImage = (url: string): Promise<HTMLImageElement> =>
+        new Promise((resolve, reject) => {
+            const image = new Image()
+            image.addEventListener('load', () => resolve(image))
+            image.addEventListener('error', (error) => reject(error))
+            image.setAttribute('crossOrigin', 'anonymous')
+            image.src = url
+        })
+
+    const getCroppedImg = async (imageSrc: string, pixelCrop: any): Promise<Blob | null> => {
+        const image = await createImage(imageSrc)
+        const canvas = document.createElement('canvas')
+        const ctx = canvas.getContext('2d')
+
+        if (!ctx) return null
+
+        canvas.width = pixelCrop.width
+        canvas.height = pixelCrop.height
+
+        ctx.drawImage(
+            image,
+            pixelCrop.x,
+            pixelCrop.y,
+            pixelCrop.width,
+            pixelCrop.height,
+            0,
+            0,
+            pixelCrop.width,
+            pixelCrop.height
+        )
+
+        return new Promise((resolve) => {
+            canvas.toBlob((blob) => {
+                resolve(blob)
+            }, 'image/jpeg')
+        })
+    }
+
+    const handleUploadAvatar = async (fileBlob: Blob) => {
+        setUploadingPhoto(true)
+        try {
+            const fileName = `${profile?.id}-${Math.random()}.jpg`
+            const filePath = `avatars/${fileName}`
+
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, fileBlob)
+
+            if (uploadError) throw uploadError
+
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath)
+
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ avatar_url: publicUrl })
+                .eq('id', profile!.id)
+
+            if (updateError) throw updateError
+
+            setProfile({ ...profile!, avatar_url: publicUrl })
+            toast.success('Foto profissional atualizada!')
+        } catch (error: any) {
+            console.error('Error uploading avatar:', error)
+            toast.error('Erro no upload: ' + error.message)
+        } finally {
+            setUploadingPhoto(false)
+            setShowCropModal(false)
+        }
+    }
+
     useEffect(() => {
         if (profile?.application_status) {
             router.push('/app/dashboard')
@@ -103,24 +191,91 @@ export default function OracleSignupPage() {
             <form onSubmit={handleSubmit} className="space-y-6">
                 <GlassCard className="border-white/5 p-8 md:p-12" hover={false}>
                     <div className="space-y-10">
+                        {/* Seção 0: Foto Profissional */}
+                        <div className="flex flex-col items-center space-y-4 pb-4 border-b border-white/5">
+                            <div className="relative group">
+                                <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-neon-purple to-neon-gold p-1 shadow-[0_0_20px_rgba(168,85,247,0.2)]">
+                                    <div className="w-full h-full rounded-full bg-deep-space overflow-hidden flex items-center justify-center relative">
+                                        <img
+                                            src={profile?.avatar_url || `https://ui-avatars.com/api/?name=${formData.full_name || profile?.full_name}&size=128&background=0a0a1a&color=a855f7`}
+                                            alt="Avatar"
+                                            className={`w-full h-full object-cover transition-opacity ${uploadingPhoto ? 'opacity-50' : 'group-hover:opacity-75'}`}
+                                        />
+                                        {uploadingPhoto && (
+                                            <div className="absolute inset-0 flex items-center justify-center">
+                                                <Loader2 size={32} className="text-white animate-spin" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <label
+                                    htmlFor="oracle-avatar-upload"
+                                    className="absolute bottom-0 right-0 p-3 bg-neon-purple text-white rounded-full shadow-xl hover:scale-110 transition-transform cursor-pointer border-2 border-deep-space"
+                                >
+                                    <Camera size={18} />
+                                    <input
+                                        id="oracle-avatar-upload"
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={(e) => {
+                                            const file = e.target.files?.[0]
+                                            if (!file) return
+                                            if (file.size > 5 * 1024 * 1024) {
+                                                toast.error('Imagem muito grande (máx 5MB)')
+                                                return
+                                            }
+                                            const reader = new FileReader()
+                                            reader.addEventListener('load', () => {
+                                                setImageSource(reader.result?.toString() || null)
+                                                setShowCropModal(true)
+                                            })
+                                            reader.readAsDataURL(file)
+                                        }}
+                                    />
+                                </label>
+                            </div>
+                            <div className="text-center">
+                                <h3 className="text-sm font-bold text-white uppercase tracking-widest">Sua Foto Profissional *</h3>
+                                <p className="text-[10px] text-slate-500 mt-1">Essa foto será exibida no marketplace após aprovação.</p>
+                            </div>
+                        </div>
+
                         {/* Seção 1: Identificação */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <div className="space-y-2">
                                 <label className="text-sm font-bold text-slate-300 flex items-center">
                                     <User size={16} className="mr-2 text-neon-purple" />
-                                    Nome de Exibição *
+                                    Nome Real (Interno) *
                                 </label>
                                 <input
                                     type="text"
                                     value={formData.full_name}
                                     onChange={e => setFormData({ ...formData, full_name: e.target.value })}
                                     className="w-full bg-deep-space border border-white/10 rounded-xl p-4 text-white focus:border-neon-purple/50 outline-none transition-all placeholder:text-slate-600"
-                                    placeholder="Ex: Oraculista Luna"
+                                    placeholder="Seu nome completo para o Templo"
                                     required
                                 />
+                                <p className="text-[10px] text-slate-500">Apenas para uso interno e pagamentos.</p>
                             </div>
 
                             <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-300 flex items-center">
+                                    <Sparkles size={16} className="mr-2 text-neon-gold" />
+                                    Nome de Exibição (Público) *
+                                </label>
+                                <input
+                                    type="text"
+                                    value={formData.name_fantasy}
+                                    onChange={e => setFormData({ ...formData, name_fantasy: e.target.value })}
+                                    className="w-full bg-deep-space border border-white/10 rounded-xl p-4 text-white focus:border-neon-gold/50 outline-none transition-all placeholder:text-slate-600"
+                                    placeholder="Ex: Oraculista Luna"
+                                    required
+                                />
+                                <p className="text-[10px] text-slate-500">Como você será visto no site.</p>
+                            </div>
+
+                            <div className="space-y-2 md:col-span-2">
                                 <label className="text-sm font-bold text-slate-300 flex items-center">
                                     <Star size={16} className="mr-2 text-neon-gold" />
                                     WhatsApp de Contato *
@@ -284,6 +439,80 @@ export default function OracleSignupPage() {
                     </NeonButton>
                 </GlassCard>
             </form>
+            {/* Avatar Crop Modal */}
+            <AnimatePresence>
+                {showCropModal && imageSource && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.9 }}
+                            className="bg-deep-space border border-white/10 rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/5 flex items-center justify-between">
+                                <h3 className="text-xl font-bold text-white flex items-center">
+                                    <Scissors size={20} className="mr-3 text-neon-purple" />
+                                    Ajustar Foto de Perfil
+                                </h3>
+                                <button onClick={() => setShowCropModal(false)} className="text-slate-500 hover:text-white transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="relative h-[400px] w-full bg-black/40">
+                                <Cropper
+                                    image={imageSource}
+                                    crop={crop}
+                                    zoom={zoom}
+                                    aspect={1}
+                                    onCropChange={setCrop}
+                                    onCropComplete={onCropComplete}
+                                    onZoomChange={setZoom}
+                                />
+                            </div>
+
+                            <div className="p-6 space-y-6">
+                                <div className="space-y-2">
+                                    <div className="flex justify-between text-xs text-slate-500 font-bold uppercase tracking-wider">
+                                        <span>Zoom</span>
+                                        <span>{Math.round(zoom * 100)}%</span>
+                                    </div>
+                                    <input
+                                        type="range"
+                                        min={1}
+                                        max={3}
+                                        step={0.1}
+                                        value={zoom}
+                                        onChange={(e) => setZoom(Number(e.target.value))}
+                                        className="w-full h-1 bg-white/10 rounded-lg appearance-none cursor-pointer accent-neon-purple"
+                                    />
+                                </div>
+
+                                <div className="flex gap-4">
+                                    <button
+                                        onClick={() => setShowCropModal(false)}
+                                        className="flex-1 py-3 px-6 rounded-xl border border-white/10 text-white font-bold hover:bg-white/5 transition-all"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <NeonButton
+                                        loading={uploadingPhoto}
+                                        onClick={async () => {
+                                            if (croppedAreaPixels && imageSource) {
+                                                const blob = await getCroppedImg(imageSource, croppedAreaPixels)
+                                                if (blob) handleUploadAvatar(blob)
+                                            }
+                                        }}
+                                        className="flex-1"
+                                    >
+                                        Salvar Foto
+                                    </NeonButton>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     )
 }

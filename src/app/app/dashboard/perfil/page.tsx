@@ -359,9 +359,13 @@ export default function OracleProfilePage() {
                                     )}
                                 </div>
                             </div>
-                            <label className="absolute bottom-0 right-0 p-2 bg-neon-purple text-white rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer">
+                            <label
+                                htmlFor="avatar-upload"
+                                className="absolute bottom-0 right-0 p-2 bg-neon-purple text-white rounded-full shadow-lg hover:scale-110 transition-transform cursor-pointer"
+                            >
                                 <Camera size={16} />
                                 <input
+                                    id="avatar-upload"
                                     type="file"
                                     accept="image/*"
                                     className="hidden"
