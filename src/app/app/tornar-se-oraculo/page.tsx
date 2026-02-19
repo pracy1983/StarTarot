@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
-import { Sparkles, Send, User, Book, MessageSquare, Info, Star, Layers, BookOpen, Camera, Scissors, X, Loader2 } from 'lucide-react'
+import { Sparkles, Send, User, Book, MessageSquare, Info, Star, Layers, BookOpen, Camera, Scissors, X, Loader2, AlertCircle } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -187,6 +187,18 @@ export default function OracleSignupPage() {
                 <h1 className="text-4xl font-bold text-white">Torne-se um <span className="neon-text-purple">Oraculista</span></h1>
                 <p className="text-slate-400">Compartilhe sua sabedoria e ajude milhares de pessoas em sua jornada espiritual.</p>
             </header>
+
+            <div className="bg-neon-purple/10 border border-neon-purple/20 rounded-2xl p-6 flex items-start gap-4">
+                <div className="p-2 bg-neon-purple/20 rounded-lg text-neon-purple shrink-0">
+                    <AlertCircle size={24} />
+                </div>
+                <div className="space-y-1">
+                    <h4 className="text-white font-bold">Atenção ao preenchimento</h4>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                        Para garantir que sua aplicação seja aprovada pela nossa equipe, certifique-se de preencher <strong>todos os campos</strong> do perfil (incluindo bio, ferramentas e especialidades) com o máximo de detalhes. Perfis com informações incompletas ou genéricas poderão ser recusados.
+                    </p>
+                </div>
+            </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <GlassCard className="border-white/5 p-8 md:p-12" hover={false}>

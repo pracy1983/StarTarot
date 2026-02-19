@@ -41,7 +41,7 @@ export default function NewOraclePage() {
 
     const fetchSpecialties = async () => {
         const { data } = await supabase
-            .from('specialties')
+            .from('oracle_specialties')
             .select('*')
             .eq('active', true)
             .order('name', { ascending: true })
@@ -53,7 +53,7 @@ export default function NewOraclePage() {
         setLoading(true)
         try {
             const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
-            const { data, error } = await supabase.from('specialties').insert({
+            const { data, error } = await supabase.from('oracle_specialties').insert({
                 name: newCategoryName,
                 slug,
                 active: true
@@ -319,6 +319,7 @@ export default function NewOraclePage() {
                                                             placeholder="Ex: Baralho Cigano"
                                                             value={newCategoryName}
                                                             onChange={e => setNewCategoryName(e.target.value)}
+                                                            onKeyDown={(e: React.KeyboardEvent) => e.key === 'Enter' && handleAddCategory()}
                                                             autoFocus
                                                         />
                                                         <div className="flex gap-3">
