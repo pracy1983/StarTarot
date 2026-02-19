@@ -73,9 +73,10 @@ export default function LandingPage() {
   }
 
   const fetchSpecialties = async () => {
+    // Correct table names: specialties and categories
     const [cats, tops] = await Promise.all([
-      supabase.from('oracle_categories').select('name').eq('active', true).order('name'),
-      supabase.from('oracle_specialties').select('name').eq('active', true).order('name')
+      supabase.from('categories').select('name').order('name'),
+      supabase.from('specialties').select('name').order('name')
     ])
 
     const combined = Array.from(new Set([
@@ -338,71 +339,71 @@ export default function LandingPage() {
 
         {/* Oracle Registration Section */}
         {(!isAuthenticated || (profile?.role !== 'oracle' && profile?.role !== 'owner')) && (
-          <section className="mt-32 pb-20">
-            <GlassCard className="p-12 border-white/5 relative overflow-hidden" hover={false}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/20 blur-[100px] -z-10" />
-              <div className="flex flex-col md:flex-row items-center gap-12">
-                <div className="flex-1 space-y-6">
-                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neon-cyan/10 border border-neon-cyan/20 text-neon-cyan text-[10px] font-bold uppercase tracking-widest">
-                    <Sparkles size={12} />
-                    <span>Compartilhe seu Dom</span>
+          <section className="mt-20 pb-10">
+            <GlassCard className="p-8 md:p-10 border-white/5 relative overflow-hidden max-w-5xl mx-auto" hover={false}>
+              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/10 blur-[100px] -z-10" />
+              <div className="flex flex-col md:flex-row items-center gap-10">
+                <div className="flex-1 space-y-5">
+                  <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neon-cyan/5 border border-neon-cyan/10 text-neon-cyan text-[9px] font-bold uppercase tracking-widest">
+                    <Sparkles size={10} />
+                    <span>Seletiva de Oraculistas</span>
                   </div>
-                  <h2 className="text-3xl md:text-5xl font-bold text-white leading-tight">
-                    Seja um Oraculista no <br />
-                    <span className="neon-text-purple">StarTarot</span>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight">
+                    Compartilhe seu Dom <br />
+                    no <span className="neon-text-purple">StarTarot</span>
                   </h2>
-                  <p className="text-slate-400 text-lg leading-relaxed">
-                    Transforme sua sabedoria em prosperidade. Atenda de onde estiver, pelo celular ou computador, com as melhores taxas do mercado.
+                  <p className="text-slate-400 text-sm leading-relaxed max-w-lg">
+                    Buscamos os melhores guias para manter a excelência do nosso templo. Sua candidatura passará por uma avaliação criteriosa e, se aprovado, você entrará em nossa lista de espera exclusiva.
                   </p>
 
-                  <div className="grid grid-cols-2 gap-4 py-4">
-                    <div className="flex items-start space-x-3">
-                      <div className="mt-1 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                        <Check size={12} />
+                  <div className="grid grid-cols-2 gap-4 py-2">
+                    <div className="flex items-start space-x-2">
+                      <div className="mt-1 w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
+                        <Check size={10} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">Tarifa Dinâmica</p>
-                        <p className="text-xs text-slate-500">Você fica com {settings.commission}% do valor</p>
+                        <p className="text-xs font-bold text-white">Transparência</p>
+                        <p className="text-[10px] text-slate-500">Você recebe {settings.commission}% do valor</p>
                       </div>
                     </div>
-                    <div className="flex items-start space-x-3">
-                      <div className="mt-1 w-5 h-5 rounded-full bg-green-500/20 flex items-center justify-center text-green-400">
-                        <Check size={12} />
+                    <div className="flex items-start space-x-2">
+                      <div className="mt-1 w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
+                        <Check size={10} />
                       </div>
                       <div>
-                        <p className="text-sm font-bold text-white">Liberdade Total</p>
-                        <p className="text-xs text-slate-500">Responda pelo celular</p>
+                        <p className="text-xs font-bold text-white">Fila de Espera</p>
+                        <p className="text-[10px] text-slate-500">Curadoria para todos ganharem bem</p>
                       </div>
                     </div>
                   </div>
 
-                  <div className="flex flex-col sm:flex-row gap-4 pt-4">
-                    <NeonButton variant="purple" size="lg" onClick={() => openAuth('oracle', true)} className="px-8">
-                      Começar a Atender Agora
+                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
+                    <NeonButton variant="purple" size="md" onClick={() => openAuth('oracle', true)} className="px-6 h-11 text-xs">
+                      Enviar Candidatura
                     </NeonButton>
                     <button
                       onClick={() => setShowGanhosModal(true)}
-                      className="text-sm font-bold text-slate-400 hover:text-white transition-all px-6 py-3 border border-white/10 rounded-2xl hover:bg-white/5"
+                      className="text-[11px] font-bold text-slate-400 hover:text-white transition-all px-5 py-2.5 border border-white/10 rounded-xl hover:bg-white/5 h-11"
                     >
-                      Saiba mais sobre ganhos
+                      Ver Simulador de Ganhos
                     </button>
                   </div>
                 </div>
-                <div className="flex-shrink-0 w-full md:w-[400px] h-[400px] relative group">
-                  <div className="absolute inset-0 bg-neon-purple/20 blur-3xl rounded-full group-hover:bg-neon-purple/30 transition-all" />
+                <div className="flex-shrink-0 w-full md:w-[280px] h-[280px] relative group hidden md:block">
+                  <div className="absolute inset-0 bg-neon-purple/10 blur-2xl rounded-full group-hover:bg-neon-purple/20 transition-all" />
                   <img
-                    src="https://images.unsplash.com/photo-1635817215354-93e114002e26?auto=format&fit=crop&q=80&w=800"
-                    alt="Tarot Oracle Mystical"
-                    className="w-full h-full object-cover rounded-[40px] relative z-10 border border-white/10 shadow-2xl"
+                    src="https://images.unsplash.com/photo-1635817215354-93e114002e26?auto=format&fit=crop&q=80&w=600"
+                    alt="Tarot Oracle"
+                    className="w-full h-full object-cover rounded-[30px] relative z-10 border border-white/10 shadow-xl opacity-80"
                   />
-                  <div className="absolute -bottom-6 -right-6 glass p-6 rounded-3xl z-20 border border-white/10 shadow-2xl animate-pulse">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-full bg-neon-gold/20 flex items-center justify-center text-neon-gold">
-                        <Star size={24} className="fill-neon-gold" />
+                  <div className="absolute -bottom-4 -right-4 glass p-4 rounded-2xl z-20 border border-white/10 shadow-xl">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-neon-gold/10 flex items-center justify-center text-neon-gold">
+                        <Star size={16} className="fill-neon-gold" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-black uppercase tracking-tighter text-slate-500 leading-none mb-1">Potencial Médio</p>
-                        <p className="text-xl font-bold text-white leading-none">R$ 3.500+</p>
+                        <p className="text-[8px] font-black uppercase tracking-tighter text-slate-500 leading-none mb-1">Potencial Médio</p>
+                        <p className="text-sm font-bold text-white leading-none">R$ 3.500+</p>
                       </div>
                     </div>
                   </div>
@@ -411,6 +412,40 @@ export default function LandingPage() {
             </GlassCard>
           </section>
         )}
+
+        {/* Como Funciona Section */}
+        <section className="mt-20 py-10">
+          <div className="text-center mb-12">
+            <h2 className="text-2xl md:text-3xl font-bold text-white mb-4">Como o <span className="neon-text-purple">StarTarot</span> Funciona</h2>
+            <p className="text-slate-400 text-sm max-w-2xl mx-auto">Tudo o que você precisa para sua jornada espiritual em um só lugar.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
+              <div className="w-14 h-14 bg-neon-purple/10 rounded-2xl flex items-center justify-center text-neon-purple mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Search size={24} />
+              </div>
+              <h3 className="font-bold text-white">1. Escolha seu Guia</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Navegue pelos perfis, veja especialidades e avaliações reais de outros consulentes.</p>
+            </div>
+
+            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
+              <div className="w-14 h-14 bg-neon-cyan/10 rounded-2xl flex items-center justify-center text-neon-cyan mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <Sparkles size={24} />
+              </div>
+              <h3 className="font-bold text-white">2. Carregue Créditos</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Adicione créditos de forma segura via PIX ou Cartão para usar no seu próprio ritmo.</p>
+            </div>
+
+            <div className="glass p-8 rounded-[30px] border-white/5 space-y-4 text-center group hover:bg-white/[0.07] transition-all">
+              <div className="w-14 h-14 bg-neon-gold/10 rounded-2xl flex items-center justify-center text-neon-gold mx-auto mb-4 group-hover:scale-110 transition-transform">
+                <MessageSquare size={24} />
+              </div>
+              <h3 className="font-bold text-white">3. Inicie a Consulta</h3>
+              <p className="text-sm text-slate-500 leading-relaxed">Escolha entre Chat por Mensagem ou Chamada de Vídeo Privada com total sigilo.</p>
+            </div>
+          </div>
+        </section>
       </main>
 
       {/* Ganhos Modal */}
@@ -472,26 +507,34 @@ export default function LandingPage() {
                   </h4>
                   <div className="space-y-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Atendimento em Vídeo (2h/dia x 20 dias)</span>
-                      <span className="text-white font-mono">R$ 6.000,00*</span>
+                      <span className="text-slate-400">Vídeo (Avg: R$ 3,00/min - 2h/dia x 20 dias)</span>
+                      <span className="text-white font-mono text-right">R$ 7.200,00*</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Respostas p/ Mensagem (10/dia x 20 dias)</span>
-                      <span className="text-white font-mono">R$ 2.400,00*</span>
+                      <span className="text-slate-400">Mensagens (Avg: R$ 15,00/msg - 10/dia x 20 dias)</span>
+                      <span className="text-white font-mono text-right">R$ 3.000,00*</span>
                     </div>
                     <div className="h-px bg-white/10 my-4" />
                     <div className="flex justify-between items-center">
                       <div>
                         <p className="text-[10px] text-neon-gold font-black uppercase tracking-widest">Seu Ganho Líquido ({settings.commission}%)</p>
-                        <p className="text-2xl font-black text-white leading-none mt-1">R$ {(8400 * (settings.commission / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
+                        <p className="text-2xl font-black text-white leading-none mt-1">R$ {(10200 * (settings.commission / 100)).toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-[10px] text-slate-500 uppercase font-bold">Por apenas</p>
                         <p className="text-sm font-bold text-slate-300">40h/mês dedicadas</p>
                       </div>
                     </div>
+                    <div className="mt-6 p-4 bg-white/5 rounded-2xl border border-white/5 space-y-2">
+                      <p className="text-xs font-bold text-neon-cyan flex items-center gap-2">
+                        <ShieldCheck size={14} /> Curadoria StarTarot
+                      </p>
+                      <p className="text-[10px] text-slate-500 leading-relaxed italic">
+                        Não somos um marketplace aberto e ilimitado. Cada oraculista é avaliado individualmente e entra em filla de espera. Fazemos isso para garantir que todos os guias ativos tenham movimento real e possam prestar um atendimento de excelência.
+                      </p>
+                    </div>
                     <p className="text-[9px] text-slate-600 mt-4 italic leading-relaxed">
-                      * Estimativas baseadas em tarifas médias. Como oraculista, você é livre para definir seus próprios preços por minuto e por mensagem.
+                      * Estimativas baseadas em tarifas médias sugeridas. Como oraculista, você é livre para definir seus próprios preços.
                     </p>
                   </div>
                 </div>
