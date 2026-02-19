@@ -257,19 +257,28 @@ export default function NewConsultationPage() {
                 })
             }
 
+            // Helper para tornar a hora mais clara para a IA (conforme solicitado pelo usuário)
+            const formatDescriptiveTime = (time: string) => {
+                if (!time) return null;
+                const [hours] = time.split(':').map(Number);
+                // Se for >= 12, é tarde/noite. Se < 12 é manhã.
+                const period = hours >= 12 ? 'tarde/noite' : 'manhã';
+                return `${time} (${period})`;
+            }
+
             // B. Criar consultation
             // Metadata agora inclui snapshot dos dados do cliente
             const metadata = {
                 client_snapshot: {
                     name: profile!.full_name,
                     birth_date: clientBirthDate,
-                    birth_time: clientBirthTime,
+                    birth_time: formatDescriptiveTime(clientBirthTime),
                     birth_place: clientBirthPlace
                 },
                 subject: subjectName ? {
                     name: subjectName,
                     birth_date: subjectBirthdate,
-                    birth_time: subjectBirthtime
+                    birth_time: formatDescriptiveTime(subjectBirthtime)
                 } : null
             }
 
@@ -486,6 +495,7 @@ export default function NewConsultationPage() {
                                         onChange={e => setClientBirthTime(e.target.value)}
                                         className={`w-full bg-black/20 border rounded-lg px-3 py-2 text-white text-sm outline-none focus:border-neon-purple/50 transition-all ${!clientBirthTime && oracle.requires_birthtime ? 'border-red-500/30' : 'border-white/5'}`}
                                     />
+                                    <p className="text-[10px] text-slate-500 mt-1 italic">Use formato 24h (ex: 17:30 para tarde)</p>
                                 </div>
 
                                 <div className="space-y-1">

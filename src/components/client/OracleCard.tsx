@@ -270,7 +270,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         oracle.last_heartbeat_at,
         oracle.is_ai || oracle.oracle_type === 'ai'
     )
-    const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video
+    const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video && !oracle.is_ai && oracle.oracle_type !== 'ai'
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()

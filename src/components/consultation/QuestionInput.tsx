@@ -172,6 +172,7 @@ export const SubjectInfo = ({
                             onChange={(e) => onBirthtimeChange?.(e.target.value)}
                             className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-white placeholder-slate-500 focus:border-neon-purple/50 outline-none transition-all"
                         />
+                        <p className="text-[10px] text-slate-500 mt-1 italic pl-1">Use formato 24h (ex: 17:30)</p>
                     </div>
                 </div>
             </div>
