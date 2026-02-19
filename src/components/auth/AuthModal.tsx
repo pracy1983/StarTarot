@@ -390,10 +390,10 @@ export const AuthModal = () => {
                             </NeonButton>
                             <div className="pt-4 flex flex-col space-y-4 text-center">
                                 <p className="text-sm text-slate-500">
-                                    Deseja ser atendido E atender? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('oracle'); }} className="text-neon-gold hover:underline">Entre como Oraculista</button>
+                                    Deseja ser atendido E atender? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('oracle'); }} className="text-neon-gold hover:underline">Cadastrar como Oraculista</button>
                                 </p>
                                 <p className="text-sm text-slate-500">
-                                    Novo no templo? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('client'); }} className="text-neon-gold hover:underline">Iniciar jornada</button>
+                                    Novo no templo? <button type="button" onClick={() => { setIsRegistering(true); setRegistrationRole('client'); }} className="text-neon-gold hover:underline">Cadastrar</button>
                                 </p>
                             </div>
                         </form>
