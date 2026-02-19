@@ -473,7 +473,7 @@ export default function OracleProfilePage() {
                         <div className="space-y-4">
                             <div className="space-y-1.5">
                                 <label className="text-xs font-medium text-slate-400 ml-1 italic">
-                                    Quantos Créditos por Mensagem? {averages.avg_price_per_message > 0 && <span className="text-neon-purple/60 font-bold ml-1">(Média do site: {averages.avg_price_per_message} cr)</span>}
+                                    Quantos Créditos por Mensagem? {averages.avg_price_per_message > 0 && <span className="text-neon-purple/60 font-bold ml-1">(Média do site: {averages.avg_price_per_message} créditos)</span>}
                                 </label>
                                 <div className="relative">
                                     <MessageSquare size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />

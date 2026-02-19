@@ -463,7 +463,7 @@ export default function VideoConsultationPage() {
                     {profile?.role === 'client' && (
                         <div className={`hidden sm:flex items-center px-4 py-2 rounded-full border ${profile.credits! < WARNING_THRESHOLD ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-neon-gold'}`}>
                             <AlertCircle size={16} className="mr-2" />
-                            <span className="text-sm">{profile.credits?.toFixed(0)} cr</span>
+                            <span className="text-sm">{profile.credits?.toFixed(0)} créditos</span>
                         </div>
                     )}
                 </div>

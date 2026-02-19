@@ -128,7 +128,7 @@ export default function AdminFinanceiroPage() {
                     </div>
                     <p className="text-slate-500 text-[10px] md:text-xs font-bold uppercase tracking-widest mb-1">Total em Circulação</p>
                     <h3 className="text-xl md:text-3xl font-bold text-white tracking-tight truncate">
-                        {stats.creditsInCirculation.toLocaleString()} <span className="text-[10px] md:text-sm font-normal text-slate-500">cr</span>
+                        {stats.creditsInCirculation.toLocaleString()} <span className="text-[10px] md:text-sm font-normal text-slate-500">créditos</span>
                     </h3>
                 </GlassCard>
 
@@ -162,7 +162,7 @@ export default function AdminFinanceiroPage() {
                                         <div className="min-w-0">
                                             <p className="text-sm font-bold text-white truncate">{(tx.profiles as any)?.full_name || 'Cliente'}</p>
                                             <p className="text-[10px] md:text-xs text-slate-500 line-clamp-1">
-                                                {format(new Date(tx.created_at), "dd/MM, HH:mm", { locale: ptBR })} • {tx.amount} cr
+                                                {format(new Date(tx.created_at), "dd/MM, HH:mm", { locale: ptBR })} • {tx.amount} créditos
                                             </p>
                                         </div>
                                     </div>
@@ -196,7 +196,7 @@ export default function AdminFinanceiroPage() {
                                         </span>
                                     </div>
                                     <span className="text-[10px] text-slate-500 font-bold uppercase tracking-tighter truncate">
-                                        {o.credits} cr • {o.isAi ? 'IA' : 'Payout'}
+                                        {o.credits} créditos • {o.isAi ? 'IA' : 'Payout'}
                                     </span>
                                     <div className="w-full h-1 bg-white/5 rounded-full overflow-hidden mt-1">
                                         <div

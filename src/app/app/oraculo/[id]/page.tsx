@@ -298,13 +298,13 @@ export default function OracleProfilePage() {
                             {!isAI && oracle.allows_video && (
                                 <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">
                                     <Video size={14} className="mr-2 text-neon-cyan" />
-                                    {oracle.credits_per_minute} <span className="opacity-60 ml-1">cr/min</span>
+                                    {oracle.credits_per_minute} <span className="opacity-60 ml-1">créditos/min</span>
                                 </div>
                             )}
                             {oracle.allows_text && (
                                 <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">
                                     <MessageSquare size={14} className="mr-2 text-neon-purple" />
-                                    {(oracle.price_per_message || 10)} <span className="opacity-60 ml-1">cr/txt</span>
+                                    {(oracle.price_per_message || 10)} <span className="opacity-60 ml-1">créditos/msg</span>
                                 </div>
                             )}
                             <div className="flex items-center text-slate-400 text-[11px] font-medium bg-white/5 px-3 py-1 rounded-full border border-white/5">

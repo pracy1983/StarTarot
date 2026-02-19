@@ -380,13 +380,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
                         <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
                             <Video size={10} className="mr-1" />
-                            {oracle.credits_per_minute} <span className="opacity-60 ml-1">cr/min</span>
+                            {oracle.credits_per_minute} <span className="opacity-60 ml-1">créditos/min</span>
                         </div>
                     )}
                     {oracle.allows_text && (
                         <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-purple' : 'text-slate-500'}`}>
                             <MessageSquare size={10} className="mr-1" />
-                            {oracle.price_per_message || 10} <span className="opacity-60 ml-1">cr/txt</span>
+                            {oracle.price_per_message || 10} <span className="opacity-60 ml-1">créditos/msg</span>
                         </div>
                     )}
                 </div>

@@ -265,7 +265,7 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                         <div className="flex flex-col items-end leading-none">
                             <span className="text-[11px] md:text-xs font-bold text-neon-gold flex items-center">
                                 <Sparkles size={10} className="mr-1" />
-                                {walletBalance} <span className="ml-1 opacity-70 font-medium">cr</span>
+                                {walletBalance} <span className="ml-1 opacity-70 font-medium">créditos</span>
                             </span>
                         </div>
                     </motion.div>

@@ -72,23 +72,23 @@ export const ScheduleGrid = ({ schedule, onChange }: ScheduleGridProps) => {
                                     <div className="space-y-3">
                                         {dayData.map((slot, idx) => (
                                             <div key={idx} className="flex items-center gap-2 bg-black/20 p-2 rounded-lg border border-white/5">
-                                                <div className="flex-1">
+                                                <div className="flex-1 min-w-[85px]">
                                                     <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Início</label>
                                                     <input
                                                         type="time"
                                                         value={slot.start}
                                                         onChange={(e) => updateTime(dayIndex, idx, 'start', e.target.value)}
-                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all"
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
                                                     />
                                                 </div>
-                                                <div className="pt-4 text-slate-600 font-black text-[10px]">:</div>
-                                                <div className="flex-1">
+                                                <div className="pt-4 text-slate-600 font-black text-[10px] mx-1">:</div>
+                                                <div className="flex-1 min-w-[85px]">
                                                     <label className="text-[9px] uppercase font-bold text-slate-500 block mb-1 ml-1">Fim</label>
                                                     <input
                                                         type="time"
                                                         value={slot.end}
                                                         onChange={(e) => updateTime(dayIndex, idx, 'end', e.target.value)}
-                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all"
+                                                        className="bg-deep-space border border-white/10 rounded-lg px-2 py-1.5 text-xs text-white w-full outline-none focus:border-neon-purple/50 transition-all [&::-webkit-calendar-picker-indicator]:hidden"
                                                     />
                                                 </div>
                                             </div>

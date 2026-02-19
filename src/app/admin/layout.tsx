@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <div className="flex items-center space-x-4">
                         <div className="flex items-center text-sm font-bold text-neon-gold hidden md:flex mr-2">
                             <Sparkles size={16} className="mr-2" />
-                            {ownerBalance !== null ? `${ownerBalance} cr` : '...'}
+                            {ownerBalance !== null ? `${ownerBalance} créditos` : '...'}
                         </div>
                         <div className="h-4 w-px bg-white/10 hidden md:block" />
                         <ProfileMenu isOnline={false} toggleOnline={() => { }} />

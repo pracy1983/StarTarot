@@ -501,7 +501,7 @@ export default function ServiceRoomPage() {
                             <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/5 overflow-hidden">
                                 <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos Líquidos</p>
                                 <p className="text-base md:text-xl font-bold text-neon-gold truncate">
-                                    {summaryData?.credits || 0} cr
+                                    {summaryData?.credits || 0} créditos
                                 </p>
                             </div>
                         </div>
