@@ -190,7 +190,7 @@ export const AuthModal = () => {
             setShowAuthModal(false)
             router.push('/app')
         } else {
-            setError('Conta já existente, mas a senha informada está incorreta.')
+            setError(loginResult.error || 'Erro ao entrar na conta.')
             setFormLoading(false)
         }
     }

@@ -180,7 +180,12 @@ export const useAuthStore = create<AuthState>((set) => ({
             p_role: fallbackRole
           })
 
-          if (fixResult?.success) {
+          // Handle both JSONB (object) and TABLE (array) RPC returns
+          const isSuccessful = Array.isArray(fixResult)
+            ? (fixResult[0] as any)?.success
+            : (fixResult as any)?.success
+
+          if (isSuccessful) {
             // Retry fetch
             const { data: profileRetry } = await supabase
               .from('profiles')
@@ -259,15 +264,19 @@ export const useAuthStore = create<AuthState>((set) => ({
         if (!profile) {
           console.log('Trigger delayed or failed, creating profile manually via RPC...')
           // Fallback: Cria o perfil manualmente usando RPC seguro
-          const { error: rpcError } = await supabase.rpc('ensure_user_profile', {
+          const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile', {
             p_user_id: data.user.id,
             p_email: email.trim().toLowerCase(),
             p_full_name: full_name.trim(),
             p_role: safeRole
           })
 
-          if (rpcError) {
-            console.error('Failed to create profile via RPC fallback:', rpcError)
+          const isSuccessful = Array.isArray(rpcData)
+            ? (rpcData[0] as any)?.success
+            : (rpcData as any)?.success
+
+          if (rpcError || !isSuccessful) {
+            console.error('Failed to create profile via RPC fallback:', rpcError || rpcData)
           } else {
             // Atualiza o telefone separadamente
             await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
