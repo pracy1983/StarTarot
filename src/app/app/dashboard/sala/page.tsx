@@ -1,30 +1,27 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import React, { useEffect, useState, useRef } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { supabase } from '@/lib/supabase'
 import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import {
-    Video,
     Mic,
     MicOff,
     VideoOff,
     PhoneOff,
-    MessageSquare,
     Video as VideoIcon,
     Loader2,
-    PhoneIncoming,
     AlertTriangle,
     User as UserIcon,
-    Power,
-    RefreshCcw
+    RefreshCcw,
+    Maximize2,
+    Minimize2,
+    LayoutDashboard
 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
-
-import { useSearchParams } from 'next/navigation'
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
 
 function RemotePlayer({ user }: { user: any }) {
@@ -47,12 +44,11 @@ export default function ServiceRoomPage() {
     const [consultation, setConsultation] = useState<any>(null)
     const [loading, setLoading] = useState(true)
     const [queueCount, setQueueCount] = useState(0)
-    const [nextClientName, setNextClientName] = useState<string | null>(null)
     const { profile } = useAuthStore()
 
     // Video Call State
-    const [joined, setJoined] = React.useState(false) // Means "I have joined"
-    const [remoteUsers, setRemoteUsers] = React.useState<any[]>([]) // Remote users present
+    const [joined, setJoined] = React.useState(false)
+    const [remoteUsers, setRemoteUsers] = React.useState<any[]>([])
     const [localVideoTrack, setLocalVideoTrack] = React.useState<ICameraVideoTrack | null>(null)
     const [localAudioTrack, setLocalAudioTrack] = React.useState<IMicrophoneAudioTrack | null>(null)
 
@@ -61,8 +57,10 @@ export default function ServiceRoomPage() {
     const [videoEnabled, setVideoEnabled] = React.useState(true)
     const [audioEnabled, setAudioEnabled] = React.useState(true)
     const clientRef = React.useRef<IAgoraRTCClient | null>(null)
-    const [duration, setDuration] = React.useState(0)
-    const timerRef = React.useRef<NodeJS.Timeout | null>(null)
+
+    // Timer & Duration
+    const [now, setNow] = useState(Date.now())
+    const [duration, setDuration] = useState(0)
 
     // Camera Switch state
     const [cameras, setCameras] = React.useState<MediaDeviceInfo[]>([])
@@ -79,11 +77,31 @@ export default function ServiceRoomPage() {
     const [isAutoStarting, setIsAutoStarting] = useState(false)
     const connectionTimeoutRef = React.useRef<NodeJS.Timeout | null>(null)
 
+    // Fullscreen toggle for the video container
+    const [isExpanded, setIsExpanded] = useState(false)
+
     useEffect(() => {
         if (localVideoTrack && localPlayerRef.current) {
             localVideoTrack.play(localPlayerRef.current)
         }
     }, [localVideoTrack, joined])
+
+    useEffect(() => {
+        // Global timer tick
+        const interval = setInterval(() => setNow(Date.now()), 1000)
+        return () => clearInterval(interval)
+    }, [])
+
+    useEffect(() => {
+        // Calculate duration based on DB timestamp if available
+        if (consultation?.started_at && consultation.status === 'active') {
+            const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
+            setDuration(Math.max(0, seconds))
+        } else if (consultation?.duration_seconds) {
+            // Keep showing final duration if finished
+            setDuration(consultation.duration_seconds)
+        }
+    }, [now, consultation])
 
     useEffect(() => {
         if (!consultationId) {
@@ -92,39 +110,28 @@ export default function ServiceRoomPage() {
             return
         }
         fetchConsultation()
-        // Get cameras list early
         getCameras()
 
-        // Subscribe to Queue Updates
         const channelQueue = supabase
             .channel('room_queue_count')
             .on(
                 'postgres_changes',
-                {
-                    event: '*',
-                    schema: 'public',
-                    table: 'consultations',
-                    filter: `oracle_id=eq.${profile?.id}`,
-                },
+                { event: '*', schema: 'public', table: 'consultations', filter: `oracle_id=eq.${profile?.id}` },
                 () => fetchQueueCount()
             )
             .subscribe()
 
-        // Subscribe to Consultation Status changes (Termination Sync)
         const channelStatus = supabase
             .channel(`consultation_${consultationId}`)
             .on(
                 'postgres_changes',
-                {
-                    event: 'UPDATE',
-                    schema: 'public',
-                    table: 'consultations',
-                    filter: `id=eq.${consultationId}`,
-                },
+                { event: 'UPDATE', schema: 'public', table: 'consultations', filter: `id=eq.${consultationId}` },
                 (payload) => {
                     const newStatus = payload.new.status
+                    // Update local consultation state to keep timer in sync
+                    setConsultation((prev: any) => ({ ...prev, ...payload.new }))
+
                     if (newStatus === 'completed' || newStatus === 'ended' || newStatus === 'cancelled') {
-                        // Check if we are already seeing summary or joined
                         if (joined || !showSummary) {
                             toast('A consulta foi encerrada.', { icon: 'ℹ️' })
                             leaveCall()
@@ -141,7 +148,6 @@ export default function ServiceRoomPage() {
 
         fetchQueueCount()
 
-        // Prevent accidental tab close
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
             if (joined) {
                 e.preventDefault()
@@ -158,7 +164,6 @@ export default function ServiceRoomPage() {
         }
     }, [consultationId])
 
-    // Auto-start call when arrival in sala
     useEffect(() => {
         if (consultationId && !joined && !callError && !loading && !isAutoStarting) {
             setIsAutoStarting(true)
@@ -166,36 +171,10 @@ export default function ServiceRoomPage() {
         }
     }, [consultationId, joined, callError, loading, isAutoStarting])
 
-    // Timer Logic: Only run when BOTH joined (i.e. joined=true AND remoteUsers.length > 0)
-    useEffect(() => {
-        if (joined && remoteUsers.length > 0) {
-            // Start timer if not running
-            if (!timerRef.current) {
-                timerRef.current = setInterval(() => {
-                    setDuration(prev => prev + 1)
-                }, 1000)
-            }
-        } else {
-            // Pause timer if condition fails 
-            if (timerRef.current) {
-                clearInterval(timerRef.current)
-                timerRef.current = null
-            }
-        }
-
-        return () => {
-            if (timerRef.current) {
-                clearInterval(timerRef.current)
-                timerRef.current = null
-            }
-        }
-    }, [joined, remoteUsers.length])
-
 
     const getCameras = async () => {
         try {
             const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            // Request permission first if not granted, or just try listing
             const cams = await AgoraRTC.getCameras()
             setCameras(cams)
             if (cams.length > 0) {
@@ -210,7 +189,6 @@ export default function ServiceRoomPage() {
         if (!localVideoTrack || cameras.length < 2) return
 
         try {
-            // Find next camera index
             const currentIndex = cameras.findIndex(c => c.deviceId === currentCameraId)
             const nextIndex = (currentIndex + 1) % cameras.length
             const nextCamera = cameras[nextIndex]
@@ -259,16 +237,13 @@ export default function ServiceRoomPage() {
 
         try {
             const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-            // Use 'marketing' mode or 'live' if 'rtc' fails? No, 'rtc' is fine.
             const client = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' })
             clientRef.current = client
 
-            // Listeners
             client.on('user-published', async (user, mediaType) => {
                 await client.subscribe(user, mediaType)
                 if (mediaType === 'video') {
                     setRemoteUsers(prev => {
-                        // Avoid duplicates
                         if (prev.find(u => u.uid === user.uid)) return prev
                         return [...prev, user]
                     })
@@ -281,25 +256,21 @@ export default function ServiceRoomPage() {
             client.on('user-unpublished', (user, mediaType) => {
                 if (mediaType === 'video') {
                     setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-                    // If client stops video but is still in room, we just wait
                 }
             })
 
             client.on('user-left', async (user) => {
                 setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
                 setCallEndedBy('client')
-                // Se o cliente saiu de vez, finaliza a consulta automaticamente
                 autoFinalizeCall('client')
             })
 
             client.on('connection-state-change', (curState, prevState) => {
                 if (curState === 'DISCONNECTED' && prevState === 'CONNECTED') {
-                    // Maybe attempt reconnect or just notify
                     toast.error('Conexão perdida. Tentando reconectar...')
                 }
             })
 
-            // Token Fetch
             const response = await fetch('/api/agora/token', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -313,12 +284,10 @@ export default function ServiceRoomPage() {
 
             const { token, appId } = await response.json()
 
-            // Join
             await client.join(appId, consultationId, token, profile!.id)
 
-            // Tracks
             const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
-            const videoTrack = await AgoraRTC.createCameraVideoTrack() // default camera
+            const videoTrack = await AgoraRTC.createCameraVideoTrack()
 
             setLocalAudioTrack(audioTrack)
             setLocalVideoTrack(videoTrack)
@@ -331,7 +300,6 @@ export default function ServiceRoomPage() {
                 videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
 
-            // Start connection timeout (30 seconds to establish connection with client)
             if (consultation?.status === 'pending') {
                 connectionTimeoutRef.current = setTimeout(async () => {
                     if (remoteUsers.length === 0) {
@@ -343,12 +311,20 @@ export default function ServiceRoomPage() {
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 30000)
+                }, 45000) // Increased to 45s
             }
 
-            // Update status to 'active' if not already
+            // Update status to 'active' and set start time for timer
             if (consultation?.status === 'pending') {
-                await supabase.from('consultations').update({ status: 'active', started_at: new Date().toISOString() }).eq('id', consultationId)
+                const nowIso = new Date().toISOString()
+                const { error: updateError } = await supabase
+                    .from('consultations')
+                    .update({ status: 'active', started_at: nowIso })
+                    .eq('id', consultationId)
+
+                if (!updateError) {
+                    setConsultation((prev: any) => ({ ...prev, status: 'active', started_at: nowIso }))
+                }
             }
 
         } catch (err: any) {
@@ -356,29 +332,22 @@ export default function ServiceRoomPage() {
 
             let errorMessage = err.message || 'Erro desconhecido'
             if (err.name === 'NotReadableError' || errorMessage.includes('NotReadableError')) {
-                errorMessage = 'Sua câmera ou microfone já está sendo usada por outro aplicativo ou aba. Por favor, feche-os e tente novamente.'
+                errorMessage = 'Sua câmera ou microfone já está sendo usada por outro aplicativo. Feche-os e tente novamente.'
             } else if (err.name === 'NotAllowedError') {
-                errorMessage = 'Permissão de câmera/microfone negada. Verifique as configurações do seu navegador.'
+                errorMessage = 'Permissão de câmera/microfone negada.'
             }
 
             setCallError(errorMessage)
 
-            // Cleanup if partial failure
             if (clientRef.current) {
                 clientRef.current.leave().catch(() => { })
                 clientRef.current = null
             }
-
-            if (errorMessage.includes('Agora credentials')) {
-                toast.error('Sistema de vídeo não configurado.')
-            } else {
-                toast.error('Erro ao conectar: ' + errorMessage)
-            }
+            toast.error('Erro ao conectar: ' + errorMessage)
         }
     }
 
     const leaveCall = async () => {
-        if (timerRef.current) clearInterval(timerRef.current)
         if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
 
         localAudioTrack?.stop()
@@ -413,8 +382,19 @@ export default function ServiceRoomPage() {
 
     const endCall = async () => {
         if (!consultationId || isFinalizing) return
-        setCallEndedBy('oracle')
-        await autoFinalizeCall('oracle')
+
+        // If not joined, simple exit
+        if (!joined) {
+            if (confirm('Deseja sair da sala? A consulta não será finalizada nem cobrada.')) {
+                router.push('/app/dashboard')
+            }
+            return
+        }
+
+        if (confirm('Deseja realmente finalizar o atendimento?')) {
+            setCallEndedBy('oracle')
+            await autoFinalizeCall('oracle')
+        }
     }
 
     const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
@@ -422,7 +402,6 @@ export default function ServiceRoomPage() {
         setIsFinalizing(true)
 
         try {
-            // Finalize in DB
             const { data: result, error } = await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: consultationId,
                 p_duration_seconds: duration,
@@ -440,11 +419,10 @@ export default function ServiceRoomPage() {
 
             await leaveCall()
             setShowSummary(true)
-            toast.success(endedBy === 'oracle' ? 'Consulta encerrada por você.' : 'O cliente encerrou a consulta.')
+            toast.success(endedBy === 'oracle' ? 'Consulta encerrada.' : 'O cliente desconectou.')
         } catch (err: any) {
             console.error('Finalize error:', err)
-            toast.error('Erro ao finalizar ganhos: ' + err.message)
-            // Still show summary if possible
+            // If error, force local summary
             setShowSummary(true)
         } finally {
             setIsFinalizing(false)
@@ -452,238 +430,204 @@ export default function ServiceRoomPage() {
     }
 
     const handleNextPatient = async () => {
-        const { data: next } = await supabase
-            .from('consultations')
-            .select('id, client:client_id(full_name)')
-            .eq('oracle_id', profile!.id)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true })
-            .limit(1)
-            .single()
-
-        if (next) {
-            const nextClient = Array.isArray(next.client) ? next.client[0] : next.client
-            if (confirm(`Próximo: ${nextClient?.full_name}. Atender?`)) {
-                // Hard refresh for clean state
-                window.location.href = `/app/dashboard/sala?consultationId=${next.id}`
-            } else {
-                router.push('/app/dashboard')
-            }
-        } else {
-            router.push('/app/dashboard')
-        }
+        router.push('/app/dashboard')
     }
 
     if (loading) return (
-        <div className="flex items-center justify-center min-h-screen bg-deep-space">
+        <div className="flex items-center justify-center min-h-[500px] h-full">
             <Loader2 className="animate-spin text-neon-cyan" size={40} />
         </div>
     )
 
     return (
-        <div className="fixed inset-0 bg-black overflow-hidden z-[50] flex flex-col">
+        <div className="w-full flex-1 p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center min-h-[calc(100vh-100px)] relative">
 
-            {/* Summary Modal w/ High Z-Index */}
-            {showSummary && (
-                <div className="absolute inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-                    <GlassCard className="max-w-md w-full p-6 md:p-8 text-center space-y-6 border-neon-purple/20 animate-in fade-in zoom-in duration-300">
-                        <div className="w-16 h-16 md:w-20 md:h-20 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <VideoIcon size={32} className="text-neon-purple" />
-                        </div>
-                        <h2 className="text-xl md:text-2xl font-bold text-white">Consulta Finalizada</h2>
-                        <div className="grid grid-cols-2 gap-3 md:gap-4">
-                            <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/5">
-                                <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black mb-1">Duração</p>
-                                <p className="text-base md:text-xl font-bold text-white">
-                                    {Math.floor(duration / 60)}:{(duration % 60).toString().padStart(2, '0')}
-                                </p>
+            {/* Header/Breadcrumbs */}
+            <div className="absolute top-4 left-4 md:left-8 z-10 flex items-center space-x-2 text-slate-400 hover:text-white transition-colors cursor-pointer" onClick={() => router.push('/app/dashboard')}>
+                <LayoutDashboard size={16} />
+                <span className="text-sm font-bold uppercase tracking-wider">Voltar ao Painel</span>
+            </div>
+
+            {/* Main Video Container - Adaptive Size */}
+            <motion.div
+                layout
+                className={`relative w-full transition-all duration-500 bg-black rounded-3xl overflow-hidden shadow-2xl border border-white/10 ${isExpanded ? 'fixed inset-0 z-50 rounded-none' : 'max-w-5xl aspect-video mx-auto'}`}
+            >
+                {/* Expand/Collapse Toggle */}
+                <button
+                    onClick={() => setIsExpanded(!isExpanded)}
+                    className="absolute top-4 right-4 z-40 p-2 bg-black/40 text-white/60 hover:text-white rounded-lg backdrop-blur-md opacity-0 hover:opacity-100 transition-opacity"
+                    title={isExpanded ? "Reduzir" : "Tela Cheia"}
+                >
+                    {isExpanded ? <Minimize2 size={20} /> : <Maximize2 size={20} />}
+                </button>
+
+                {/* Info Bar Overlay */}
+                <div className="absolute top-0 left-0 right-0 p-6 z-20 flex justify-between items-start bg-gradient-to-b from-black/80 via-black/40 to-transparent pb-20 pointer-events-none">
+                    <div className="flex items-center gap-4 pointer-events-auto">
+                        <div className="relative group">
+                            <div className="w-12 h-12 rounded-full border-2 border-neon-purple overflow-hidden">
+                                <img src={consultation?.client?.avatar_url || `https://ui-avatars.com/api/?name=${consultation?.client?.full_name}`} className="w-full h-full object-cover" />
                             </div>
-                            <div className="bg-white/5 p-3 md:p-4 rounded-2xl border border-white/5 overflow-hidden">
-                                <p className="text-[8px] md:text-[10px] text-slate-500 uppercase font-black mb-1">Ganhos Líquidos</p>
-                                <p className="text-base md:text-xl font-bold text-neon-gold truncate">
-                                    {summaryData?.credits || 0} créditos
-                                </p>
-                            </div>
+                            <div className={`absolute bottom-0 right-0 w-3 h-3 rounded-full border-2 border-black ${joined && remoteUsers.length > 0 ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
                         </div>
-
-                        <div className="space-y-3 pt-4">
-                            <NeonButton variant="purple" fullWidth onClick={handleNextPatient}>
-                                {queueCount > 0 ? 'Atender Próximo' : 'Voltar ao Painel'}
-                            </NeonButton>
+                        <div>
+                            <h3 className="text-white font-bold text-lg leading-none shadow-black drop-shadow-md">{consultation?.client?.full_name}</h3>
+                            <p className="text-slate-300 text-xs mt-1 font-medium">
+                                {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
+                            </p>
                         </div>
-                    </GlassCard>
-                </div>
-            )}
-
-            {/* Main Video Area (Remote) */}
-            <div className="flex-1 relative z-0 bg-zinc-900 flex items-center justify-center overflow-hidden">
-                {remoteUsers.length > 0 ? (
-                    <div className="w-full h-full">
-                        <RemotePlayer user={remoteUsers[0]} />
                     </div>
-                ) : (
-                    <div className="w-full h-full flex items-center justify-center p-6">
-                        {callError ? (
-                            <div className="max-w-md w-full text-center space-y-6">
-                                <div className="w-16 h-16 md:w-20 md:h-20 bg-red-500/20 rounded-full flex items-center justify-center mx-auto border border-red-500/40">
-                                    <AlertTriangle size={32} className="text-red-500" />
-                                </div>
-                                <div className="space-y-2">
-                                    <h2 className="text-xl md:text-2xl font-bold text-white">Falha na Conexão</h2>
-                                    <p className="text-slate-400 text-sm leading-relaxed">
-                                        {callError}
-                                    </p>
-                                </div>
-                                <div className="pt-4 flex flex-col space-y-3">
-                                    <NeonButton variant="purple" onClick={startCall} size="lg" fullWidth>
-                                        <RefreshCcw className="mr-2" size={20} />
-                                        Tentar Reiniciar
+
+                    <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-lg">
+                        <span className="font-mono text-neon-cyan text-xl font-bold tracking-widest">
+                            {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+                        </span>
+                    </div>
+                </div>
+
+                {/* Remote Video Area */}
+                <div className="absolute inset-0 z-0 bg-zinc-900 flex items-center justify-center">
+                    {remoteUsers.length > 0 ? (
+                        <RemotePlayer user={remoteUsers[0]} />
+                    ) : (
+                        <div className="text-center p-8 space-y-6 max-w-md">
+                            {callError ? (
+                                <div className="space-y-4">
+                                    <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto text-red-500">
+                                        <AlertTriangle size={32} />
+                                    </div>
+                                    <p className="text-red-400 font-medium">{callError}</p>
+                                    <NeonButton variant="purple" onClick={startCall} size="sm">
+                                        <RefreshCcw className="mr-2" size={16} /> Tentar Novamente
                                     </NeonButton>
                                 </div>
-                            </div>
-                        ) : (
-                            <div className="text-center space-y-6">
-                                <div className="relative group mx-auto w-fit">
-                                    <div className="w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden mx-auto mb-4 border-4 border-white/10 relative z-10">
-                                        <img src={consultation?.client?.avatar_url || `https://ui-avatars.com/api/?name=${consultation?.client?.full_name}`} className="w-full h-full object-cover" />
+                            ) : (
+                                <div className="space-y-4">
+                                    <div className="relative w-20 h-20 mx-auto">
+                                        <div className="absolute inset-0 bg-neon-purple/20 blur-xl rounded-full animate-pulse" />
+                                        <Loader2 size={80} className="relative z-10 text-neon-purple animate-spin opacity-50" />
                                     </div>
-                                    <div className="absolute inset-0 bg-neon-purple blur-2xl opacity-20 group-hover:opacity-40 transition-opacity rounded-full animate-pulse" />
+                                    <p className="text-slate-400 text-sm animate-pulse">Aguardando vídeo do cliente...</p>
                                 </div>
+                            )}
+                        </div>
+                    )}
+                </div>
 
-                                <div>
-                                    <h2 className="text-xl md:text-2xl font-bold text-white mb-2">{consultation?.client?.full_name}</h2>
-                                    <p className="text-white/60 animate-pulse text-sm">Aguardando conexão do cliente...</p>
-                                </div>
-
-                                {!joined ? (
-                                    <div className="mt-8 flex justify-center">
-                                        <style jsx>{`
-                                            @keyframes pulse-red {
-                                                0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); transform: scale(1); }
-                                                70% { box-shadow: 0 0 0 15px rgba(239, 68, 68, 0); transform: scale(1.05); }
-                                                100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); transform: scale(1); }
-                                            }
-                                            .pulse-button {
-                                                animation: pulse-red 2s infinite;
-                                                background-color: #ef4444 !important;
-                                                color: white !important;
-                                            }
-                                        `}</style>
-                                        <NeonButton
-                                            variant="red"
-                                            onClick={startCall}
-                                            size="lg"
-                                            className="pulse-button font-bold px-8 md:px-12 py-4 md:py-6 text-lg md:text-xl uppercase tracking-tighter"
-                                        >
-                                            <VideoIcon className="mr-3" size={24} />
-                                            Iniciar Atendimento
-                                        </NeonButton>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white/5 border border-white/10 p-4 rounded-2xl max-w-xs mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
-                                        <Loader2 size={24} className="text-neon-cyan animate-spin mx-auto mb-2" />
-                                        <p className="text-[10px] text-slate-500 uppercase font-black tracking-widest">Aguardando vídeo dele...</p>
-                                        <p className="text-[9px] text-slate-600 mt-2">Se ele não conectar em 30s, a consulta será cancelada automaticamente.</p>
-                                    </div>
-                                )}
-                            </div>
+                {/* Local Video - PiP */}
+                {joined && (
+                    <motion.div
+                        drag
+                        dragConstraints={{ left: 0, right: 300, top: 0, bottom: 300 }}
+                        className="absolute right-6 bottom-24 w-32 h-44 md:w-40 md:h-56 bg-zinc-800 rounded-2xl border border-white/20 overflow-hidden shadow-2xl z-30 group"
+                    >
+                        <div ref={localPlayerRef} className="w-full h-full bg-black object-cover" />
+                        <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-white backdrop-blur-sm">Você</div>
+                        {cameras.length > 1 && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); switchCamera(); }}
+                                className="absolute top-2 right-2 p-1.5 bg-black/60 rounded-full text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                            >
+                                <RefreshCcw size={12} />
+                            </button>
                         )}
-                    </div>
+                    </motion.div>
                 )}
 
-                {/* Mensagem de Encerramento Superior */}
+                {/* Controls - Bottom Panel */}
+                <div className="absolute bottom-0 left-0 right-0 p-6 z-40 bg-gradient-to-t from-black/90 via-black/50 to-transparent flex justify-center items-end pb-8">
+                    <div className="flex items-center gap-4 bg-black/40 backdrop-blur-xl p-2 rounded-full border border-white/10 shadow-2xl">
+
+                        {/* Audio Toggle */}
+                        <button
+                            onClick={toggleAudio}
+                            disabled={!joined}
+                            className={`p-4 rounded-full transition-all ${!joined ? 'opacity-50 cursor-not-allowed bg-white/5' : audioEnabled ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-red-500/20 text-red-500 border border-red-500/50'}`}
+                            title={audioEnabled ? "Desativar Microfone" : "Ativar Microfone"}
+                        >
+                            {audioEnabled ? <Mic size={24} /> : <MicOff size={24} />}
+                        </button>
+
+                        {/* End Call - Main Action */}
+                        <button
+                            onClick={endCall}
+                            className="p-5 rounded-full bg-red-600 text-white shadow-lg shadow-red-600/30 hover:bg-red-700 transform hover:scale-105 transition-all mx-2"
+                            title="Encerrar Atendimento"
+                        >
+                            <PhoneOff size={28} fill="currentColor" />
+                        </button>
+
+                        {/* Video Toggle */}
+                        <button
+                            onClick={toggleVideo}
+                            disabled={!joined}
+                            className={`p-4 rounded-full transition-all ${!joined ? 'opacity-50 cursor-not-allowed bg-white/5' : videoEnabled ? 'bg-white/10 hover:bg-white/20 text-white' : 'bg-red-500/20 text-red-500 border border-red-500/50'}`}
+                            title={videoEnabled ? "Desativar Câmera" : "Ativar Câmera"}
+                        >
+                            {videoEnabled ? <VideoIcon size={24} /> : <VideoOff size={24} />}
+                        </button>
+                    </div>
+                </div>
+
+                {/* End Call Overlay */}
                 {callEndedBy && !showSummary && (
-                    <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-                        <GlassCard className="max-w-xs w-full p-6 text-center space-y-4 border-red-500/20">
-                            <div className="w-16 h-16 bg-red-500/20 rounded-full flex items-center justify-center mx-auto">
-                                <PhoneOff size={32} className="text-red-500" />
+                    <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                        <div className="text-center space-y-4">
+                            <Loader2 size={40} className="text-neon-purple animate-spin mx-auto" />
+                            <h3 className="text-xl font-bold text-white">Finalizando atendimento...</h3>
+                            <p className="text-slate-400 text-sm">Registrando duração e créditos.</p>
+                        </div>
+                    </div>
+                )}
+            </motion.div>
+
+            {/* Queue Info Widget */}
+            <div className="mt-8 flex items-center gap-4 text-slate-500 text-sm font-medium">
+                <div className="flex items-center gap-2 px-4 py-2 bg-white/5 rounded-full border border-white/5">
+                    <UserIcon size={14} />
+                    <span>{queueCount} pessoas na fila</span>
+                </div>
+                <div className="h-1 w-1 rounded-full bg-slate-700" />
+                <span>Próxima consulta em breve</span>
+            </div>
+
+            {/* Finished Summary Modal */}
+            <AnimatePresence>
+                {showSummary && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+                        <GlassCard className="max-w-md w-full p-8 text-center space-y-8 border-neon-purple/30 shadow-[0_0_50px_rgba(168,85,247,0.2)]">
+                            <div className="w-20 h-20 bg-green-500/20 rounded-full flex items-center justify-center mx-auto ring-4 ring-green-500/10">
+                                <VideoIcon size={32} className="text-green-400" />
                             </div>
-                            <div>
-                                <h3 className="text-xl font-bold text-white">Chamada Encerrada</h3>
-                                <p className="text-slate-400 text-sm">
-                                    {callEndedBy === 'client' ? 'O cliente encerrou a chamada.' : 'O oraculista encerrou a chamada.'}
-                                </p>
+
+                            <div className="space-y-2">
+                                <h2 className="text-2xl font-bold text-white">Atendimento Concluído</h2>
+                                <p className="text-slate-400 text-sm">Os créditos foram transferidos para sua carteira.</p>
                             </div>
-                            <div className="animate-pulse text-neon-cyan text-xs font-bold uppercase">
-                                Calculando ganhos...
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Duração Total</p>
+                                    <p className="text-2xl font-bold text-white font-mono">
+                                        {Math.floor(summaryData.duration / 60)}:{(summaryData.duration % 60).toString().padStart(2, '0')}
+                                    </p>
+                                </div>
+                                <div className="bg-white/5 p-4 rounded-2xl border border-white/5">
+                                    <p className="text-[10px] text-slate-500 uppercase font-bold tracking-wider mb-1">Você Ganhou</p>
+                                    <p className="text-2xl font-bold text-neon-gold">
+                                        {summaryData.credits} <span className="text-xs text-neon-gold/50">créditos</span>
+                                    </p>
+                                </div>
                             </div>
+
+                            <NeonButton variant="purple" fullWidth onClick={handleNextPatient} size="lg">
+                                Voltar ao Painel
+                            </NeonButton>
                         </GlassCard>
                     </div>
                 )}
-            </div>
-
-            {/* Local Video (Floating PiP) */}
-            {joined && (
-                <motion.div
-                    drag
-                    dragConstraints={{ left: -300, right: 300, top: -500, bottom: 500 }}
-                    initial={{ x: 20, y: 20 }}
-                    className="absolute right-4 bottom-32 w-28 h-40 md:w-48 md:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
-                >
-                    <div ref={localPlayerRef} className="w-full h-full bg-slate-900 overflow-hidden" />
-
-                    <div className="absolute bottom-2 left-2 flex items-center space-x-1 bg-black/40 px-2 py-0.5 rounded-lg backdrop-blur-md">
-                        <UserIcon size={10} className="text-neon-cyan" />
-                        <span className="text-[8px] text-white">Você</span>
-                    </div>
-
-                    {cameras.length > 1 && (
-                        <button
-                            onClick={(e) => { e.stopPropagation(); switchCamera(); }}
-                            className="absolute top-2 right-2 p-1.5 bg-black/40 rounded-full text-white hover:bg-black/60 transition-all z-30"
-                        >
-                            <RefreshCcw size={14} />
-                        </button>
-                    )}
-                </motion.div>
-            )}
-
-            {/* Top Bar - Info */}
-            <div className="absolute top-0 left-0 right-0 p-4 z-10 flex justify-between items-start bg-gradient-to-b from-black/80 to-transparent pb-12">
-                <div className="flex items-center gap-3">
-                    <div className={`w-2 h-2 md:w-3 md:h-3 rounded-full ${joined && remoteUsers.length > 0 ? 'bg-green-500' : 'bg-yellow-500 animate-pulse'}`} />
-                    <div className="min-w-0">
-                        <p className="text-white font-bold text-xs md:text-sm shadow-black drop-shadow-md truncate">
-                            {joined && remoteUsers.length > 0 ? 'Online' : 'Conectando...'}
-                        </p>
-                        <p className="text-white/60 text-[10px] md:text-xs">
-                            {queueCount} na fila
-                        </p>
-                    </div>
-                </div>
-
-                <div className="bg-black/40 backdrop-blur-md px-3 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10">
-                    <span className="font-mono text-neon-cyan text-base md:text-lg font-bold">
-                        {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
-                    </span>
-                </div>
-            </div>
-
-            {/* Bottom Controls */}
-            {joined && (
-                <div className="absolute bottom-6 md:bottom-8 left-0 right-0 z-20 flex justify-center items-center gap-4 md:gap-6 px-4 max-w-full">
-                    <button
-                        onClick={toggleAudio}
-                        className={`p-3 md:p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${audioEnabled ? 'bg-white/10 text-white border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
-                    >
-                        {audioEnabled ? <Mic size={20} className="md:w-6 md:h-6" /> : <MicOff size={20} className="md:w-6 md:h-6" />}
-                    </button>
-
-                    <button
-                        onClick={endCall}
-                        className="p-3 md:p-4 rounded-full bg-red-600 text-white shadow-xl shadow-red-900/50 hover:bg-red-700 hover:scale-105 transition-all border border-red-400"
-                    >
-                        <PhoneOff size={24} className="md:w-8 md:h-8" />
-                    </button>
-
-                    <button
-                        onClick={toggleVideo}
-                        className={`p-3 md:p-4 rounded-full transition-all shadow-xl backdrop-blur-md ${videoEnabled ? 'bg-white/10 text-white border border-white/20' : 'bg-red-500 text-white border border-red-400'}`}
-                    >
-                        {videoEnabled ? <VideoIcon size={20} className="md:w-6 md:h-6" /> : <VideoOff size={20} className="md:w-6 md:h-6" />}
-                    </button>
-                </div>
-            )}
+            </AnimatePresence>
         </div>
     )
 }
