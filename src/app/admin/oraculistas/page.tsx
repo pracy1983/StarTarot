@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
+import { GlowInput } from '@/components/ui/GlowInput'
+import { NeonButton } from '@/components/ui/NeonButton'
 import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare, History, RefreshCw, Layers, BookOpen } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
@@ -63,8 +65,8 @@ export default function AdminOraculistasPage() {
 
     const fetchSpecialties = async () => {
         const [specRes, catRes] = await Promise.all([
-            supabase.from('specialties').select('*').order('name', { ascending: true }),
-            supabase.from('categories').select('*').order('name', { ascending: true })
+            supabase.from('oracle_specialties').select('*').order('name', { ascending: true }),
+            supabase.from('oracle_categories').select('*').order('name', { ascending: true })
         ])
 
         if (specRes.data) setSpecialties(specRes.data)
@@ -237,7 +239,7 @@ export default function AdminOraculistasPage() {
     const handleSaveItem = async () => {
         if (!itemName.trim()) return
         setLoadingCategory(true)
-        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
 
         try {
             const slug = itemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
@@ -276,7 +278,7 @@ export default function AdminOraculistasPage() {
         if (!confirm(`Deseja realmente excluir a ${label} "${name}"?`)) return
 
         setIsDeletingItem(true)
-        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
 
         try {
             const { error: deleteError } = await supabase
@@ -434,20 +436,20 @@ export default function AdminOraculistasPage() {
                                         {editingItem ? `Editar ${activeManageTab === 'categories' ? 'Categoria' : 'Especialidade'}` : `Nova ${activeManageTab === 'categories' ? 'Categoria' : 'Especialidade'}`}
                                     </h4>
                                     <div className="flex gap-3">
-                                        <input
-                                            type="text"
+                                        <GlowInput
                                             placeholder={`Nome da ${activeManageTab === 'categories' ? 'categoria' : 'especialidade'}...`}
                                             value={itemName}
                                             onChange={e => setItemName(e.target.value)}
-                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-neon-gold/50 transition-all"
+                                            onKeyDown={(e: React.KeyboardEvent) => {
+                                                if (e.key === 'Enter') {
+                                                    handleSaveItem()
+                                                }
+                                            }}
+                                            className="flex-1"
                                         />
-                                        <button
-                                            onClick={handleSaveItem}
-                                            disabled={loadingCategory || !itemName.trim()}
-                                            className={`px-6 py-2 rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50 ${activeManageTab === 'categories' ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'bg-neon-cyan text-deep-space shadow-lg shadow-neon-cyan/20'}`}
-                                        >
+                                        <NeonButton variant={activeManageTab === 'categories' ? 'purple' : 'cyan'} onClick={handleSaveItem} disabled={loadingCategory || !itemName.trim()}>
                                             {loadingCategory ? '...' : editingItem ? 'Atualizar' : 'Adicionar'}
-                                        </button>
+                                        </NeonButton>
                                         {editingItem && (
                                             <button
                                                 onClick={() => {
@@ -724,7 +726,6 @@ export default function AdminOraculistasPage() {
                                             {/* Common Action: View Profile */}
                                             <Link
                                                 href={`/app/oraculo/${o.id}`}
-                                                target="_blank"
                                                 className="flex items-center space-x-1 px-2 py-1.5 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
                                                 title="Visualizar Perfil Público"
                                             >

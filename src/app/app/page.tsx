@@ -39,8 +39,8 @@ export default function MarketplacePage() {
 
     const fetchSpecialties = async () => {
         const [specsRes, catsRes] = await Promise.all([
-            supabase.from('specialties').select('name').eq('active', true).order('name', { ascending: true }),
-            supabase.from('categories').select('name').eq('active', true).order('name', { ascending: true })
+            supabase.from('oracle_specialties').select('name').eq('active', true).order('name', { ascending: true }),
+            supabase.from('oracle_categories').select('name').eq('active', true).order('name', { ascending: true })
         ])
 
         if (specsRes.data) {

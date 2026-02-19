@@ -217,7 +217,13 @@ export default function OracleProfilePage() {
         <div className="max-w-3xl mx-auto space-y-8 pb-20">
             {/* Voltar */}
             <button
-                onClick={() => router.back()}
+                onClick={() => {
+                    if (window.history.length > 1) {
+                        router.back()
+                    } else {
+                        router.push('/app')
+                    }
+                }}
                 className="flex items-center text-slate-400 hover:text-white transition-colors text-sm"
             >
                 <ArrowLeft size={18} className="mr-2" /> Voltar

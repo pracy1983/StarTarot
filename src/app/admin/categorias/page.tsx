@@ -23,7 +23,7 @@ export default function AdminCategoriesPage() {
 
     const fetchData = async () => {
         setLoading(true)
-        const table = activeTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
         const customCol = activeTab === 'categories' ? 'custom_category' : 'custom_topic'
 
         try {
@@ -163,6 +163,11 @@ export default function AdminCategoriesPage() {
                                     placeholder={`Nova ${activeTab === 'categories' ? 'ferramenta' : 'especialidade'}...`}
                                     value={newItemName}
                                     onChange={e => setNewItemName(e.target.value)}
+                                    onKeyDown={(e: React.KeyboardEvent) => {
+                                        if (e.key === 'Enter') {
+                                            handleAddItem(newItemName)
+                                        }
+                                    }}
                                     className="flex-1"
                                 />
                                 <NeonButton variant={activeTab === 'categories' ? 'purple' : 'cyan'} onClick={() => handleAddItem(newItemName)}>
