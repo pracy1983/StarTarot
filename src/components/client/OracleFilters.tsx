@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Search, Sun, Moon, Sparkles, ChevronDown, Check, Filter, Video, MessageSquare } from 'lucide-react'
 
@@ -39,6 +39,22 @@ export const OracleFilters = ({
 }: OracleFiltersProps) => {
     const [isCategoryOpen, setIsCategoryOpen] = useState(false)
     const [isSpecialtyOpen, setIsSpecialtyOpen] = useState(false)
+
+    const categoryRef = useRef<HTMLDivElement>(null)
+    const specialtyRef = useRef<HTMLDivElement>(null)
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (categoryRef.current && !categoryRef.current.contains(event.target as Node)) {
+                setIsCategoryOpen(false)
+            }
+            if (specialtyRef.current && !specialtyRef.current.contains(event.target as Node)) {
+                setIsSpecialtyOpen(false)
+            }
+        }
+        document.addEventListener('mousedown', handleClickOutside)
+        return () => document.removeEventListener('mousedown', handleClickOutside)
+    }, [])
 
     const toggleSelection = (list: string[], setList: (v: string[]) => void, item: string) => {
         if (item === 'all') {
@@ -90,10 +106,10 @@ export const OracleFilters = ({
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 relative z-20">
                 {/* Categories Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={categoryRef}>
                     <button
                         onClick={() => { setIsCategoryOpen(!isCategoryOpen); setIsSpecialtyOpen(false) }}
-                        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-white/5 border transition-all text-white group ${selectedCategories.length > 0 ? 'border-neon-purple/50 bg-neon-purple/5' : 'border-white/10 hover:border-neon-purple/30'}`}
+                        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-white/5 border transition-all text-white group ${isCategoryOpen || selectedCategories.length > 0 ? 'border-neon-purple/50 bg-neon-purple/5' : 'border-white/10 hover:border-neon-purple/30'}`}
                     >
                         <div className="flex items-center space-x-3">
                             <Filter size={16} className={selectedCategories.length > 0 ? 'text-neon-purple' : 'text-slate-500'} />
@@ -115,7 +131,7 @@ export const OracleFilters = ({
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 10 }}
-                                className="absolute top-full left-0 right-0 mt-2 max-h-[300px] overflow-y-auto bg-deep-space border border-white/10 rounded-2xl shadow-2xl z-50 p-2 glass"
+                                className="absolute top-full left-0 right-0 mt-3 max-h-[350px] overflow-y-auto bg-[#1a1a2e] border border-neon-purple/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 p-2 backdrop-blur-xl"
                             >
                                 <button
                                     onClick={() => toggleSelection(selectedCategories, setSelectedCategories, 'all')}
@@ -141,10 +157,10 @@ export const OracleFilters = ({
                 </div>
 
                 {/* Specialties Dropdown */}
-                <div className="relative">
+                <div className="relative" ref={specialtyRef}>
                     <button
                         onClick={() => { setIsSpecialtyOpen(!isSpecialtyOpen); setIsCategoryOpen(false) }}
-                        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-white/5 border transition-all text-white group ${selectedSpecialties.length > 0 ? 'border-neon-cyan/50 bg-neon-cyan/5' : 'border-white/10 hover:border-neon-cyan/30'}`}
+                        className={`w-full flex items-center justify-between px-5 py-3.5 rounded-2xl bg-white/5 border transition-all text-white group ${isSpecialtyOpen || selectedSpecialties.length > 0 ? 'border-neon-cyan/50 bg-neon-cyan/5' : 'border-white/10 hover:border-neon-cyan/30'}`}
                     >
                         <div className="flex items-center space-x-3">
                             <Sparkles size={16} className={selectedSpecialties.length > 0 ? 'text-neon-cyan' : 'text-slate-500'} />
@@ -166,7 +182,7 @@ export const OracleFilters = ({
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 exit={{ opacity: 0, y: 10 }}
-                                className="absolute top-full left-0 right-0 mt-2 max-h-[300px] overflow-y-auto bg-deep-space border border-white/10 rounded-2xl shadow-2xl z-50 p-2 glass"
+                                className="absolute top-full left-0 right-0 mt-3 max-h-[350px] overflow-y-auto bg-[#1a1a2e] border border-neon-cyan/30 rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.5)] z-50 p-2 backdrop-blur-xl"
                             >
                                 <button
                                     onClick={() => toggleSelection(selectedSpecialties, setSelectedSpecialties, 'all')}

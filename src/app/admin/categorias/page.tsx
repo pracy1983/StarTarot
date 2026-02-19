@@ -37,31 +37,40 @@ export default function AdminCategoriesPage() {
             setItems(sData || [])
 
             // 2. Fetch Suggestions from profiles
-            // Since we now use arrays (categories, topics), we might need a more complex query if we want to find "Other" in arrays.
-            // But for now, let's look at custom_category/custom_topic columns which are dedicated to the "Other" text.
+            const profileCol = activeTab === 'categories' ? 'categories' : 'topics'
             const { data: pData, error: pError } = await supabase
                 .from('profiles')
-                .select(customCol)
-                .not(customCol, 'is', null)
+                .select(`${customCol}, ${profileCol}`)
 
             if (pError) throw pError
 
             // Count occurrences
             const counts: Record<string, number> = {}
+            const officialNames = new Set(sData?.map(s => s.name.toLowerCase()))
+
             pData?.forEach((p: any) => {
-                const val = p[customCol]
-                if (val) {
-                    const name = val.trim()
-                    counts[name] = (counts[name] || 0) + 1
+                // Check custom text field
+                const customVal = p[customCol]
+                if (customVal) {
+                    const name = customVal.trim()
+                    if (!officialNames.has(name.toLowerCase())) {
+                        counts[name] = (counts[name] || 0) + 1
+                    }
+                }
+
+                // Check array fields for items not in official list
+                const arrayVals = p[profileCol] as string[] | null
+                if (arrayVals && Array.isArray(arrayVals)) {
+                    arrayVals.forEach(val => {
+                        if (val && !officialNames.has(val.toLowerCase())) {
+                            counts[val] = (counts[val] || 0) + 1
+                        }
+                    })
                 }
             })
 
             // Transform to array
-            const suggs = Object.entries(counts).map(([name, count]) => ({ name, count }))
-            // Filter out those that are already official (case insensitive check)
-            const officialNames = new Set(sData?.map(s => s.name.toLowerCase()))
-            const filteredSuggs = suggs.filter(s => !officialNames.has(s.name.toLowerCase()))
-
+            const filteredSuggs = Object.entries(counts).map(([name, count]) => ({ name, count }))
             setSuggestions(filteredSuggs.sort((a, b) => b.count - a.count))
 
         } catch (err: any) {
@@ -74,12 +83,17 @@ export default function AdminCategoriesPage() {
 
     const handleAddItem = async (name: string) => {
         if (!name.trim()) return
-        const table = activeTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const slug = name.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
 
         try {
             const { error } = await supabase
                 .from(table)
-                .insert({ name: name.trim() })
+                .insert({
+                    name: name.trim(),
+                    slug: slug.trim(),
+                    active: true
+                })
 
             if (error) throw error
 
@@ -95,7 +109,7 @@ export default function AdminCategoriesPage() {
         const typeLabel = activeTab === 'categories' ? 'categoria' : 'especialidade'
         if (!confirm(`Tem certeza que deseja remover a ${typeLabel} "${name}"?`)) return
 
-        const table = activeTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
 
         try {
             const { error: deleteError } = await supabase
