@@ -168,10 +168,14 @@ export default function MarketplacePage() {
 
         let matchesStatus = true
         if (filter === 'online') {
-            const lastPulse = o.last_heartbeat_at ? new Date(o.last_heartbeat_at).getTime() : 0
-            const now = new Date().getTime()
-            const isPulseActive = (now - lastPulse) < 120000
-            matchesStatus = o.is_online && isPulseActive
+            if (o.is_ai || o.oracle_type === 'ai') {
+                matchesStatus = !!o.is_online
+            } else {
+                const lastPulse = o.last_heartbeat_at ? new Date(o.last_heartbeat_at).getTime() : 0
+                const now = new Date().getTime()
+                const isPulseActive = (now - lastPulse) < 120000
+                matchesStatus = !!o.is_online && isPulseActive
+            }
         }
 
         // Specialty Filter
@@ -185,13 +189,14 @@ export default function MarketplacePage() {
         }
 
         // Capabilities Filter
-        let matchesVideo = true
-        if (filterVideo) matchesVideo = !!o.allows_video
+        let matchesCapabilities = true
+        if (filterVideo || filterMessage) {
+            matchesCapabilities = false
+            if (filterVideo && o.allows_video) matchesCapabilities = true
+            if (filterMessage && o.allows_text) matchesCapabilities = true
+        }
 
-        let matchesMessage = true
-        if (filterMessage) matchesMessage = !!o.allows_text
-
-        return matchesSearch && matchesStatus && matchesSpecialty && matchesVideo && matchesMessage
+        return matchesSearch && matchesStatus && matchesSpecialty && matchesCapabilities
     })
 
     // Paginação

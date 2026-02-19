@@ -102,6 +102,10 @@ export default function OracleDashboard() {
     }
 
     const toggleStatus = async (type: 'video' | 'message') => {
+        if (profile?.application_status !== 'approved') {
+            toast.error('Seu perfil precisa ser aprovado para ativar os serviços.')
+            return
+        }
         const field = type === 'video' ? 'allows_video' : 'allows_text'
         const newValue = !profile![field as keyof typeof profile]
 
@@ -130,23 +134,36 @@ export default function OracleDashboard() {
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
-            {/* Alert for Rejected/Paused Status */}
-            {(profile?.application_status === 'rejected' || (profile?.suspended_until && new Date(profile.suspended_until) > new Date())) && (
+            {/* Status Notices */}
+            {profile?.application_status && profile.application_status !== 'approved' && (
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="bg-orange-500/20 border border-orange-500/50 p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-[0_0_30px_rgba(249,115,22,0.15)] mb-8"
+                    className={`p-6 rounded-2xl flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl mb-8 border ${profile.application_status === 'rejected'
+                        ? 'bg-red-500/10 border-red-500/30 shadow-red-500/10'
+                        : profile.application_status === 'pending'
+                            ? 'bg-blue-500/10 border-blue-500/30 shadow-blue-500/10'
+                            : 'bg-orange-500/10 border-orange-500/30'
+                        }`}
                 >
                     <div className="flex items-center space-x-4">
-                        <div className="p-3 bg-orange-500 rounded-xl text-white">
+                        <div className={`p-3 rounded-xl text-white ${profile.application_status === 'rejected' ? 'bg-red-500' : profile.application_status === 'pending' ? 'bg-blue-500' : 'bg-orange-500'}`}>
                             <Info size={24} />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-white">Atenção: Ação Necessária</h3>
+                            <h3 className="text-lg font-bold text-white">
+                                {profile.application_status === 'rejected' ? 'Perfil Rejeitado / Pausado' :
+                                    profile.application_status === 'pending' ? 'Candidatura em Análise' :
+                                        'Fila de Espera'}
+                            </h3>
                             <p className="text-sm text-slate-300">
-                                {profile.rejection_reason
-                                    ? `Motivo: ${profile.rejection_reason}`
-                                    : 'Seu perfil precisa de ajustes para continuar atendendo.'}
+                                {profile.application_status === 'pending'
+                                    ? 'Sua candidatura está sendo avaliada por nossa equipe. Você pode editar seu perfil enquanto aguarda.'
+                                    : profile.application_status === 'waitlist'
+                                        ? 'No momento estamos com muitas solicitações. Você será notificado assim que houver uma vaga.'
+                                        : profile.rejection_reason
+                                            ? `Motivo: ${profile.rejection_reason}`
+                                            : 'Seu perfil precisa de ajustes para continuar atendendo.'}
                             </p>
                         </div>
                     </div>
@@ -154,9 +171,9 @@ export default function OracleDashboard() {
                         <NeonButton
                             variant="white"
                             size="sm"
-                            onClick={() => router.push('/app/perfil')}
+                            onClick={() => router.push('/app/dashboard/perfil')}
                         >
-                            Editar Perfil
+                            Ver Meus Dados
                         </NeonButton>
                         {profile.application_status === 'rejected' && (
                             <NeonButton
@@ -173,10 +190,7 @@ export default function OracleDashboard() {
                                         if (error) throw error
 
                                         toast.success('Candidatura reenviada com sucesso!')
-                                        // Update local state
                                         useAuthStore.getState().setProfile({ ...profile, application_status: 'pending' })
-                                        setPendingConsultations([]) // Force re-render or just let state handle it
-                                        // Ideally redirect or show "Under Review"
                                     } catch (err) {
                                         toast.error('Erro ao reenviar candidatura')
                                     }

@@ -61,7 +61,7 @@ export function ProfileMenu({ isOnline, toggleOnline }: ProfileMenuProps) {
     ].filter(v => {
         if (!v.requiredRole) return true
         if (profile?.role === 'owner') return true
-        if (v.requiredRole === 'oracle' && profile?.role === 'oracle' && profile?.application_status === 'approved') return true
+        if (v.requiredRole === 'oracle' && (profile?.role === 'oracle' || !!profile?.application_status)) return true
         return false
     })
 

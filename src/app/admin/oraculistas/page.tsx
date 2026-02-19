@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -42,9 +42,25 @@ export default function AdminOraculistasPage() {
     const [rejectionMessage, setRejectionMessage] = useState('')
     const [isProcessingStatus, setIsProcessingStatus] = useState(false)
 
+    // Specialties Management
+    const [isManagingSpecialties, setIsManagingSpecialties] = useState(false)
+    const [specialties, setSpecialties] = useState<any[]>([])
+    const [editingSpecialty, setEditingSpecialty] = useState<any>(null)
+    const [specialtyName, setSpecialtyName] = useState('')
+    const [isDeletingSpecialty, setIsDeletingSpecialty] = useState(false)
+
     useEffect(() => {
         fetchOracles()
+        fetchSpecialties()
     }, [])
+
+    const fetchSpecialties = async () => {
+        const { data, error } = await supabase
+            .from('specialties')
+            .select('*')
+            .order('name', { ascending: true })
+        if (data) setSpecialties(data)
+    }
 
     // Sync tab with URL
     const handleTabChange = (tab: 'human' | 'ai' | 'pending') => {
@@ -197,25 +213,68 @@ export default function AdminOraculistasPage() {
         }
     }
 
-    const handleAddCategory = async () => {
-        if (!newCategoryName.trim()) return
+    const handleSaveSpecialty = async () => {
+        if (!specialtyName.trim()) return
         setLoadingCategory(true)
         try {
-            const slug = newCategoryName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
-            const { error } = await supabase.from('specialties').insert({
-                name: newCategoryName,
-                slug,
-                active: true
-            })
+            const slug = specialtyName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
 
-            if (error) throw error
-            toast.success('Categoria adicionada com sucesso!')
-            setNewCategoryName('')
-            setIsAddingCategory(false)
+            if (editingSpecialty) {
+                // Update
+                const { error } = await supabase
+                    .from('specialties')
+                    .update({ name: specialtyName, slug })
+                    .eq('id', editingSpecialty.id)
+                if (error) throw error
+                toast.success('Categoria atualizada!')
+            } else {
+                // Insert
+                const { error } = await supabase.from('specialties').insert({
+                    name: specialtyName,
+                    slug,
+                    active: true
+                })
+                if (error) throw error
+                toast.success('Categoria adicionada!')
+            }
+
+            setSpecialtyName('')
+            setEditingSpecialty(null)
+            fetchSpecialties()
         } catch (err: any) {
-            toast.error('Erro ao adicionar categoria: ' + err.message)
+            toast.error('Erro ao salvar categoria: ' + err.message)
         } finally {
             setLoadingCategory(false)
+        }
+    }
+
+    const handleDeleteSpecialty = async (id: string, name: string) => {
+        if (!confirm(`Deseja realmente excluir a categoria "${name}"? Todos os oraculistas desta categoria serão movidos para "Outros".`)) return
+
+        setIsDeletingSpecialty(true)
+        try {
+            // 1. Move oracles to "Outros"
+            const { error: updateError } = await supabase
+                .from('profiles')
+                .update({ specialty: 'Outros' })
+                .eq('specialty', name)
+
+            if (updateError) throw updateError
+
+            // 2. Delete specialty
+            const { error: deleteError } = await supabase
+                .from('specialties')
+                .delete()
+                .eq('id', id)
+
+            if (deleteError) throw deleteError
+
+            toast.success('Categoria excluída e oraculistas movidos.')
+            fetchSpecialties()
+        } catch (err: any) {
+            toast.error('Erro ao excluir categoria: ' + err.message)
+        } finally {
+            setIsDeletingSpecialty(false)
         }
     }
 
@@ -252,10 +311,10 @@ export default function AdminOraculistasPage() {
                 </div>
                 <div className="flex gap-3">
                     <button
-                        onClick={() => setIsAddingCategory(true)}
+                        onClick={() => setIsManagingSpecialties(true)}
                         className="flex items-center px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-bold hover:bg-white/10 transition-all"
                     >
-                        <Plus size={20} className="mr-2 text-neon-gold" /> Nova Categoria
+                        <Tag size={20} className="mr-2 text-neon-gold" /> Categorias
                     </button>
                     <button
                         onClick={() => router.push(`/admin/oraculistas/novo?tab=${activeTab}`)}
@@ -266,52 +325,98 @@ export default function AdminOraculistasPage() {
                 </div>
             </div>
 
-            {/* Modal de Nova Categoria, Comparison Modal, etc... (skipped for brevity but included in output if needed) */}
-
-            {/* Same modals as before... keeping them in the output */}
+            {/* Modal de Gestão de Categorias */}
             <AnimatePresence>
-                {isAddingCategory && (
-                    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                {isManagingSpecialties && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
                         <motion.div
-                            initial={{ opacity: 0, scale: 0.9 }}
+                            initial={{ opacity: 0, scale: 0.95 }}
                             animate={{ opacity: 1, scale: 1 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="w-full max-w-sm"
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col bg-[#0f172a] rounded-2xl border border-white/10 shadow-2xl"
                         >
-                            <GlassCard className="border-neon-gold/30" hover={false}>
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-bold text-white flex items-center">
-                                        <Sparkles size={18} className="mr-2 text-neon-gold" />
-                                        Nova Categoria
-                                    </h3>
-                                    <div className="space-y-1.5">
-                                        <label className="text-sm font-medium text-slate-400 ml-1">Nome da Categoria</label>
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                <h3 className="text-xl font-bold text-white flex items-center">
+                                    <Tag className="mr-3 text-neon-gold" />
+                                    Gerenciar Categorias
+                                </h3>
+                                <button
+                                    onClick={() => {
+                                        setIsManagingSpecialties(false)
+                                        setEditingSpecialty(null)
+                                        setSpecialtyName('')
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <X size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-6">
+                                {/* Form Section */}
+                                <div className="p-4 bg-white/5 rounded-xl border border-white/10 space-y-4">
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">
+                                        {editingSpecialty ? 'Editar Categoria' : 'Nova Categoria'}
+                                    </h4>
+                                    <div className="flex gap-3">
                                         <input
                                             type="text"
-                                            placeholder="Ex: Baralho Cigano"
-                                            value={newCategoryName}
-                                            onChange={e => setNewCategoryName(e.target.value)}
-                                            className="w-full bg-white/5 border border-white/10 rounded-xl py-2.5 px-4 text-white outline-none focus:border-neon-gold/50 transition-all"
-                                            autoFocus
+                                            placeholder="Nome da categoria..."
+                                            value={specialtyName}
+                                            onChange={e => setSpecialtyName(e.target.value)}
+                                            className="flex-1 bg-white/5 border border-white/10 rounded-xl px-4 py-2 text-white outline-none focus:border-neon-gold/50 transition-all"
                                         />
-                                    </div>
-                                    <div className="flex gap-3">
                                         <button
-                                            onClick={() => setIsAddingCategory(false)}
-                                            className="flex-1 px-4 py-2 border border-white/10 rounded-xl text-slate-400 font-bold hover:bg-white/5 transition-all"
+                                            onClick={handleSaveSpecialty}
+                                            disabled={loadingCategory || !specialtyName.trim()}
+                                            className="px-6 py-2 bg-neon-gold text-deep-space rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50"
                                         >
-                                            Cancelar
+                                            {loadingCategory ? '...' : editingSpecialty ? 'Atualizar' : 'Adicionar'}
                                         </button>
-                                        <button
-                                            onClick={handleAddCategory}
-                                            disabled={loadingCategory || !newCategoryName.trim()}
-                                            className="flex-1 px-4 py-2 bg-neon-gold text-deep-space rounded-xl font-bold hover:scale-105 transition-all disabled:opacity-50"
-                                        >
-                                            {loadingCategory ? '...' : 'Adicionar'}
-                                        </button>
+                                        {editingSpecialty && (
+                                            <button
+                                                onClick={() => {
+                                                    setEditingSpecialty(null)
+                                                    setSpecialtyName('')
+                                                }}
+                                                className="px-4 py-2 bg-white/10 text-white rounded-xl font-bold hover:bg-white/20 transition-all"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
-                            </GlassCard>
+
+                                {/* List Section */}
+                                <div className="space-y-2">
+                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4">Categorias Existentes</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {specialties.map(s => (
+                                            <div key={s.id} className="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5 group hover:border-white/20 transition-all">
+                                                <span className="text-white font-medium">{s.name}</span>
+                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button
+                                                        onClick={() => {
+                                                            setEditingSpecialty(s)
+                                                            setSpecialtyName(s.name)
+                                                        }}
+                                                        className="p-1.5 text-slate-400 hover:text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all"
+                                                    >
+                                                        <Edit2 size={14} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteSpecialty(s.id, s.name)}
+                                                        disabled={isDeletingSpecialty}
+                                                        className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </div>
                         </motion.div>
                     </div>
                 )}

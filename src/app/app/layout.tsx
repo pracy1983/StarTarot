@@ -177,9 +177,12 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
     const searchParams = useSearchParams()
     const view = searchParams.get('view')
 
-    const isOracleView = pathname.startsWith('/app/dashboard') ||
+    const isOracleDashboard = pathname.startsWith('/app/dashboard')
+    const isOracleView = isOracleDashboard ||
         pathname.startsWith('/app/tornar-se-oraculo') ||
         (pathname === '/app/mensagens' && view === 'oracle')
+
+    const hasOracleAccess = profile?.role === 'oracle' || profile?.role === 'owner' || !!profile?.application_status
 
     const isAdminView = pathname.startsWith('/admin')
 
@@ -314,15 +317,25 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                     </nav>
 
                     {/* Become Oracle Button (Discrete) */}
-                    {profile?.role === 'client' && !isOracleView && (
+                    {!isOracleView && (
                         <div className="px-4 mb-2">
-                            <button
-                                onClick={() => router.push('/app/tornar-se-oraculo')}
-                                className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
-                            >
-                                <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
-                                <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
-                            </button>
+                            {!profile?.application_status && profile?.role === 'client' ? (
+                                <button
+                                    onClick={() => router.push('/app/tornar-se-oraculo')}
+                                    className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
+                                >
+                                    <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
+                                </button>
+                            ) : hasOracleAccess ? (
+                                <button
+                                    onClick={() => router.push('/app/dashboard')}
+                                    className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-400 hover:text-neon-purple hover:bg-white/5 transition-all group border border-white/5 hover:border-neon-purple/30 bg-neon-purple/5"
+                                >
+                                    <LayoutDashboard size={16} className="group-hover:text-neon-purple transition-colors" />
+                                    <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Minha Central</span>
+                                </button>
+                            ) : null}
                         </div>
                     )}
 
