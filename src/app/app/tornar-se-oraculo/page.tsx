@@ -70,24 +70,14 @@ export default function OracleSignupPage() {
         }
     }
 
-    if (profile?.application_status === 'pending') {
-        return (
-            <div className="max-w-2xl mx-auto py-20 text-center">
-                <GlassCard className="border-white/5 py-12">
-                    <div className="w-16 h-16 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-6">
-                        <Clock className="text-neon-purple" size={32} />
-                    </div>
-                    <h2 className="text-2xl font-bold text-white mb-4">Candidatura em Análise</h2>
-                    <p className="text-slate-400 mb-8">
-                        Recebemos seus dados e estamos revisando seu perfil.
-                        Você receberá uma notificação assim que for aprovado.
-                    </p>
-                    <NeonButton variant="purple" onClick={() => router.push('/app/perfil')}>
-                        Voltar ao Perfil
-                    </NeonButton>
-                </GlassCard>
-            </div>
-        )
+    useEffect(() => {
+        if (profile?.application_status) {
+            router.push('/app/dashboard')
+        }
+    }, [profile, router])
+
+    if (profile?.application_status) {
+        return null
     }
 
     return (

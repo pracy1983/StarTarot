@@ -19,25 +19,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             return
         }
 
-        if (profile.role === 'owner') {
+        const hasAccess = profile.role === 'owner' || profile.role === 'oracle' || !!profile.application_status
+        if (hasAccess) {
             setIsAuthorized(true)
-            return
+        } else {
+            router.push('/app')
         }
-
-        if (profile.role === 'oracle') {
-            if (profile.application_status === 'approved' || profile.application_status === 'rejected') {
-                setIsAuthorized(true)
-            } else if (profile.application_status === 'pending') {
-                router.push('/app/tornar-se-oraculo')
-            } else {
-                // suspended or just role set without application ??
-                router.push('/app')
-            }
-            return
-        }
-
-        // If client tries to access
-        router.push('/app')
 
     }, [profile, loading, router])
 
