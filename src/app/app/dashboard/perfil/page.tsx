@@ -518,7 +518,7 @@ export default function OracleProfilePage() {
                             <h3 className="text-sm font-bold uppercase tracking-wider">Configuração de Canais</h3>
                         </div>
                         <p className="text-xs text-slate-500 mb-6 italic">
-                            Escolha como você deseja atender seus clientes. Atendentes de IA operam apenas por mensagem.
+                            Escolha como você deseja atender seus clientes.
                         </p>
 
                         <div className="space-y-4">
@@ -531,7 +531,7 @@ export default function OracleProfilePage() {
                                         <MessageSquare size={18} />
                                     </div>
                                     <div>
-                                        <p className={`text-sm font-bold ${formData.allows_text ? 'text-white' : 'text-slate-400'}`}>Atendimento por Chat</p>
+                                        <p className={`text-sm font-bold ${formData.allows_text ? 'text-white' : 'text-slate-400'}`}>Atendimento por Mensagem</p>
                                         <p className="text-[10px] text-slate-500">Habilita consultas de texto</p>
                                     </div>
                                 </div>
@@ -766,7 +766,7 @@ export default function OracleProfilePage() {
                                     <Clock size={16} className="mr-2 text-neon-purple" /> Sua Escala de Atendimento
                                 </h3>
                                 <p className="text-xs text-slate-500 mb-6 italic">
-                                    * Defina os horários em que você estará disponível para consultas. O sistema automaticamente muda seu status para "Online" durante estes períodos.
+                                    * Defina os horários em que você costuma estar disponível para que seus clientes saibam quando te encontrar.
                                 </p>
                                 <ScheduleGrid schedule={schedule} onChange={setSchedule} />
                             </div>

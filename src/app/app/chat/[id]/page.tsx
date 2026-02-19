@@ -328,10 +328,9 @@ export default function MessagingPage() {
 
             {/* Rodapé Informativo */}
             <div className="flex justify-center mt-3 text-[10px] text-slate-600 space-x-4">
-                <span className="flex items-center"><Sparkles size={10} className="mr-1" /> Consulta Assistida por IA DeepSeek</span>
                 <span className="flex items-center">
                     <AlertCircle size={10} className="mr-1" />
-                    {oracle?.is_ai ? 'Cada mensagem enviada consome créditos' : 'O tempo consome créditos em tempo real'}
+                    {oracle?.is_ai || oracle?.oracle_type === 'ai' ? 'Cada mensagem enviada consome créditos' : 'O tempo consome créditos em tempo real'}
                 </span>
             </div>
         </div>
