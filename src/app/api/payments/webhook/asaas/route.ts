@@ -7,7 +7,7 @@ export async function POST(req: Request) {
         const body = await req.json()
         const { event, payment } = body
 
-        console.log('Asaas Webhook received:', event, payment.id)
+        console.log('Asaas Webhook payload:', JSON.stringify(body, null, 2))
 
         // Verificamos apenas pagamentos recebidos (PAYMENT_RECEIVED ou PAYMENT_CONFIRMED)
         if (event === 'PAYMENT_RECEIVED' || event === 'PAYMENT_CONFIRMED') {
