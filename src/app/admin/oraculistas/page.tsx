@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare } from 'lucide-react'
+import { Users, Plus, Search, Edit2, Trash2, Brain, User, Check, X, Star, Eye, Ban, Tag, MessageSquare, History, RefreshCw } from 'lucide-react'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
@@ -199,7 +199,7 @@ export default function AdminOraculistasPage() {
             if (error) throw error
 
             if (!data) {
-                toast.error('Nenhum histórico de alterações encontrado para este usuário.')
+                toast.error('Nenhum histórico de alterações encontrado (registo anterior ao sistema de logs ou sem rejeições prévias).')
                 setComparisonModal({ open: false, current: null, snapshot: null })
                 return
             }
@@ -708,7 +708,7 @@ export default function AdminOraculistasPage() {
                                                             className="flex items-center space-x-1 px-2 py-1.5 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
                                                             title="Ver Alterações Recentes"
                                                         >
-                                                            <div className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full" />
+                                                            <RefreshCw size={14} className={loadingSnapshot ? 'animate-spin' : ''} />
                                                             <span className="text-[10px] font-bold uppercase">Changes</span>
                                                         </button>
                                                     )}
@@ -767,6 +767,98 @@ export default function AdminOraculistasPage() {
                     </table>
                 )}
             </GlassCard>
+
+            {/* Comparison Modal */}
+            <AnimatePresence>
+                {comparisonModal.open && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/90 backdrop-blur-xl">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            exit={{ opacity: 0, scale: 0.95 }}
+                            className="w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col bg-[#0f172a] rounded-2xl border border-white/10 shadow-2xl"
+                        >
+                            <div className="p-6 border-b border-white/10 flex justify-between items-center bg-white/5">
+                                <div className="flex items-center space-x-3">
+                                    <h3 className="text-xl font-bold text-white flex items-center">
+                                        <History className="mr-3 text-neon-gold" />
+                                        Comparação de Alterações
+                                    </h3>
+                                    <span className="px-3 py-1 bg-white/5 rounded-full text-xs text-slate-400 border border-white/10">
+                                        {comparisonModal.current?.full_name}
+                                    </span>
+                                </div>
+                                <button
+                                    onClick={() => setComparisonModal({ open: false, current: null, snapshot: null })}
+                                    className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                >
+                                    <X size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+                                <div className="grid grid-cols-2 gap-8 sticky top-0 z-10 bg-[#0f172a]/80 backdrop-blur-md pb-4 border-b border-white/5">
+                                    <div className="text-center">
+                                        <p className="text-[10px] uppercase tracking-widest font-black text-red-400 mb-1">Versão Anterior (Snapshot)</p>
+                                        <p className="text-xs text-slate-500">Estado no momento da rejeição</p>
+                                    </div>
+                                    <div className="text-center">
+                                        <p className="text-[10px] uppercase tracking-widest font-black text-green-400 mb-1">Versão Atual</p>
+                                        <p className="text-xs text-slate-500">Estado modificado pelo oraculista</p>
+                                    </div>
+                                </div>
+
+                                {/* Comparison Rows */}
+                                <div className="space-y-12 pb-10">
+                                    {/* Bio */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Biografia / Descrição</h4>
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div className="p-5 bg-red-400/5 border border-red-500/20 rounded-2xl text-slate-400 text-sm leading-relaxed italic">
+                                                {comparisonModal.snapshot?.bio || 'Sem bio anterior'}
+                                            </div>
+                                            <div className={`p-5 rounded-2xl text-white text-sm leading-relaxed border ${comparisonModal.current?.bio !== comparisonModal.snapshot?.bio ? 'bg-green-400/10 border-green-500/30' : 'bg-white/5 border-white/10'}`}>
+                                                {comparisonModal.current?.bio}
+                                            </div>
+                                        </div>
+                                    </section>
+
+                                    {/* Specialty */}
+                                    <section className="space-y-4">
+                                        <h4 className="text-center text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade / Título</h4>
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div className="p-4 bg-red-400/5 border border-red-500/20 rounded-xl text-center font-bold text-slate-400">
+                                                {comparisonModal.snapshot?.specialty}
+                                            </div>
+                                            <div className={`p-4 rounded-xl text-center font-bold border ${comparisonModal.current?.specialty !== comparisonModal.snapshot?.specialty ? 'bg-green-400/10 border-green-500/30 text-white' : 'bg-white/5 border-white/10 text-slate-300'}`}>
+                                                {comparisonModal.current?.specialty}
+                                            </div>
+                                        </div>
+                                    </section>
+                                </div>
+                            </div>
+
+                            <div className="p-6 border-t border-white/10 bg-white/5 flex justify-end gap-3">
+                                <button
+                                    onClick={() => setComparisonModal({ open: false, current: null, snapshot: null })}
+                                    className="px-6 py-2 bg-white/10 hover:bg-white/20 text-white rounded-xl transition-all"
+                                >
+                                    Fechar
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        handleStatusChange(comparisonModal.current.id, 'approved')
+                                        setComparisonModal({ open: false, current: null, snapshot: null })
+                                    }}
+                                    className="px-6 py-2 bg-green-500 text-white rounded-xl font-bold hover:bg-green-600 shadow-lg shadow-green-500/20 transition-all"
+                                >
+                                    Aprovar Agora
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             {/* Rejection Modal */}
             <AnimatePresence>
