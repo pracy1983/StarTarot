@@ -342,18 +342,10 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
             ) : null}
 
-            {/* Status Badge - Top Left */}
-            <div className={`absolute top-4 left-4 flex items-center space-x-1.5 px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-[0.1em] z-10 border shadow-lg ${status === 'online' ? 'bg-green-500 text-white border-green-500/20 shadow-green-500/20' :
-                'bg-red-500 text-white border-red-500/20 shadow-red-500/10'
-                }`}>
-                <div className={`w-1.5 h-1.5 rounded-full bg-white ${status === 'online' ? 'animate-pulse' : ''}`} />
-                <span>{status === 'online' ? 'ONLINE' : 'OFFLINE'}</span>
-            </div>
-
             <div className="flex flex-col items-center text-center space-y-3 pt-4">
-                {/* Avatar */}
+                {/* Avatar container with status capsule */}
                 <div className="relative">
-                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500'
+                    <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500/20'
                         }`} />
                     <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
@@ -362,12 +354,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                             className="w-full h-full rounded-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all"
                         />
                     </div>
-                    {/* Pulsing online indicator on avatar */}
-                    {status === 'online' && (
-                        <div className="absolute -bottom-1 -right-1 w-4 h-4 rounded-full bg-green-500 border-2 border-[#0f0f2d] z-20 flex items-center justify-center">
-                            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        </div>
-                    )}
+
+                    {/* Centered Status Capsule */}
+                    <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full border border-white/20 z-20 flex items-center justify-center whitespace-nowrap shadow-lg ${status === 'online' ? 'bg-green-500 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.4)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.2)]'}`}>
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest leading-none">
+                            {status === 'online' ? 'Online' : 'Offline'}
+                        </span>
+                    </div>
                 </div>
 
                 <div className="space-y-1">

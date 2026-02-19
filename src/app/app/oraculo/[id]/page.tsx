@@ -237,10 +237,11 @@ export default function OracleProfilePage() {
                                 className="w-full h-full rounded-full object-cover"
                             />
                         </div>
-                        {/* Status Dot */}
-                        <div className={`absolute bottom-0 right-1 px-2 py-0.5 rounded-full border-[3px] border-[#0f0f2d] z-20 flex items-center space-x-1 ${isOnline ? 'bg-green-500 shadow-[0_0_10px_#22c55e]' : 'bg-red-500 shadow-[0_0_10px_#ef4444]'}`}>
-                            <div className={`w-2 h-2 rounded-full bg-white ${isOnline ? 'animate-pulse' : ''}`} />
-                            {isOnline && <span className="text-[8px] font-black text-white uppercase tracking-tighter">Online</span>}
+                        {/* Status Capsule Badge */}
+                        <div className={`absolute -bottom-2 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full border border-white/20 z-20 flex items-center justify-center whitespace-nowrap ${isOnline ? 'bg-green-500 animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.5)]' : 'bg-red-500 shadow-[0_0_10px_rgba(239,68,68,0.3)]'}`}>
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest leading-none">
+                                {isOnline ? 'Online' : 'Offline'}
+                            </span>
                         </div>
                     </div>
 
@@ -250,12 +251,6 @@ export default function OracleProfilePage() {
                             <div>
                                 <div className="flex items-center justify-center md:justify-start space-x-2">
                                     <h1 className="text-xl md:text-2xl font-bold text-white tracking-tight">{oracle.full_name}</h1>
-                                    {isOnline && (
-                                        <div className="flex items-center px-1.5 py-0.5 rounded bg-green-500/10 border border-green-500/20">
-                                            <div className="w-1 h-1 rounded-full bg-green-500 animate-ping mr-1.5" />
-                                            <span className="text-[8px] font-bold text-green-400 uppercase tracking-widest">Ativo</span>
-                                        </div>
-                                    )}
                                 </div>
                                 <p className="text-neon-cyan text-[10px] md:text-xs font-bold uppercase tracking-[0.2em]">
                                     {oracle.specialty}
