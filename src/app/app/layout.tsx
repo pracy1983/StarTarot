@@ -298,7 +298,20 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                 {/* Desktop Sidebar */}
                 {profile && (
                     <aside className="w-20 lg:w-64 border-r border-white/5 glass flex flex-col sticky top-20 h-[calc(100vh-80px)] hidden md:flex">
-                        <nav className="flex-1 py-8 px-4 space-y-2 overflow-y-auto">
+                        {/* Comprar Créditos (Client Only) */}
+                        {!isOracleView && !isAdminView && (
+                            <div className="px-4 mb-4">
+                                <button
+                                    onClick={() => router.push('/app/carteira')}
+                                    className="w-full flex items-center justify-center space-x-2 px-4 py-3 rounded-xl bg-gradient-to-r from-neon-purple to-neon-pink text-white font-bold shadow-lg shadow-neon-purple/20 hover:shadow-neon-purple/40 hover:scale-[1.02] transition-all group"
+                                >
+                                    <Sparkles size={18} className="fill-white" />
+                                    <span className="uppercase tracking-wider text-xs">Comprar Créditos</span>
+                                </button>
+                            </div>
+                        )}
+
+                        <nav className="flex-1 py-4 px-4 space-y-2 overflow-y-auto">
                             {navItems.map((item) => {
                                 const isActive = pathname === item.href
                                 return (
@@ -329,30 +342,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
                                 )
                             })}
                         </nav>
-
-                        {/* Become Oracle Button (Discrete) */}
-                        {!isOracleView && (
-                            <div className="px-4 mb-2">
-                                {!profile?.application_status && profile?.role === 'client' ? (
-                                    <button
-                                        onClick={() => router.push('/app/tornar-se-oraculo')}
-                                        className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-500 hover:text-neon-cyan hover:bg-white/5 transition-all group border border-dashed border-white/5 hover:border-neon-cyan/30"
-                                    >
-                                        <Sparkles size={16} className="group-hover:text-neon-gold transition-colors" />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Seja nosso oraculista</span>
-                                    </button>
-                                ) : hasOracleAccess ? (
-                                    <button
-                                        onClick={() => router.push('/app/dashboard')}
-                                        className="w-full flex items-center space-x-3 px-4 py-2 rounded-xl text-slate-400 hover:text-neon-purple hover:bg-white/5 transition-all group border border-white/5 hover:border-neon-purple/30 bg-neon-purple/5"
-                                    >
-                                        <LayoutDashboard size={16} className="group-hover:text-neon-purple transition-colors" />
-                                        <span className="text-[11px] font-bold uppercase tracking-wider hidden lg:block">Minha Central</span>
-                                    </button>
-                                ) : null}
-                            </div>
-                        )}
-
 
                         <div className="p-4 border-t border-white/5">
                             <button

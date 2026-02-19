@@ -240,6 +240,9 @@ export default function InboxPage() {
                     <h2 className="text-2xl font-bold font-raleway flex items-center">
                         <Inbox size={24} className="mr-3 text-neon-purple" />
                         Caixa de <span className="neon-text-purple ml-2">Entrada</span>
+                        <span className="text-sm font-normal text-slate-500 ml-3 hidden md:inline">
+                            (como {isOracleView ? 'Oraculista' : 'Cliente'})
+                        </span>
                     </h2>
                     {messages.filter(m => !m.is_read).length > 0 && (
                         <div className="bg-red-500 text-white text-xs font-bold rounded-full h-6 w-6 flex items-center justify-center shadow-[0_0_10px_rgba(239,68,68,0.5)] animate-bounce">

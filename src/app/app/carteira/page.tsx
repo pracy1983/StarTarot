@@ -10,6 +10,23 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
+// Helpers
+const formatCPF = (value: string) => {
+    return value
+        .replace(/\D/g, '')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})/, '$1-$2')
+        .replace(/(-\d{2})\d+?$/, '$1')
+}
+
+const formatCEP = (value: string) => {
+    return value
+        .replace(/\D/g, '')
+        .replace(/(\d{5})(\d)/, '$1-$2')
+        .replace(/(-\d{3})\d+?$/, '$1')
+}
+
 export default function WalletPage() {
     const { profile } = useAuthStore()
     const [balance, setBalance] = useState<number | null>(null)
@@ -43,8 +60,25 @@ export default function WalletPage() {
         if (profile?.id) {
             fetchWalletData()
             fetchTransactions()
+
+            // Load Profile Data
+            const p = profile as any
+            if (p.cpf) {
+                setCpf(formatCPF(p.cpf))
+                setBillingInfo(prev => ({ ...prev, cpf: formatCPF(p.cpf) }))
+            }
+            if (p.address) {
+                setBillingInfo(prev => ({
+                    ...prev,
+                    address: p.address || '',
+                    postal_code: formatCEP(p.postal_code || ''),
+                    city: p.city || '',
+                    state: p.state || '',
+                    address_number: p.address_number || ''
+                }))
+            }
         }
-    }, [profile?.id])
+    }, [profile])
 
     const fetchWalletData = async () => {
         try {
@@ -71,12 +105,16 @@ export default function WalletPage() {
     }
 
     const fetchTransactions = async () => {
+        // Filter for client-relevant transactions only: deposits (positive) or generic usage (negative)
+        // We exclude 'consultation_received' type which is typically Oracle earnings
         const { data } = await supabase
             .from('transactions')
             .select('*')
             .eq('user_id', profile!.id)
+            .neq('type', 'consultation_received') // Exclude earnings
+            .neq('type', 'gift_received') // Exclude gift earnings
             .order('created_at', { ascending: false })
-            .limit(5)
+            .limit(10)
         setTransactions(data || [])
     }
 
@@ -152,6 +190,7 @@ export default function WalletPage() {
             if (error) throw error
 
             toast.success('Dados salvos!')
+            setCpf(billingInfo.cpf) // Sync state to avoid re-asking
             setShowBillingModal(false)
             if (selectedPackage) {
                 setStep('checkout')
@@ -160,6 +199,26 @@ export default function WalletPage() {
             toast.error('Erro ao salvar dados')
         } finally {
             setIsProcessing(false)
+        }
+    }
+
+    const fetchAddress = async () => {
+        const cep = billingInfo.postal_code.replace(/\D/g, '')
+        if (cep.length !== 8) return
+
+        try {
+            const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`)
+            const data = await res.json()
+            if (!data.erro) {
+                setBillingInfo(prev => ({
+                    ...prev,
+                    address: data.logradouro,
+                    city: `${data.localidade} - ${data.uf}`,
+                    state: data.uf
+                }))
+            }
+        } catch (err) {
+            console.error('Erro ao buscar CEP')
         }
     }
 
@@ -375,7 +434,7 @@ export default function WalletPage() {
                                         type="text"
                                         placeholder="000.000.000-00"
                                         value={cpf}
-                                        onChange={(e) => setCpf(e.target.value)}
+                                        onChange={(e) => setCpf(formatCPF(e.target.value))}
                                         className="w-full bg-white/5 border border-white/10 rounded-xl py-3 px-4 text-white outline-none focus:border-neon-purple/50"
                                     />
                                 </div>
@@ -484,7 +543,7 @@ export default function WalletPage() {
                                     <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">CPF</label>
                                     <input
                                         value={billingInfo.cpf}
-                                        onChange={e => setBillingInfo({ ...billingInfo, cpf: e.target.value })}
+                                        onChange={e => setBillingInfo({ ...billingInfo, cpf: formatCPF(e.target.value) })}
                                         className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
                                         placeholder="000.000.000-00"
                                     />
@@ -494,8 +553,10 @@ export default function WalletPage() {
                                         <label className="text-xs font-bold text-slate-500 uppercase mb-1 block">CEP</label>
                                         <input
                                             value={billingInfo.postal_code}
-                                            onChange={e => setBillingInfo({ ...billingInfo, postal_code: e.target.value })}
+                                            onChange={e => setBillingInfo({ ...billingInfo, postal_code: formatCEP(e.target.value) })}
+                                            onBlur={fetchAddress}
                                             className="w-full bg-white/5 border border-white/10 rounded-lg p-3 text-white outline-none focus:border-neon-purple"
+                                            placeholder="00000-000"
                                         />
                                     </div>
                                     <div>
@@ -555,9 +616,16 @@ export default function WalletPage() {
                                     <p className="text-xs text-slate-500">{new Date(t.created_at).toLocaleDateString()}</p>
                                 </div>
                             </div>
-                            <span className={`font-bold ${t.amount > 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                {t.amount > 0 ? '+' : ''}{t.amount} Créditos
-                            </span>
+                            <div className="text-right">
+                                <span className={`font-bold block ${t.amount > 0 ? 'text-green-500' : 'text-slate-400'}`}>
+                                    {t.amount > 0 ? '+' : ''}{t.amount} Créditos
+                                </span>
+                                {t.metadata?.brl_amount && (
+                                    <span className="text-[10px] text-slate-500 block">
+                                        R$ {t.metadata.brl_amount.toFixed(2)}
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     )) : (
                         <p className="text-slate-500 text-sm">Nenhuma transação recente.</p>

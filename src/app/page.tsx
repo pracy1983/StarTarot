@@ -36,8 +36,10 @@ export default function LandingPage() {
   const [marketplaceLoading, setMarketplaceLoading] = useState(true)
   const [filter, setFilter] = useState('all') // online, all
   const [searchTerm, setSearchTerm] = useState('')
-  const [specialtyFilter, setSpecialtyFilter] = useState('all')
-  const [specialties, setSpecialties] = useState<string[]>([])
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([])
+  const [selectedSpecialties, setSelectedSpecialties] = useState<string[]>([])
+  const [categories, setCategories] = useState<string[]>([])
+  const [specialtiesList, setSpecialtiesList] = useState<string[]>([])
   const [favorites, setFavorites] = useState<string[]>([])
 
   // Global Settings
@@ -79,11 +81,8 @@ export default function LandingPage() {
       supabase.from('specialties').select('name').eq('active', true).order('name')
     ])
 
-    const combined = Array.from(new Set([
-      ...(cats.data || []).map(s => s.name),
-      ...(tops.data || []).map(s => s.name)
-    ]))
-    setSpecialties(combined)
+    setCategories((cats.data || []).map(s => s.name))
+    setSpecialtiesList((tops.data || []).map(s => s.name))
   }
 
   const fetchFavorites = async () => {
@@ -172,12 +171,14 @@ export default function LandingPage() {
       }
 
       let matchesSpecialty = true
-      if (specialtyFilter !== 'all') {
-        matchesSpecialty = (
-          (o.categories || []).includes(specialtyFilter) ||
-          (o.topics || []).includes(specialtyFilter) ||
-          o.specialty === specialtyFilter
-        )
+      if (selectedCategories.length > 0 || selectedSpecialties.length > 0) {
+        const oracleCats = o.categories || []
+        const oracleTopics = o.topics || []
+
+        const hasCategory = selectedCategories.length === 0 || selectedCategories.some(sc => oracleCats.includes(sc))
+        const hasSpecialty = selectedSpecialties.length === 0 || selectedSpecialties.some(ss => oracleTopics.includes(ss) || o.specialty === ss)
+
+        matchesSpecialty = hasCategory && hasSpecialty
       }
 
       return matchesSearch && matchesStatus && matchesSpecialty
@@ -261,41 +262,34 @@ export default function LandingPage() {
             Conecte-se com os melhores oraculistas em consultas em tempo real ou mensagens exclusivas.
           </motion.p>
         </header>
-        {/* Como Funciona Section - Moved up for visibility */}
-        <section className="mt-12 mb-20 py-16 border-y border-white/5 relative bg-white/[0.02] rounded-[40px] px-8">
-          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/5 via-transparent to-neon-cyan/5 pointer-events-none rounded-[40px]" />
 
-          <div className="text-center mb-12">
-            <h2 className="text-2xl md:text-3xl font-bold text-white tracking-tight flex items-center justify-center">
-              <Sparkles className="text-neon-gold mr-3" size={24} />
-              Como o <span className="neon-text-purple ml-2">Templo</span> Funciona
-            </h2>
-            <p className="text-slate-400 mt-2 text-sm">Siga os passos abaixo para iniciar sua jornada espiritual</p>
-          </div>
+        {/* Como Funciona Section - Moved up and made smaller */}
+        <section className="mb-16 py-8 border-y border-white/5 relative bg-white/[0.015] rounded-[30px] px-6">
+          <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/5 via-transparent to-neon-cyan/5 pointer-events-none rounded-[30px]" />
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-12 relative z-10">
-            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
-              <div className="w-20 h-20 bg-neon-purple/10 rounded-3xl flex items-center justify-center text-neon-purple shadow-[0_0_20px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">
-                <Search size={32} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 bg-neon-purple/10 rounded-xl flex items-center justify-center text-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">
+                <Search size={22} />
               </div>
-              <h3 className="font-bold text-white text-xl">1. Escolha seu Guia</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Navegue pelos perfis e veja as especialidades de cada oraculista. Leia suas bios e avaliações.</p>
+              <h3 className="font-bold text-white text-sm">1. Escolha seu Guia</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Veja as especialidades, bios e avaliações de cada oraculista.</p>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
-              <div className="w-20 h-20 bg-neon-cyan/10 rounded-3xl flex items-center justify-center text-neon-cyan shadow-[0_0_20px_rgba(34,211,238,0.1)] group-hover:scale-110 transition-transform">
-                <Sparkles size={32} />
+            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 bg-neon-cyan/10 rounded-xl flex items-center justify-center text-neon-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)] group-hover:scale-110 transition-transform">
+                <Sparkles size={22} />
               </div>
-              <h3 className="font-bold text-white text-xl">2. Adicione Créditos</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Carregue sua carteira via PIX ou Cartão de forma rápida. Seus créditos nunca expiram.</p>
+              <h3 className="font-bold text-white text-sm">2. Adicione Créditos</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Carregue sua carteira via PIX ou Cartão. Seus créditos nunca expiram.</p>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-4 p-6 group hover:bg-white/[0.03] rounded-[30px] transition-all">
-              <div className="w-20 h-20 bg-neon-gold/10 rounded-3xl flex items-center justify-center text-neon-gold shadow-[0_0_20px_rgba(251,191,36,0.1)] group-hover:scale-110 transition-transform">
-                <MessageSquare size={32} />
+            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 bg-neon-gold/10 rounded-xl flex items-center justify-center text-neon-gold shadow-[0_0_15px_rgba(251,191,36,0.1)] group-hover:scale-110 transition-transform">
+                <MessageSquare size={22} />
               </div>
-              <h3 className="font-bold text-white text-xl">3. Inicie a Jornada</h3>
-              <p className="text-sm text-slate-500 leading-relaxed">Inicie sua consulta por Mensagem ou Vídeo com total privacidade e segurança.</p>
+              <h3 className="font-bold text-white text-sm">3. Inicie a Jornada</h3>
+              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Consulta por Mensagem ou Vídeo com total privacidade e segurança.</p>
             </div>
           </div>
         </section>
@@ -308,9 +302,12 @@ export default function LandingPage() {
             setFilter={setFilter}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
-            specialtyFilter={specialtyFilter}
-            setSpecialtyFilter={setSpecialtyFilter}
-            specialties={specialties}
+            selectedCategories={selectedCategories}
+            setSelectedCategories={setSelectedCategories}
+            selectedSpecialties={selectedSpecialties}
+            setSelectedSpecialties={setSelectedSpecialties}
+            categories={categories}
+            specialties={specialtiesList}
           />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
@@ -512,11 +509,11 @@ export default function LandingPage() {
                   </h4>
                   <div className="space-y-4">
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Vídeo (Avg: R$ 3,00/min - 2h/dia x 20 dias)</span>
+                      <span className="text-slate-400">Vídeo (Média: R$ 3,00/min - 2h/dia x 20 dias)</span>
                       <span className="text-white font-mono text-right">R$ 7.200,00*</span>
                     </div>
                     <div className="flex justify-between text-sm">
-                      <span className="text-slate-400">Mensagens (Avg: R$ 15,00/msg - 10/dia x 20 dias)</span>
+                      <span className="text-slate-400">Mensagens (Média: R$ 15,00/msg - 10/dia x 20 dias)</span>
                       <span className="text-white font-mono text-right">R$ 3.000,00*</span>
                     </div>
                     <div className="h-px bg-white/10 my-4" />
@@ -539,7 +536,7 @@ export default function LandingPage() {
                       </p>
                     </div>
                     <p className="text-[9px] text-slate-600 mt-4 italic leading-relaxed">
-                      * Estimativas baseadas em tarifas médias sugeridas. Como oraculista, você é livre para definir seus próprios preços.
+                      * Estimativas baseadas em valores médios sugeridos. Como oraculista, você é livre para definir seus próprios valores.
                     </p>
                   </div>
                 </div>
