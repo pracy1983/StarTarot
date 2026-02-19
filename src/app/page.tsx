@@ -75,10 +75,10 @@ export default function LandingPage() {
   }
 
   const fetchSpecialties = async () => {
-    // Correct table names: specialties and categories
+    // Correct table names: oracle_specialties and oracle_categories
     const [cats, tops] = await Promise.all([
-      supabase.from('categories').select('name').eq('active', true).order('name'),
-      supabase.from('specialties').select('name').eq('active', true).order('name')
+      supabase.from('oracle_categories').select('name').eq('active', true).order('name'),
+      supabase.from('oracle_specialties').select('name').eq('active', true).order('name')
     ])
 
     setCategories((cats.data || []).map(s => s.name))
@@ -374,77 +374,34 @@ export default function LandingPage() {
 
         {/* Oracle Registration Section */}
         {(!isAuthenticated || (profile?.role !== 'oracle' && profile?.role !== 'owner')) && (
-          <section className="mt-20 pb-10">
-            <GlassCard className="p-8 md:p-10 border-white/5 relative overflow-hidden max-w-5xl mx-auto" hover={false}>
-              <div className="absolute top-0 right-0 w-64 h-64 bg-neon-purple/10 blur-[100px] -z-10" />
-              <div className="flex flex-col md:flex-row items-center gap-10">
-                <div className="flex-1 space-y-5">
+          <section className="mt-20">
+            <div className="p-8 md:p-10 bg-white/[0.02] border border-white/5 rounded-[40px] relative overflow-hidden max-w-5xl mx-auto text-center md:text-left">
+              <div className="flex flex-col md:flex-row items-center justify-between gap-10">
+                <div className="flex-1 space-y-4">
                   <div className="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-neon-cyan/5 border border-neon-cyan/10 text-neon-cyan text-[9px] font-bold uppercase tracking-widest">
                     <Sparkles size={10} />
                     <span>Seletiva de Oraculistas</span>
                   </div>
-                  <h2 className="text-2xl md:text-3xl font-bold text-white leading-tight">
-                    Compartilhe seu Dom <br />
-                    no <span className="neon-text-purple">StarTarot</span>
+                  <h2 className="text-2xl md:text-3xl font-bold text-white">
+                    Compartilhe seu Dom no <span className="neon-text-purple">StarTarot</span>
                   </h2>
-                  <p className="text-slate-400 text-sm leading-relaxed max-w-lg">
-                    Buscamos os melhores guias para manter a excelência do nosso templo. Sua candidatura passará por uma avaliação criteriosa e, se aprovado, você entrará em nossa lista de espera exclusiva.
+                  <p className="text-slate-400 text-sm max-w-xl">
+                    Buscamos os melhores guias. Se você tem o dom, candidate-se e entre em nossa lista de espera exclusiva.
                   </p>
-
-                  <div className="grid grid-cols-2 gap-4 py-2">
-                    <div className="flex items-start space-x-2">
-                      <div className="mt-1 w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
-                        <Check size={10} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-white">Transparência</p>
-                        <p className="text-[10px] text-slate-500">Você recebe {settings.commission}% do valor</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start space-x-2">
-                      <div className="mt-1 w-4 h-4 rounded-full bg-green-500/10 flex items-center justify-center text-green-400">
-                        <Check size={10} />
-                      </div>
-                      <div>
-                        <p className="text-xs font-bold text-white">Fila de Espera</p>
-                        <p className="text-[10px] text-slate-500">Curadoria para todos ganharem bem</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                    <NeonButton variant="purple" size="md" onClick={() => openAuth('oracle', true)} className="px-6 h-11 text-xs">
-                      Enviar Candidatura
-                    </NeonButton>
-                    <button
-                      onClick={() => setShowGanhosModal(true)}
-                      className="text-[11px] font-bold text-slate-400 hover:text-white transition-all px-5 py-2.5 border border-white/10 rounded-xl hover:bg-white/5 h-11"
-                    >
-                      Ver Simulador de Ganhos
-                    </button>
-                  </div>
                 </div>
-                <div className="flex-shrink-0 w-full md:w-[280px] h-[280px] relative group hidden md:block">
-                  <div className="absolute inset-0 bg-neon-purple/10 blur-2xl rounded-full group-hover:bg-neon-purple/20 transition-all" />
-                  <img
-                    src="https://images.unsplash.com/photo-1635817215354-93e114002e26?auto=format&fit=crop&q=80&w=600"
-                    alt="Tarot Oracle"
-                    className="w-full h-full object-cover rounded-[30px] relative z-10 border border-white/10 shadow-xl opacity-80"
-                  />
-                  <div className="absolute -bottom-4 -right-4 glass p-4 rounded-2xl z-20 border border-white/10 shadow-xl">
-                    <div className="flex items-center gap-2">
-                      <div className="w-8 h-8 rounded-full bg-neon-gold/10 flex items-center justify-center text-neon-gold">
-                        <Star size={16} className="fill-neon-gold" />
-                      </div>
-                      <div>
-                        <p className="text-[8px] font-black uppercase tracking-tighter text-slate-500 leading-none mb-1">Potencial Médio</p>
-                        <p className="text-sm font-bold text-white leading-none">R$ 3.500+</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex flex-col sm:flex-row gap-3">
+                  <NeonButton variant="purple" size="md" onClick={() => openAuth('oracle', true)} className="px-8">
+                    Enviar Candidatura
+                  </NeonButton>
+                  <button
+                    onClick={() => setShowGanhosModal(true)}
+                    className="text-[11px] font-bold text-slate-400 hover:text-white transition-all px-5 py-2.5 border border-white/10 rounded-xl hover:bg-white/5"
+                  >
+                    Simulador de Ganhos
+                  </button>
                 </div>
               </div>
-            </GlassCard>
+            </div>
           </section>
         )}
 

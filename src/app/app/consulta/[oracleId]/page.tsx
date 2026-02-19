@@ -607,7 +607,11 @@ export default function NewConsultationPage() {
                                         {isVideo ? 'Iniciar Chamada de Vídeo' : 'Enviar Consulta'}
                                     </span>
                                     <span className="text-[10px] opacity-80 font-normal mt-1">
-                                        {isVideo ? `Custo Inicial: ${calculateTotal()} Créditos` : `Total: ${calculateTotal()} Créditos`}
+                                        {isVideo
+                                            ? `Custo Inicial: ${calculateTotal()} Créditos`
+                                            : calculateTotal() > 0
+                                                ? `Total: ${calculateTotal()} Créditos`
+                                                : `Custo: ${oracle.price_per_message || 10} Créditos/mensagem`}
                                     </span>
                                 </div>
                             </NeonButton>

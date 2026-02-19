@@ -98,11 +98,11 @@ export const OracleFilters = ({
                         <div className="flex items-center space-x-3">
                             <Filter size={16} className={selectedCategories.length > 0 ? 'text-neon-purple' : 'text-slate-500'} />
                             <div className="text-left">
-                                <p className="text-[10px] uppercase font-bold text-slate-500 leading-none mb-1">Categorias</p>
+                                <p className="text-[10px] uppercase font-bold text-slate-500 leading-none mb-1">Oráculos & Ferramentas</p>
                                 <p className="text-xs font-bold truncate max-w-[150px]">
-                                    {selectedCategories.length === 0 ? 'Todas as Categorias' :
+                                    {selectedCategories.length === 0 ? 'Todos os Oráculos' :
                                         selectedCategories.length === 1 ? selectedCategories[0] :
-                                            `${selectedCategories.length} selecionadas`}
+                                            `${selectedCategories.length} selecionados`}
                                 </p>
                             </div>
                         </div>
@@ -149,7 +149,7 @@ export const OracleFilters = ({
                         <div className="flex items-center space-x-3">
                             <Sparkles size={16} className={selectedSpecialties.length > 0 ? 'text-neon-cyan' : 'text-slate-500'} />
                             <div className="text-left">
-                                <p className="text-[10px] uppercase font-bold text-slate-500 leading-none mb-1">Métodos & Oráculos</p>
+                                <p className="text-[10px] uppercase font-bold text-slate-500 leading-none mb-1">Especialidades & Temas</p>
                                 <p className="text-xs font-bold truncate max-w-[150px]">
                                     {selectedSpecialties.length === 0 ? 'Todas Especialidades' :
                                         selectedSpecialties.length === 1 ? selectedSpecialties[0] :

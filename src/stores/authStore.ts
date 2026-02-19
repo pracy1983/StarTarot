@@ -227,6 +227,10 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signUp: async (email: string, password: string, full_name: string, phone: string, role: UserRole = 'client') => {
     try {
+      // Safety: If role is oracle, we pass it, but the backend trigger/RPC will force status to pending.
+      // If role is owner/admin, we force client here to prevent client-side injection.
+      const safeRole = (role === 'owner') ? 'client' : role;
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -234,7 +238,7 @@ export const useAuthStore = create<AuthState>((set) => ({
           data: {
             full_name,
             phone,
-            role
+            role: safeRole
           }
         }
       })
@@ -245,10 +249,10 @@ export const useAuthStore = create<AuthState>((set) => ({
         // 1. Aguarda um momento para a trigger rodar
         await new Promise(resolve => setTimeout(resolve, 1500));
 
-        // 2. Verifica se o perfil foi criado pela trigger
+        // 2. Verifica se o perfil foi criado pela trigger e se o status está correto
         const { data: profile } = await supabase
           .from('profiles')
-          .select('id')
+          .select('id, role, application_status')
           .eq('id', data.user.id)
           .maybeSingle()
 
@@ -259,14 +263,20 @@ export const useAuthStore = create<AuthState>((set) => ({
             p_user_id: data.user.id,
             p_email: email.trim().toLowerCase(),
             p_full_name: full_name.trim(),
-            p_role: role
+            p_role: safeRole
           })
 
           if (rpcError) {
             console.error('Failed to create profile via RPC fallback:', rpcError)
           } else {
-            // Atualiza o telefone separadamente, pois a RPC de fallback pode ser generica
+            // Atualiza o telefone separadamente
             await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
+          }
+        } else {
+          // Se o perfil existe e é oraculo, verifica se está como pending
+          if (safeRole === 'oracle' && profile.application_status !== 'pending') {
+            // Should be caught by DB trigger generally, but good to log
+            console.warn('Oracle created but status is', profile.application_status)
           }
         }
 

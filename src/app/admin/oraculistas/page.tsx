@@ -63,8 +63,8 @@ export default function AdminOraculistasPage() {
 
     const fetchSpecialties = async () => {
         const [specRes, catRes] = await Promise.all([
-            supabase.from('specialties').select('*').order('name', { ascending: true }),
-            supabase.from('categories').select('*').order('name', { ascending: true })
+            supabase.from('oracle_specialties').select('*').order('name', { ascending: true }),
+            supabase.from('oracle_categories').select('*').order('name', { ascending: true })
         ])
 
         if (specRes.data) setSpecialties(specRes.data)
@@ -81,10 +81,11 @@ export default function AdminOraculistasPage() {
 
     const fetchOracles = async () => {
         try {
+            // Updated query to be more strict about roles
             const { data, error } = await supabase
                 .from('profiles')
                 .select('*')
-                .or('role.in.(oracle,owner),application_status.in.(pending,waitlist,approved,rejected)')
+                .in('role', ['oracle', 'owner'])
                 .order('full_name', { ascending: true })
 
             if (error) throw error
@@ -225,7 +226,7 @@ export default function AdminOraculistasPage() {
     const handleSaveItem = async () => {
         if (!itemName.trim()) return
         setLoadingCategory(true)
-        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
 
         try {
             const slug = itemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
@@ -264,7 +265,7 @@ export default function AdminOraculistasPage() {
         if (!confirm(`Deseja realmente excluir a ${label} "${name}"?`)) return
 
         setIsDeletingItem(true)
-        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
+        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
 
         try {
             const { error: deleteError } = await supabase
