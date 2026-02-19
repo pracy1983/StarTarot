@@ -38,17 +38,17 @@ export default function MarketplacePage() {
     }, [profile?.id])
 
     const fetchSpecialties = async () => {
-        const { data: specs } = await supabase
-            .from('specialties')
-            .select('name')
-            .eq('active', true)
-            .order('name', { ascending: true })
-        if (specs) {
-            setSpecialties(specs.map(s => s.name))
-        }
+        const [specsRes, catsRes] = await Promise.all([
+            supabase.from('specialties').select('name').eq('active', true).order('name', { ascending: true }),
+            supabase.from('categories').select('name').eq('active', true).order('name', { ascending: true })
+        ])
 
-        // Mock Categories for now or fetch if table exists
-        setCategories(['Tarot', 'Astrologia', 'Terapia', 'Baralho Cigano', 'Runas', 'Numerologia'])
+        if (specsRes.data) {
+            setSpecialties(specsRes.data.map(s => s.name))
+        }
+        if (catsRes.data) {
+            setCategories(catsRes.data.map(c => c.name))
+        }
     }
 
     const fetchFavorites = async () => {

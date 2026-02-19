@@ -75,10 +75,10 @@ export default function LandingPage() {
   }
 
   const fetchSpecialties = async () => {
-    // Correct table names: oracle_specialties and oracle_categories
+    // Unified table names: specialties and categories
     const [cats, tops] = await Promise.all([
-      supabase.from('oracle_categories').select('name').eq('active', true).order('name'),
-      supabase.from('oracle_specialties').select('name').eq('active', true).order('name')
+      supabase.from('categories').select('name').eq('active', true).order('name'),
+      supabase.from('specialties').select('name').eq('active', true).order('name')
     ])
 
     setCategories((cats.data || []).map(s => s.name))

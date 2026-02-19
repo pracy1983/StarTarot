@@ -63,8 +63,8 @@ export default function AdminOraculistasPage() {
 
     const fetchSpecialties = async () => {
         const [specRes, catRes] = await Promise.all([
-            supabase.from('oracle_specialties').select('*').order('name', { ascending: true }),
-            supabase.from('oracle_categories').select('*').order('name', { ascending: true })
+            supabase.from('specialties').select('*').order('name', { ascending: true }),
+            supabase.from('categories').select('*').order('name', { ascending: true })
         ])
 
         if (specRes.data) setSpecialties(specRes.data)
@@ -237,7 +237,7 @@ export default function AdminOraculistasPage() {
     const handleSaveItem = async () => {
         if (!itemName.trim()) return
         setLoadingCategory(true)
-        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
 
         try {
             const slug = itemName.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '-')
@@ -276,7 +276,7 @@ export default function AdminOraculistasPage() {
         if (!confirm(`Deseja realmente excluir a ${label} "${name}"?`)) return
 
         setIsDeletingItem(true)
-        const table = activeManageTab === 'categories' ? 'oracle_categories' : 'oracle_specialties'
+        const table = activeManageTab === 'categories' ? 'categories' : 'specialties'
 
         try {
             const { error: deleteError } = await supabase
