@@ -7,6 +7,8 @@ VALUES ('signup_bonus_credits', '50', 'Créditos de bônus ao cadastrar')
 ON CONFLICT (key) DO UPDATE SET value = '50';
 
 -- 2. Improve ensure_user_profile to prevent auto-oracle approval
+DROP FUNCTION IF EXISTS public.ensure_user_profile(uuid, text, text, text);
+
 CREATE OR REPLACE FUNCTION public.ensure_user_profile(
     p_user_id UUID,
     p_email TEXT,
