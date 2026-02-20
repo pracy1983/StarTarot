@@ -232,9 +232,9 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   signUp: async (email: string, password: string, full_name: string, phone: string, role: UserRole = 'client') => {
     try {
-      // Safety: If role is oracle, we pass it, but the backend trigger/RPC will force status to pending.
-      // If role is owner/admin, we force client here to prevent client-side injection.
       const safeRole = (role === 'owner') ? 'client' : role;
+
+      console.log('[SignUp] Iniciando cadastro:', { email, full_name, safeRole, phone })
 
       const { data, error } = await supabase.auth.signUp({
         email,
@@ -248,22 +248,38 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       })
 
+      console.log('[SignUp] Resposta do Supabase Auth:', {
+        userId: data?.user?.id,
+        error: error?.message,
+        identities: data?.user?.identities?.length
+      })
+
       if (error) throw error
 
-      if (data.user) {
-        // 1. Aguarda um momento para a trigger rodar
-        await new Promise(resolve => setTimeout(resolve, 1500));
+      // IMPORTANTE: Supabase retorna user com identities=[] se o email já existe mas sem confirmação
+      // Neste caso, data.user existe, mas identities é vazio = usuário fantasma
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        console.warn('[SignUp] Usuário fantasma detectado (identities vazio) - email já existe no Auth')
+        return { success: false, error: 'User already registered' }
+      }
 
-        // 2. Verifica se o perfil foi criado pela trigger e se o status está correto
+      if (data.user) {
+        console.log('[SignUp] Usuário criado no Auth! ID:', data.user.id)
+
+        // 1. Aguarda um momento para a trigger rodar
+        await new Promise(resolve => setTimeout(resolve, 2000));
+
+        // 2. Verifica se o perfil foi criado pela trigger
         const { data: profile } = await supabase
           .from('profiles')
           .select('id, role, application_status')
           .eq('id', data.user.id)
           .maybeSingle()
 
+        console.log('[SignUp] Perfil após trigger:', profile)
+
         if (!profile) {
-          console.log('Trigger delayed or failed, creating profile manually via RPC...')
-          // Fallback: Cria o perfil manualmente usando RPC seguro
+          console.log('[SignUp] Trigger falhou, criando perfil via RPC...')
           const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile', {
             p_user_id: data.user.id,
             p_email: email.trim().toLowerCase(),
@@ -271,30 +287,32 @@ export const useAuthStore = create<AuthState>((set) => ({
             p_role: safeRole
           })
 
+          console.log('[SignUp] Resultado RPC:', { rpcData, rpcError: rpcError?.message })
+
           const isSuccessful = Array.isArray(rpcData)
             ? (rpcData[0] as any)?.success
             : (rpcData as any)?.success
 
           if (rpcError || !isSuccessful) {
-            console.error('Failed to create profile via RPC fallback:', rpcError || rpcData)
+            console.error('[SignUp] RPC fallback falhou:', rpcError || rpcData)
             return { success: false, error: 'Erro ao criar perfil de usuário. Tente novamente.' }
           } else {
-            // Atualiza o telefone separadamente
             await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
           }
         } else {
-          // Se o perfil existe e é oraculo, verifica se está como pending
           if (safeRole === 'oracle' && profile.application_status !== 'pending') {
-            // Should be caught by DB trigger generally, but good to log
-            console.warn('Oracle created but status is', profile.application_status)
+            console.warn('[SignUp] Oracle criado mas status é', profile.application_status)
           }
         }
 
+        console.log('[SignUp] Cadastro completo com sucesso!')
         return { success: true }
       }
+
+      console.error('[SignUp] data.user é null')
       return { success: false, error: 'Ocorreu um erro ao criar a conta.' }
     } catch (error: any) {
-      console.error('Erro no signUp:', error)
+      console.error('[SignUp] Erro:', error.message)
       return { success: false, error: error.message || 'Erro ao criar conta' }
     }
   },
