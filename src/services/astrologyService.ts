@@ -35,14 +35,12 @@ export const astrologyService = {
         lat: number,
         long: number,
         timezone: number,
-        birthPlace?: string  // Nome da cidade (opcional, mais preciso)
+        birthPlace?: string
     ): Promise<BirthChartData | null> => {
         try {
-            const birthDate = new Date(date + 'T' + time)
-            if (isNaN(birthDate.getTime())) {
-                console.error('[Astrology] Invalid birth date/time:', date, time)
-                return null
-            }
+            // Extração direta para evitar conversões automáticas de fuso horário do objeto Date
+            const [year, month, day] = date.split('-').map(Number)
+            const [hour, minute] = time.split(':').map(Number)
 
             const apiKey = process.env.NEXT_PUBLIC_FREE_ASTRO_API_KEY || ''
             if (!apiKey) {
@@ -50,14 +48,12 @@ export const astrologyService = {
                 return null
             }
 
-            // Nova API espera: year, month, day, hour, minute, city (ou lat/lng)
             const requestBody: any = {
-                year: birthDate.getFullYear(),
-                month: birthDate.getMonth() + 1,
-                day: birthDate.getDate(),
-                hour: birthDate.getHours(),
-                minute: birthDate.getMinutes(),
-                // Usa cidade se disponível, senão usa coordenadas
+                year,
+                month,
+                day,
+                hour,
+                minute,
                 ...(birthPlace ? { city: birthPlace } : { lat, lng: long })
             }
 
@@ -70,7 +66,8 @@ export const astrologyService = {
                     'Accept': 'application/json',
                     'x-api-key': apiKey
                 },
-                body: JSON.stringify(requestBody)
+                body: JSON.stringify(requestBody),
+                cache: 'no-store'
             })
 
             if (!response.ok) {
@@ -80,8 +77,6 @@ export const astrologyService = {
             }
 
             const data = await response.json()
-            console.log('[Astrology] API Response received, planets count:', data.planets?.length || 0)
-
             return data
         } catch (error) {
             console.error('[Astrology] Error calculating birth chart:', error)
@@ -90,27 +85,10 @@ export const astrologyService = {
     },
 
     /**
-     * Formata os dados da API nova (planets como array) para o prompt da IA
+     * Formata todos os dados (Planetas + 12 Casas) para o prompt da IA
      */
     formatForAI: (data: BirthChartData): string => {
         if (!data || !data.planets || !Array.isArray(data.planets)) return ''
-
-        const find = (id: string) => data.planets.find(p => p.id === id || p.name?.toLowerCase() === id.toLowerCase())
-
-        const sun = find('sun')
-        const moon = find('moon')
-        const mercury = find('mercury')
-        const venus = find('venus')
-        const mars = find('mars')
-        const jupiter = find('jupiter')
-        const saturn = find('saturn')
-        const uranus = find('uranus')
-        const neptune = find('neptune')
-        const pluto = find('pluto')
-        const chiron = find('chiron')
-
-        const asc = data.angles_details?.asc
-        const mc = data.angles_details?.mc
 
         const signMap: Record<string, string> = {
             'ari': 'Áries', 'tau': 'Touro', 'gem': 'Gêmeos', 'can': 'Câncer',
@@ -118,26 +96,32 @@ export const astrologyService = {
             'sag': 'Sagitário', 'cap': 'Capricórnio', 'aqu': 'Aquário', 'pis': 'Peixes'
         }
         const sign = (s?: string) => s ? (signMap[s.toLowerCase().substring(0, 3)] || s) : 'N/D'
-        const fmt = (p?: PlanetItem | null) => p ? `${sign(p.sign)} (Casa ${p.house}${p.retrograde ? ', Retrógrado' : ''})` : 'N/D'
 
-        let text = `[MAPA NATAL - DADOS ASTROLÓGICOS REAIS]\n`
-        if (sun) text += `Sol: ${fmt(sun)}\n`
-        if (moon) text += `Lua: ${fmt(moon)}\n`
-        if (asc) text += `Ascendente: ${sign(asc.sign)} (Casa ${asc.house})\n`
-        if (mc) text += `Meio do Céu: ${sign(mc.sign)} (Casa ${mc.house})\n`
-        if (mercury) text += `Mercúrio: ${fmt(mercury)}\n`
-        if (venus) text += `Vênus: ${fmt(venus)}\n`
-        if (mars) text += `Marte: ${fmt(mars)}\n`
-        if (jupiter) text += `Júpiter: ${fmt(jupiter)}\n`
-        if (saturn) text += `Saturno: ${fmt(saturn)}\n`
-        if (uranus) text += `Urano: ${fmt(uranus)}\n`
-        if (neptune) text += `Netuno: ${fmt(neptune)}\n`
-        if (pluto) text += `Plutão: ${fmt(pluto)}\n`
-        if (chiron) text += `Quíron: ${fmt(chiron)}\n`
+        let text = `[MAPA NATAL COMPLETO - DADOS REAIS DA API]\n\n`
 
-        text += `[FIM DO MAPA NATAL]\n`
-        text += `Use estes dados EXATOS para sua interpretação. Não invente posições planetárias.`
+        text += `POSIÇÕES PLANETÁRIAS:\n`
+        data.planets.forEach(p => {
+            text += `- ${p.name}: ${sign(p.sign)} a ${p.pos.toFixed(1)}° (Casa ${p.house}${p.retrograde ? ', Retrógrado' : ''})\n`
+        })
+
+        if (data.angles_details) {
+            const { asc, mc } = data.angles_details
+            text += `\nPONTOS ANGULARES:\n`
+            if (asc) text += `- Ascendente: ${sign(asc.sign)} a ${asc.pos.toFixed(1)}°\n`
+            if (mc) text += `- Meio do Céu (MC): ${sign(mc.sign)} a ${mc.pos.toFixed(1)}°\n`
+        }
+
+        if (data.houses && Array.isArray(data.houses)) {
+            text += `\nCÚSPIDES DAS 12 CASAS:\n`
+            data.houses.forEach(h => {
+                text += `- Casa ${h.house}: ${sign(h.sign)} a ${h.pos.toFixed(1)}°\n`
+            })
+        }
+
+        text += `\n[FIM DOS DADOS TÉCNICOS]\n`
+        text += `INSTRUÇÃO: Use EXCLUSIVAMENTE os dados acima. Se houver divergência entre o que você acha e os dados técnicos acima, os dados acima PREVALECEM. Não diga que o ascendente é X se a API diz que é Y.`
 
         return text
     }
 }
+
