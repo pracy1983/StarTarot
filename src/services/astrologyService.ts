@@ -83,7 +83,7 @@ export const astrologyService = {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'x-api-key': '605a3818c08ad6d63008f13fa7e5ad222326b30151ab8e26a6bfcfd2b4ed6f4a'
+                    'x-api-key': process.env.NEXT_PUBLIC_FREE_ASTRO_API_KEY || ''
                 },
                 body: JSON.stringify(requestBody)
             });
