@@ -295,6 +295,8 @@ export const useAuthStore = create<AuthState>((set) => ({
 
           if (rpcError || !isSuccessful) {
             console.error('[SignUp] RPC fallback falhou:', rpcError || rpcData)
+            console.log('[SignUp] Debug RPC Full Data:', rpcData)
+            console.log('[SignUp] Debug RPC Error:', rpcError)
             return { success: false, error: 'Erro ao criar perfil de usuário. Tente novamente.' }
           } else {
             await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
