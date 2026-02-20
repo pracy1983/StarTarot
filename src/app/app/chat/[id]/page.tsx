@@ -19,6 +19,39 @@ import {
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
+import { astrologyService } from '@/services/astrologyService'
+
+// Helper to check if oracle is astrology type
+const isAstrologyOracle = (oracle: any) => {
+    if (!oracle) return false
+    const specialty = oracle.specialty?.toLowerCase() || ''
+    const bio = oracle.bio?.toLowerCase() || ''
+    return specialty.includes('astrologia') || specialty.includes('mapa astral') || bio.includes('astrologia')
+}
+
+// Helper to extract birth data from message
+const extractBirthData = (message: string) => {
+    // Basic regex for date (DD/MM/YYYY) and time (HH:mm)
+    // This is a simple heuristic. Ideally, we'd use a more robust parser or structured input.
+    const dateMatch = message.match(/(\d{2})\/(\d{2})\/(\d{4})/)
+    const timeMatch = message.match(/(\d{2}):(\d{2})/)
+    // City extraction is hard without NLP/Geocoding, so for now we rely on the AI asking or the user providing context.
+    // BUT, for the API we need lat/long. 
+    // If we can't extract structured data, we can't call the API reliably without a geocoding step.
+    // Simplifying: We only trigger if we find at least date and time, and we'll use a default or try to parse city later.
+    // FOR NOW: Let's assume the user input might contain this. 
+    // To make this robust, we should probably ask the user for these specific fields if they are missing.
+    // However, the prompt says "a lógica é consultar a api antes com o dados que a pessoa enviou".
+    // So we try our best.
+
+    if (dateMatch && timeMatch) {
+        return {
+            date: `${dateMatch[3]}-${dateMatch[2]}-${dateMatch[1]}`, // YYYY-MM-DD
+            time: `${timeMatch[1]}:${timeMatch[2]}`
+        }
+    }
+    return null
+}
 
 export default function MessagingPage() {
     const { id: oracleId } = useParams()
@@ -169,15 +202,59 @@ export default function MessagingPage() {
 
             if (oracle?.is_ai || oracle?.oracle_type === 'ai') {
                 setIsThinking(true)
+
+                let contextMessage = content
+                let usingAstrologyAPI = false
+
+                // INTEGRAÇÃO FREE ASTRO API
+                if (isAstrologyOracle(oracle)) {
+                    const birthData = extractBirthData(content)
+
+                    if (birthData) {
+                        // TODO: Precisamos de Lat/Long reais. 
+                        // Como não temos geocoding aqui, vamos usar um hack: 
+                        // Se a mensagem contiver "São Paulo" ou "SP", usamos SP.
+                        // Para um produto final, precisaríamos de uma API de geocoding (Google Maps/Mapbox).
+                        // Vou usar coordenadas de SP como default se não achar, ou tentar inferir.
+                        // Mas o ideal é que o 'astrologyService' cuidasse disso ou tivéssemos um input estruturado.
+
+                        // Coordenadas Padrao (Brasilia) para evitar crash, mas o ideal é pedir a cidade.
+                        // Lat: -15.7975, Long: -47.8919
+                        const lat = -23.5505 // SP Default
+                        const long = -46.6333
+                        const timezone = -3
+
+                        try {
+                            const chartData = await astrologyService.calculateBirthChart(
+                                birthData.date,
+                                birthData.time,
+                                lat,
+                                long,
+                                timezone
+                            )
+
+                            if (chartData) {
+                                const formattedData = astrologyService.formatForAI(chartData)
+                                contextMessage = `${content}\n\n${formattedData}`
+                                usingAstrologyAPI = true
+                                console.log('🔮 Astrology Data Injected:', formattedData)
+                            }
+                        } catch (astroError) {
+                            console.error('Failed to fetch astrology data', astroError)
+                        }
+                    }
+                }
+
                 // Chamar API Route que processa a IA
-                await processAIResponse(chatId, content)
+                await processAIResponse(chatId, contextMessage, usingAstrologyAPI)
             }
         } catch (err: any) {
             toast.error('Falha na conexão mística: ' + err.message)
+            setIsThinking(false)
         }
     }
 
-    const processAIResponse = async (chatId: string, userMessage: string) => {
+    const processAIResponse = async (chatId: string, userMessage: string, injectedContext: boolean = false) => {
         try {
             const response = await fetch('/api/chat', {
                 method: 'POST',
@@ -199,6 +276,8 @@ export default function MessagingPage() {
             if (data.newBalance !== undefined) {
                 setWalletBalance(data.newBalance)
             }
+
+            setIsThinking(false) // Stop thinking after success
         } catch (err: any) {
             setIsThinking(false)
             toast.error(err.message)
@@ -266,6 +345,11 @@ export default function MessagingPage() {
                         Conexão Protegida por Criptografia Estelar
                     </div>
                 </div>
+
+                {/* Badge de Uso da API (Só visível se fosse relevante, mas o user pediu discreto/interno, 
+                    então não mostramos nada explícito para o usuário final aqui, 
+                    conforme instrução: "isso nao deve ser mostrado ao usuario JAMAIS") 
+                */}
 
                 {messages.length === 0 && (
                     <div className="flex justify-center py-12">

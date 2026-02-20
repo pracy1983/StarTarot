@@ -606,6 +606,14 @@ export const AuthModal = () => {
                                     Ao fazer login, sua conta atual será mantida e você ganhará acesso extra como <strong>{registrationRole === 'oracle' ? 'Oraculista' : 'Membro'}</strong>.
                                 </div>
                             )}
+
+                            {/* Aviso Interno para Oraculistas (Astrologia) */}
+                            {registrationRole === 'oracle' && (
+                                <div className="p-2 border border-blue-500/20 bg-blue-500/5 rounded-lg text-[10px] text-blue-300/70 text-center uppercase tracking-widest font-mono">
+                                    <span className="opacity-50">System:</span> Free Astro API Integration Active
+                                </div>
+                            )}
+
                             {error && <div className={`text-sm p-3 rounded-lg border text-center ${upgradeMode ? 'text-neon-gold bg-neon-gold/10 border-neon-gold/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}>{error}</div>}
                             <NeonButton type="submit" variant={registrationRole === 'oracle' ? 'gold' : 'purple'} fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
                                 {upgradeMode ? 'Fazer Login e Ativar' : 'Gerar Código WhatsApp'}
