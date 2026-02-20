@@ -5,6 +5,21 @@ import { astrologyService } from '@/services/astrologyService'
 
 const MAX_RETRIES = 3
 
+// Helper para gravar log no banco e no console
+async function log(consultationId: string, event: string, details?: string) {
+    const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    const msg = `[${ts}] [${event}]${details ? ' ' + details : ''}`
+    console.log(`[AI Processor] ${msg}`)
+
+    await supabaseAdmin.from('consultation_logs').insert({
+        consultation_id: consultationId,
+        event,
+        details: details || null
+    }).then(({ error }) => {
+        if (error) console.error('[AI Processor] Failed to write log:', error.message)
+    })
+}
+
 export async function POST(req: Request) {
     try {
         // Optional: protect with a secret key for cron jobs
@@ -42,6 +57,7 @@ export async function POST(req: Request) {
                 processedCount++
             } catch (err: any) {
                 console.error(`[AI Processor] Error processing ${consultation.id}:`, err)
+                await log(consultation.id, 'error', `Falha geral: ${err.message}`)
 
                 // Retry logic
                 const retryCount = (consultation.metadata?.retry_count || 0) + 1
@@ -61,18 +77,17 @@ export async function POST(req: Request) {
                         })
                         .eq('id', consultation.id)
 
-                    console.log(`[AI Processor] Retry ${retryCount}/${MAX_RETRIES} for ${consultation.id}, next at ${retryAt}`)
+                    await log(consultation.id, 'retry_scheduled', `Tentativa ${retryCount}/${MAX_RETRIES} agendada para ${new Date(retryAt).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`)
                 } else {
                     // Max retries reached — log error for owner
                     await supabaseAdmin.from('inbox_messages').insert({
-                        recipient_id: consultation.oracle_id, // Goes to the AI oracle's "owner" view
+                        recipient_id: consultation.oracle_id,
                         sender_id: consultation.client_id,
                         title: '⚠️ Erro: Consulta IA não processada',
                         content: `A consulta de ${consultation.client?.full_name} falhou após ${MAX_RETRIES} tentativas. Erro: ${err.message}. ID: ${consultation.id}`,
                         metadata: { consultation_id: consultation.id, type: 'ai_processing_error', error: err.message }
                     })
 
-                    // Also mark metadata so it doesn't keep retrying
                     await supabaseAdmin
                         .from('consultations')
                         .update({
@@ -85,7 +100,7 @@ export async function POST(req: Request) {
                         })
                         .eq('id', consultation.id)
 
-                    console.error(`[AI Processor] MAX RETRIES reached for ${consultation.id}. Marked as failed.`)
+                    await log(consultation.id, 'max_retries_reached', `Falhou após ${MAX_RETRIES} tentativas. Último erro: ${err.message}`)
                 }
                 errorCount++
             }
@@ -103,6 +118,11 @@ async function processAIConsultation(consultation: any) {
     const client = consultation.client
     const consultationId = consultation.id
 
+    await log(consultationId, 'started', `Iniciando processamento para cliente "${client.full_name}" com oraculista IA "${oracle.full_name}"`)
+
+    // Atualiza status para 'processing' imediatamente
+    await supabaseAdmin.from('consultations').update({ status: 'processing' }).eq('id', consultationId)
+
     // 1. Buscar perguntas
     const { data: questions } = await supabaseAdmin
         .from('consultation_questions')
@@ -113,6 +133,8 @@ async function processAIConsultation(consultation: any) {
     if (!questions || questions.length === 0) {
         throw new Error('Nenhuma pergunta encontrada')
     }
+
+    await log(consultationId, 'questions_loaded', `${questions.length} pergunta(s) carregada(s)`)
 
     // 2. Buscar Master Prompt
     const { data: globalSettings } = await supabaseAdmin
@@ -153,32 +175,39 @@ async function processAIConsultation(consultation: any) {
             .join('\n\n')
 
         memoryHistory = `\n\nHISTÓRICO DE ATENDIMENTOS ANTERIORES COM ESTE CLIENTE (MEMÓRIA):\n${historyText}\n\n---`
+        await log(consultationId, 'memory_loaded', `${pastQuestions.length} consulta(s) anteriores carregadas para contexto`)
     }
 
-    // 5. Dados astrológicos reais via API (se tiver data/hora/local de nascimento)
+    // 5. Dados astrológicos reais via API (se tiver data/hora de nascimento)
     let astrologyContext = ''
     if (client.birth_date && client.birth_time) {
+        await log(consultationId, 'astrology_starting', `Consultando API de Astrologia para ${client.full_name} (${client.birth_date} ${client.birth_time}, local: ${client.birth_place || 'São Paulo'})`)
         try {
-            // Default coordinates for São Paulo if no birth_place coordinates available
+            // Usa lat/lng padrão de SP para clientes sem local de nascimento definido
             const lat = -23.5505
-            const long = -46.6333
+            const lng = -46.6333
             const timezone = -3
 
             const birthChart = await astrologyService.calculateBirthChart(
                 client.birth_date,
                 client.birth_time,
                 lat,
-                long,
-                timezone
+                lng,
+                timezone,
+                client.birth_place || undefined
             )
 
-            if (birthChart) {
+            if (birthChart && birthChart.planets && birthChart.planets.length > 0) {
                 astrologyContext = '\n\n' + astrologyService.formatForAI(birthChart)
+                await log(consultationId, 'astrology_ok', `Mapa natal obtido com ${birthChart.planets.length} posições planetárias`)
+            } else {
+                await log(consultationId, 'astrology_empty', 'API retornou resposta vazia ou sem planetas — continuando sem dados astrológicos')
             }
-        } catch (astroErr) {
-            console.error('[AI Processor] Astrology API error:', astroErr)
-            // Continue without astrology data
+        } catch (astroErr: any) {
+            await log(consultationId, 'astrology_error', `Erro na API de Astrologia: ${astroErr.message} — continuando sem dados astrológicos`)
         }
+    } else {
+        await log(consultationId, 'astrology_skipped', `Cliente sem data/hora de nascimento completa — pulando dados astrológicos`)
     }
 
     // 6. Subject data
@@ -191,7 +220,7 @@ async function processAIConsultation(consultation: any) {
 
     // 7. Data atual para o prompt
     const now = new Date()
-    const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Sao_Paulo' })
     const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
     const clientBirthInfo = `
@@ -239,7 +268,10 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
     // 8. Processar cada pergunta
     const conversationHistory: any[] = []
 
-    for (const question of questions) {
+    for (let i = 0; i < questions.length; i++) {
+        const question = questions[i]
+        await log(consultationId, `generating_answer_${i + 1}`, `Gerando resposta para pergunta ${i + 1}/${questions.length}: "${question.question_text.substring(0, 80)}..."`)
+
         const deepseekResponse = await fetch('https://api.deepseek.com/chat/completions', {
             method: 'POST',
             headers: {
@@ -260,7 +292,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
 
         if (!deepseekResponse.ok) {
             const errorText = await deepseekResponse.text()
-            console.error('DeepSeek API Error:', errorText)
+            await log(consultationId, `answer_${i + 1}_error`, `DeepSeek API retornou ${deepseekResponse.status}: ${errorText.substring(0, 200)}`)
             throw new Error('DeepSeek API falhou: ' + errorText)
         }
 
@@ -269,7 +301,7 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
 
         if (!answer) throw new Error('AI retornou resposta vazia')
 
-        // Remove any markdown formatting that slipped through
+        // Remove markdown formatting
         answer = answer.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s/gm, '').replace(/^---$/gm, '')
 
         conversationHistory.push({ role: 'user', content: question.question_text })
@@ -279,6 +311,8 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
             .from('consultation_questions')
             .update({ answer_text: answer })
             .eq('id', question.id)
+
+        await log(consultationId, `answer_${i + 1}_ok`, `Resposta ${i + 1}/${questions.length} gerada com sucesso (${answer.length} chars)`)
     }
 
     // 9. Atualizar status para answered
@@ -299,6 +333,8 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
         metadata: { consultation_id: consultationId, type: 'consultation_answered' }
     })
 
+    await log(consultationId, 'sent_to_client', `Notificação enviada ao cliente "${client.full_name}"`)
+
     // 11. Notificar WhatsApp
     try {
         const { data: clientData } = await supabaseAdmin
@@ -313,10 +349,11 @@ Importante: Garanta uma resposta valiosa, profunda e completa, focada estritamen
                 clientData.full_name || 'Cliente',
                 oracle.full_name
             )
+            await log(consultationId, 'whatsapp_sent', `WhatsApp enviado para "${clientData.full_name}"`)
         }
-    } catch (whatsappError) {
-        console.error('WhatsApp notification error:', whatsappError)
+    } catch (whatsappError: any) {
+        await log(consultationId, 'whatsapp_error', `Erro ao enviar WhatsApp: ${whatsappError.message}`)
     }
 
-    console.log(`[AI Processor] Successfully processed consultation ${consultationId} (${questions.length} questions)`)
+    await log(consultationId, 'completed', `✅ Consulta finalizada com sucesso — ${questions.length} pergunta(s) respondida(s)`)
 }

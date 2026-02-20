@@ -385,7 +385,7 @@ export default function AdminOraculistasPage() {
         return false
     })
 
-    const pendingCount = oraculistas.filter(o => o.application_status === 'pending' || o.application_status === 'waitlist' || o.application_status === 'rejected').length
+    const pendingCount = oraculistas.filter(o => o.has_unseen_changes === true).length
 
     return (
         <div className="p-8 space-y-8">

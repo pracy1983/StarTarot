@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react'
 import { GlassCard } from '@/components/ui/GlassCard'
-import { Search, Filter, Download, Eye, Sparkles, Calendar, Trash2, Video, MessageSquare } from 'lucide-react'
+import { Search, Filter, Download, Eye, Sparkles, Calendar, Trash2, Video, MessageSquare, Terminal, ChevronDown, ChevronUp } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 
@@ -25,6 +25,8 @@ export default function AdminConsultationsPage() {
     const [selectedConsultation, setSelectedConsultation] = useState<any>(null)
     const [modalQuestions, setModalQuestions] = useState<any[]>([])
     const [isRegenerating, setIsRegenerating] = useState(false)
+    const [consultationLogs, setConsultationLogs] = useState<any[]>([])
+    const [showLogs, setShowLogs] = useState(false)
 
     useEffect(() => {
         fetchData()
@@ -63,13 +65,22 @@ export default function AdminConsultationsPage() {
     }
 
     const handleViewDetails = async (consultation: any) => {
-        const { data: questions } = await supabase
-            .from('consultation_questions')
-            .select('*')
-            .eq('consultation_id', consultation.id)
-            .order('question_order', { ascending: true })
+        const [{ data: questions }, { data: logs }] = await Promise.all([
+            supabase
+                .from('consultation_questions')
+                .select('*')
+                .eq('consultation_id', consultation.id)
+                .order('question_order', { ascending: true }),
+            supabase
+                .from('consultation_logs')
+                .select('*')
+                .eq('consultation_id', consultation.id)
+                .order('created_at', { ascending: true })
+        ])
 
         setModalQuestions(questions || [])
+        setConsultationLogs(logs || [])
+        setShowLogs(false)
         setSelectedConsultation(consultation)
     }
 
@@ -490,6 +501,43 @@ export default function AdminConsultationsPage() {
                                 <p className="text-center text-slate-500 py-4">Nenhuma mensagem trocada.</p>
                             )}
                         </div>
+
+                        {/* Logs de Processamento */}
+                        {(selectedConsultation.oracle?.is_ai || selectedConsultation.oracle?.oracle_type === 'ai') && (
+                            <div className="mt-6 border border-white/10 rounded-xl overflow-hidden">
+                                <button
+                                    onClick={() => setShowLogs(v => !v)}
+                                    className="w-full flex items-center justify-between px-4 py-3 bg-white/5 hover:bg-white/10 transition-colors"
+                                >
+                                    <span className="flex items-center gap-2 text-sm font-bold text-slate-400">
+                                        <Terminal size={14} className="text-neon-cyan" />
+                                        Logs de Processamento
+                                        <span className="text-[10px] bg-neon-cyan/10 text-neon-cyan px-2 py-0.5 rounded-full">{consultationLogs.length} eventos</span>
+                                    </span>
+                                    {showLogs ? <ChevronUp size={16} className="text-slate-500" /> : <ChevronDown size={16} className="text-slate-500" />}
+                                </button>
+                                {showLogs && (
+                                    <div className="p-4 space-y-1 font-mono text-xs max-h-64 overflow-y-auto bg-black/20">
+                                        {consultationLogs.length === 0 ? (
+                                            <p className="text-slate-500 text-center py-4">Nenhum log registrado ainda.<br />Logs aparecem a partir das próximas consultas.</p>
+                                        ) : consultationLogs.map((log: any) => {
+                                            const isError = log.event.includes('error') || log.event.includes('failed')
+                                            const isOk = log.event.includes('_ok') || log.event === 'completed' || log.event.includes('sent')
+                                            const color = isError ? 'text-red-400' : isOk ? 'text-green-400' : 'text-slate-300'
+                                            const ts = new Date(log.created_at).toLocaleTimeString('pt-BR', { timeZone: 'America/Sao_Paulo', hour: '2-digit', minute: '2-digit', second: '2-digit' })
+                                            return (
+                                                <div key={log.id} className={`flex gap-3 ${color}`}>
+                                                    <span className="text-slate-600 shrink-0">{ts}</span>
+                                                    <span className="text-slate-500 shrink-0">[{log.event}]</span>
+                                                    <span>{log.details}</span>
+                                                </div>
+                                            )
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <button
                             onClick={() => setSelectedConsultation(null)}
                             className="mt-6 w-full py-3 bg-white/5 hover:bg-white/10 text-white rounded-xl font-bold transition-colors"

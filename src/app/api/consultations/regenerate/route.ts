@@ -3,6 +3,20 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+// Helper para gravar log no banco e no console
+async function log(consultationId: string, event: string, details?: string) {
+    const ts = new Date().toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })
+    console.log(`[Regenerate] [${ts}] [${event}] ${details || ''}`)
+
+    await supabaseAdmin.from('consultation_logs').insert({
+        consultation_id: consultationId,
+        event: `regenerate_${event}`,
+        details: details || null
+    }).then(({ error }) => {
+        if (error) console.error('[Regenerate] Failed to write log:', error.message)
+    })
+}
+
 export async function POST(req: Request) {
     const supabase = createRouteHandlerClient({ cookies })
 
@@ -23,6 +37,8 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Apenas administradores podem regenerar respostas' }, { status: 403 })
         }
 
+        await log(consultationId, 'started', `Regeneração iniciada pelo owner`)
+
         // 2. Buscar consulta
         const { data: consultation, error: consultationError } = await supabaseAdmin
             .from('consultations')
@@ -36,6 +52,8 @@ export async function POST(req: Request) {
 
         const oracle = consultation.oracle
         const client = consultation.client
+
+        await log(consultationId, 'data_loaded', `Cliente: "${client.full_name}", Oráculo IA: "${oracle.full_name}"`)
 
         // 3. Buscar Master Prompt e Configurações Globais
         const { data: globalSettings } = await supabaseAdmin
@@ -60,6 +78,8 @@ export async function POST(req: Request) {
 
         if (!questions || questions.length === 0) throw new Error('Nenhuma pergunta encontrada')
 
+        await log(consultationId, 'questions_loaded', `${questions.length} pergunta(s) encontrada(s)`)
+
         // 5. Lógica de IA (DeepSeek)
         const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
         if (!apiKey) throw new Error('DEEPSEEK_API_KEY não configurada')
@@ -67,6 +87,11 @@ export async function POST(req: Request) {
         const subjectContext = consultation.subject_name
             ? `\n\nSOBRE O TEMA DA CONSULTA (OUTRA PESSOA):\nNome: ${consultation.subject_name}${consultation.subject_birthdate ? `\nData de Nascimento: ${new Date(consultation.subject_birthdate).toLocaleDateString('pt-BR')}` : ''}.`
             : ''
+
+        // Data atual
+        const now = new Date()
+        const dateStr = now.toLocaleDateString('pt-BR', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', timeZone: 'America/Sao_Paulo' })
+        const timeStr = now.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', timeZone: 'America/Sao_Paulo' })
 
         const clientBirthInfo = `
 DADOS DO CONSULENTE (VOCÊ):
@@ -78,6 +103,8 @@ ${subjectContext}
 `.trim()
 
         const systemMessage = `
+DATA E HORA ATUAL: ${dateStr}, ${timeStr} (Horário de Brasília)
+
 ${masterPrompt}
 
 DADOS PARA A LEITURA:
@@ -101,7 +128,7 @@ REGRAS CRÍTICAS DE PERSONA (O QUE VOCÊ É E NÃO É):
 REGRAS CRÍTICAS DE FORMATO (OBRIGATÓRIO):
 1. SEM DESCRIÇÕES DE CENA: NUNCA descreva cenas, ações ou gestos (ex: NÃO use "*embaralha as cartas*").
 2. APENAS A RESPOSTA: Dê apenas a interpretação mística e o conselho. Sem "Aqui está sua leitura".
-3. SEM EMOJIS EM EXCESSO: Respeite o Master Prompt sobre formatação e ícones.
+3. SEM FORMATAÇÃO: NUNCA use **, *, #, ##, ---. Texto puro apenas.
 
 INSTRUÇÕES DO SEU MÉTODO DE LEITURA (PROMPT ESPECÍFICO):
 ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
@@ -109,8 +136,11 @@ ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
 
         const conversationHistory: any[] = []
 
-        // Processamento sequencial para manter o histórico entre as perguntas da mesma consulta
-        for (const q of questions) {
+        // Processamento sequencial para manter o histórico entre as perguntas
+        for (let i = 0; i < questions.length; i++) {
+            const q = questions[i]
+            await log(consultationId, `generating_${i + 1}`, `Gerando resposta ${i + 1}/${questions.length}: "${q.question_text.substring(0, 60)}..."`)
+
             try {
                 const response = await fetch('https://api.deepseek.com/chat/completions', {
                     method: 'POST',
@@ -132,11 +162,13 @@ ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
 
                 if (response.ok) {
                     const data = await response.json()
-                    const answer = data.choices[0].message.content
+                    let answer = data.choices[0].message.content
 
                     if (!answer) throw new Error('AI retornou resposta vazia')
 
-                    // Alimentar o histórico
+                    // Remove markdown formatting
+                    answer = answer.replace(/\*\*/g, '').replace(/\*/g, '').replace(/^#+\s/gm, '').replace(/^---$/gm, '')
+
                     conversationHistory.push({ role: 'user', content: q.question_text })
                     conversationHistory.push({ role: 'assistant', content: answer })
 
@@ -144,8 +176,11 @@ ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
                         .from('consultation_questions')
                         .update({ answer_text: answer })
                         .eq('id', q.id)
+
+                    await log(consultationId, `answer_${i + 1}_ok`, `Resposta ${i + 1}/${questions.length} gerada (${answer.length} chars)`)
                 } else {
                     const errorMsg = await response.text()
+                    await log(consultationId, `answer_${i + 1}_error`, `DeepSeek ${response.status}: ${errorMsg.substring(0, 150)}`)
                     throw new Error(`DeepSeek Error: ${response.status} - ${errorMsg}`)
                 }
             } catch (e: any) {
@@ -154,19 +189,29 @@ ${oracle.system_prompt || 'Responda como um oráculo tradicional.'}
                     .from('consultation_questions')
                     .update({ answer_text: 'Erro ao regenerar resposta.' })
                     .eq('id', q.id)
+                await log(consultationId, `answer_${i + 1}_error`, e.message)
             }
         }
 
-        // 5. Finalizar
+        // Finalizar
         await supabaseAdmin
             .from('consultations')
             .update({ status: 'answered', answered_at: new Date().toISOString() })
             .eq('id', consultationId)
 
+        await log(consultationId, 'completed', `✅ Regeneração concluída — ${questions.length} resposta(s)`)
+
         return NextResponse.json({ success: true })
 
     } catch (err: any) {
         console.error('Regenerate error:', err)
+        // Tenta logar o erro se tiver consultationId
+        try {
+            const body = await req.json().catch(() => ({}))
+            if (body?.consultationId) {
+                await log(body.consultationId, 'fatal_error', err.message)
+            }
+        } catch { }
         return NextResponse.json({ error: err.message }, { status: 500 })
     }
 }
