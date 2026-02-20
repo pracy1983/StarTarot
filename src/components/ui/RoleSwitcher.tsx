@@ -62,6 +62,9 @@ export function RoleSwitcher() {
                         <button
                             key={v.id}
                             onClick={() => {
+                                // Persistência da preferência de visão
+                                localStorage.setItem('last_view_preference', v.id)
+
                                 if (v.id === 'client') {
                                     sessionStorage.removeItem('oracle_redirected')
                                 }
