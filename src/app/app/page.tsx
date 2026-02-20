@@ -213,9 +213,9 @@ export default function MarketplacePage() {
     const paginatedOracles = filteredOracles.slice((page - 1) * oraclesPerPage, page * oraclesPerPage)
 
     return (
-        <div className="space-y-6 md:space-y-10 max-w-full overflow-x-hidden">
+        <div className="space-y-4 md:space-y-6 max-w-full overflow-x-hidden">
             {/* Hero / Intro */}
-            <section className="relative py-6 md:py-10 px-4 md:px-8 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
+            <section className="relative py-4 md:py-6 px-4 md:px-6 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-neon-purple/10 blur-[100px] z-0" />
                 <div className="absolute bottom-0 left-0 w-1/3 h-full bg-neon-cyan/10 blur-[100px] z-0" />
 
@@ -232,7 +232,7 @@ export default function MarketplacePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-2xl md:text-4xl font-bold font-raleway text-white mb-3 md:mb-4 leading-tight"
+                        className="text-xl md:text-3xl font-bold font-raleway text-white mb-2 md:mb-3 leading-tight"
                     >
                         A resposta que você busca está <span className="neon-text-purple">escrita nas estrelas.</span>
                     </motion.h1>
@@ -240,7 +240,7 @@ export default function MarketplacePage() {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 text-xs md:text-base leading-relaxed mb-4 md:mb-6"
+                        className="text-slate-400 text-xs md:text-sm leading-relaxed mb-3 md:mb-4"
                     >
                         Escolha seu guia, concentre sua energia e inicie sua jornada de autoconhecimento agora mesmo.
                     </motion.p>
@@ -326,10 +326,10 @@ export default function MarketplacePage() {
                     setFilterMessage={setFilterMessage}
                 />
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-6 pb-10">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 gap-3 lg:gap-4 pb-6">
                     {loading ? (
                         Array.from({ length: 3 }).map((_, i) => (
-                            <div key={i} className="glass-card h-80 animate-pulse bg-white/5 border-white/5" />
+                            <div key={i} className="glass-card h-64 animate-pulse bg-white/5 border-white/5" />
                         ))
                     ) : paginatedOracles.length > 0 ? (
                         <AnimatePresence mode='wait'>

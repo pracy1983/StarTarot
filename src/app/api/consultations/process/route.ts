@@ -109,13 +109,16 @@ export async function POST(req: Request) {
                 .update({ status: 'pending' })
                 .eq('id', consultationId)
 
-            await supabaseAdmin.from('inbox_messages').insert({
-                recipient_id: oracle.id,
-                sender_id: consultation.client_id,
-                title: '📧 Nova Consulta Pendente',
-                content: `Você recebeu uma nova consulta de ${client.full_name}. Responda para receber seus créditos.`,
-                metadata: { consultation_id: consultationId, type: 'new_pending_consultation' }
-            })
+            // Só inserir mensagem na inbox para consultas de TEXTO (vídeo não tem perguntas)
+            if (consultation.type !== 'video') {
+                await supabaseAdmin.from('inbox_messages').insert({
+                    recipient_id: oracle.id,
+                    sender_id: consultation.client_id,
+                    title: '📧 Nova Consulta Pendente',
+                    content: `Você recebeu uma nova consulta de ${client.full_name}. Responda para receber seus créditos.`,
+                    metadata: { consultation_id: consultationId, type: 'new_pending_consultation' }
+                })
+            }
 
             await supabaseAdmin.from('transactions').insert([
                 {
@@ -136,7 +139,10 @@ export async function POST(req: Request) {
                 }
             ])
 
-            if (oracle.whatsapp_notification_enabled && oracle.phone) {
+            // WhatsApp para o ORÁCULO apenas se estiver OFFLINE
+            // (se online, a notificação visual aparece na tela em tempo real)
+            const isOracleOnline = oracle.is_online === true
+            if (!isOracleOnline && oracle.whatsapp_notification_enabled && oracle.phone) {
                 try {
                     await whatsappService.sendNewConsultationNotificationToOracle(oracle.phone)
                 } catch (waErr) {

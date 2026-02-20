@@ -150,6 +150,10 @@ export default function OracleProfilePage() {
             const credits_per_minute = Math.round(formData.price_brl_per_minute * 10)
             const initial_fee_credits = Math.round(formData.initial_fee_brl * 10)
 
+            // Se oraculista estiver pendente/rejeitado e atualizar o perfil,
+            // sinalizar para o admin que há mudanças novas (bolinha vermelha)
+            const isAwaitingReview = profile?.application_status === 'pending' || profile?.application_status === 'rejected'
+
             const { error } = await supabase
                 .from('profiles')
                 .update({
@@ -171,7 +175,8 @@ export default function OracleProfilePage() {
                     requires_birthtime: formData.requires_birthtime,
                     whatsapp_notification_enabled: formData.whatsapp_notification_enabled,
                     allows_video: formData.allows_video,
-                    allows_text: formData.allows_text
+                    allows_text: formData.allows_text,
+                    ...(isAwaitingReview ? { has_unseen_changes: true } : {})
                 })
                 .eq('id', profile!.id)
 

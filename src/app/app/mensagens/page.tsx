@@ -270,8 +270,8 @@ export default function InboxPage() {
                             >
                                 <GlassCard
                                     className={`border-white/5 cursor-pointer group transition-all relative overflow-hidden ${!msg.is_read
-                                        ? 'bg-neon-purple/5 border-neon-purple/20' // Subtle purple for unread
-                                        : 'hover:bg-white/5'
+                                            ? 'bg-neon-purple/5 border-neon-purple/20' // Destaque para não lida
+                                            : 'opacity-50 grayscale-[30%] hover:opacity-70 hover:grayscale-0 hover:bg-white/5' // Apagado para lida
                                         }`}
                                     onClick={() => handleMessageClick(msg)}
                                 >
@@ -306,7 +306,7 @@ export default function InboxPage() {
                                                         </div>
                                                     </div>
                                                 ) : msg.is_read ? (
-                                                    <Mail size={24} className="text-slate-500 mt-2" />
+                                                    <MailOpen size={24} className="text-slate-600 mt-2" />
                                                 ) : (
                                                     <Mail size={24} className="text-red-400 mt-2 animate-bounce" />
                                                 )}

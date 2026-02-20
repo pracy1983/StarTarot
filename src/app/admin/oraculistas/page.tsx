@@ -43,6 +43,7 @@ export default function AdminOraculistasPage() {
     const [rejectionModal, setRejectionModal] = useState<{ open: boolean, id: string | null, name: string }>({ open: false, id: null, name: '' })
     const [rejectionMessage, setRejectionMessage] = useState('')
     const [isProcessingStatus, setIsProcessingStatus] = useState(false)
+    const [isDeletingPending, setIsDeletingPending] = useState<string | null>(null)
 
     // Specialties & Categories Management
     const [isManagingSpecialties, setIsManagingSpecialties] = useState(false)
@@ -149,7 +150,10 @@ export default function AdminOraculistasPage() {
     const handleStatusChange = async (id: string, newStatus: string, message?: string) => {
         setIsProcessingStatus(true)
         try {
-            const updates: any = { application_status: newStatus }
+            const updates: any = {
+                application_status: newStatus,
+                has_unseen_changes: false  // Admin reviu → limpa a bolinha
+            }
             if (newStatus === 'rejected') {
                 const currentProfile = oraculistas.find(o => o.id === id)
                 if (currentProfile) {
@@ -161,7 +165,6 @@ export default function AdminOraculistasPage() {
                     })
                     if (snapError) console.error('Error creating snapshot:', snapError)
                 }
-
                 updates.rejection_reason = message
             } else if (newStatus === 'approved') {
                 updates.role = 'oracle'
@@ -175,13 +178,14 @@ export default function AdminOraculistasPage() {
 
             if (error) throw error
 
+            // Notificação in-app para o oraculista apenas quando for REJEITADO com mensagem
+            // (sem push/WA - o oraculista verá no inbox da plataforma)
             if (newStatus === 'rejected' && message) {
-                await supabase.from('notifications').insert({
-                    user_id: id,
-                    title: 'Atenção: Ação Necessária no Seu Perfil',
+                await supabase.from('inbox_messages').insert({
+                    recipient_id: id,
+                    title: '⚠️ Ação Necessária no Seu Perfil',
                     content: message,
-                    type: 'system',
-                    role: 'oracle'
+                    metadata: { type: 'profile_review' }
                 })
             }
 
@@ -197,6 +201,28 @@ export default function AdminOraculistasPage() {
             toast.error('Erro ao atualizar status')
         } finally {
             setIsProcessingStatus(false)
+        }
+    }
+
+    const handleDeletePendingUser = async (id: string, name: string) => {
+        if (!confirm(`Deletar PERMANENTEMENTE o cadastro de ${name}? Esta ação remove o usuário do banco de dados e do sistema de autenticação.`)) return
+
+        setIsDeletingPending(id)
+        try {
+            const res = await fetch('/api/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: id })
+            })
+            const data = await res.json()
+            if (!res.ok) throw new Error(data.error || 'Erro ao deletar usuário')
+
+            setOraculistas(prev => prev.filter(o => o.id !== id))
+            toast.success(`${name} deletado permanentemente`)
+        } catch (err: any) {
+            toast.error('Erro ao deletar: ' + err.message)
+        } finally {
+            setIsDeletingPending(null)
         }
     }
 
@@ -653,32 +679,47 @@ export default function AdminOraculistasPage() {
                             {filteredOracles.map((o) => (
                                 <tr key={o.id} className="hover:bg-white/5 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <div className="relative">
-                                            <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
-                                                {o.avatar_url ? (
-                                                    <img src={o.avatar_url} className="w-full h-full object-cover" alt={o.full_name} />
-                                                ) : (
-                                                    <div className="w-full h-full flex items-center justify-center text-neon-purple font-bold">
-                                                        {o.full_name?.[0]}
-                                                    </div>
+                                        <div className="flex items-center gap-3">
+                                            <div className="relative shrink-0">
+                                                <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
+                                                    {o.avatar_url ? (
+                                                        <img src={o.avatar_url} className="w-full h-full object-cover" alt={o.full_name} />
+                                                    ) : (
+                                                        <div className="w-full h-full flex items-center justify-center text-neon-purple font-bold">
+                                                            {o.full_name?.[0]}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                {o.unread_gifts?.length > 0 && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="absolute -top-1 -right-1 bg-neon-gold text-deep-space rounded-full p-1 shadow-[0_0_10px_rgba(251,191,36,0.5)] z-10"
+                                                        title={`Recebeu ${o.unread_gifts.length} presente(s): ${o.unread_gifts.map((g: any) => `${g.name} (${g.profiles?.full_name})`).join(', ')}`}
+                                                    >
+                                                        <Star size={10} fill="currentColor" />
+                                                    </motion.div>
+                                                )}
+                                                {o.has_unseen_changes && (
+                                                    <motion.div
+                                                        initial={{ scale: 0 }}
+                                                        animate={{ scale: 1 }}
+                                                        className="absolute -bottom-1 -right-1 w-3.5 h-3.5 bg-red-500 rounded-full border-2 border-deep-space animate-pulse z-10"
+                                                        title="Oraculista atualizou o perfil — revisar!"
+                                                    />
                                                 )}
                                             </div>
-                                            {o.unread_gifts?.length > 0 && (
-                                                <motion.div
-                                                    initial={{ scale: 0 }}
-                                                    animate={{ scale: 1 }}
-                                                    className="absolute -top-1 -right-1 bg-neon-gold text-deep-space rounded-full p-1 shadow-[0_0_10px_rgba(251,191,36,0.5)] z-10"
-                                                    title={`Recebeu ${o.unread_gifts.length} presente(s): ${o.unread_gifts.map((g: any) => `${g.name} (${g.profiles?.full_name})`).join(', ')}`}
-                                                >
-                                                    <Star size={10} fill="currentColor" />
-                                                </motion.div>
-                                            )}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <span className="text-sm font-bold text-white">{o.name_fantasy || o.full_name}</span>
-                                            {o.name_fantasy && o.name_fantasy !== o.full_name && (
-                                                <span className="text-[10px] text-slate-500 font-medium">{o.full_name}</span>
-                                            )}
+                                            <div className="flex flex-col">
+                                                <span className="text-sm font-bold text-white flex items-center gap-2">
+                                                    {o.name_fantasy || o.full_name}
+                                                    {o.has_unseen_changes && (
+                                                        <span className="text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase">Atualizado</span>
+                                                    )}
+                                                </span>
+                                                {o.name_fantasy && o.name_fantasy !== o.full_name && (
+                                                    <span className="text-[10px] text-slate-500 font-medium">{o.full_name}</span>
+                                                )}
+                                            </div>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
@@ -745,7 +786,7 @@ export default function AdminOraculistasPage() {
                                             {/* Tab Specific Actions */}
                                             {activeTab === 'pending' ? (
                                                 <>
-                                                    {/* Show "Ver Alterações" if the user has been rejected before (has notification/snapshot history) */}
+                                                    {/* Ver Alterações: apenas se já foi rejeitado antes */}
                                                     {o.rejection_reason && (
                                                         <button
                                                             onClick={() => handleViewChanges(o.id)}
@@ -753,7 +794,7 @@ export default function AdminOraculistasPage() {
                                                             title="Ver Alterações Recentes"
                                                         >
                                                             <RefreshCw size={14} className={loadingSnapshot ? 'animate-spin' : ''} />
-                                                            <span className="text-[10px] font-bold uppercase">Changes</span>
+                                                            <span className="text-[10px] font-bold uppercase">Diffs</span>
                                                         </button>
                                                     )}
 
@@ -767,11 +808,24 @@ export default function AdminOraculistasPage() {
                                                     </button>
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-red-400 hover:bg-red-400/10 rounded-lg transition-all border border-transparent hover:border-red-400/30"
-                                                        title="Rejeitar Solicitação"
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        title="Pausar e Solicitar Correções"
                                                     >
                                                         <X size={14} />
-                                                        <span className="text-[10px] font-bold uppercase">Rejeitar</span>
+                                                        <span className="text-[10px] font-bold uppercase">Pausar</span>
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeletePendingUser(o.id, o.full_name)}
+                                                        disabled={isDeletingPending === o.id}
+                                                        className="flex items-center space-x-1 px-2 py-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
+                                                        title="Deletar cadastro permanentemente"
+                                                    >
+                                                        {isDeletingPending === o.id ? (
+                                                            <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                                        ) : (
+                                                            <Trash2 size={14} />
+                                                        )}
+                                                        <span className="text-[10px] font-bold uppercase">Deletar</span>
                                                     </button>
                                                 </>
                                             ) : (

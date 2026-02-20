@@ -336,7 +336,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
             )}
 
-            <div className="flex flex-col items-center text-center space-y-3 pt-4">
+            <div className="flex flex-col items-center text-center space-y-1.5 lg:space-y-2 pt-2">
                 {/* Avatar container with status capsule and rating */}
                 <div className="relative">
                     {/* Rating Badge - Top Right of Avatar */}
@@ -354,7 +354,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                     <div className={`absolute inset-0 rounded-full blur-lg opacity-20 transition-all duration-500 group-hover:scale-110 ${status === 'online' ? 'bg-neon-cyan' : 'bg-red-500/10'
                         }`} />
-                    <div className="w-20 h-20 rounded-full p-1 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
+                    <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full p-0.5 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
                             src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7`}
                             alt={oracle.full_name}
@@ -370,70 +370,70 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                     </div>
                 </div>
 
-                <div className="space-y-1">
-                    <h3 className="text-lg font-bold text-white group-hover:text-neon-purple transition-colors duration-300 leading-tight">
+                <div className="space-y-0.5">
+                    <h3 className="text-sm lg:text-base font-bold text-white group-hover:text-neon-purple transition-colors duration-300 leading-tight">
                         {oracle.name_fantasy || oracle.full_name}
                     </h3>
-                    <p className="text-neon-cyan text-[10px] font-bold uppercase tracking-[0.2em] line-clamp-1 px-4">
+                    <p className="text-neon-cyan text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.15em] line-clamp-1 px-2">
                         {oracle.categories && oracle.categories.length > 0
-                            ? oracle.categories.map(c => c === 'Outros' ? oracle.custom_category : c).join(' • ')
+                            ? oracle.categories.map(c => c === 'Outros' ? oracle.custom_category : c).join(' · ')
                             : oracle.specialty}
                     </p>
-                    <p className="text-slate-500 text-[9px] uppercase tracking-widest line-clamp-1 px-4">
+                    <p className="text-slate-500 text-[8px] lg:text-[9px] uppercase tracking-widest line-clamp-1 px-2">
                         {oracle.topics && oracle.topics.length > 0
-                            ? oracle.topics.map(t => t === 'Outros' ? oracle.custom_topic : t).join(' • ')
+                            ? oracle.topics.map(t => t === 'Outros' ? oracle.custom_topic : t).join(' · ')
                             : ''}
                     </p>
                 </div>
 
                 {/* Info Tags */}
-                <div className="flex flex-col items-center space-y-0.5">
+                <div className="flex items-center justify-center gap-3 flex-wrap">
                     {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
-                        <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
-                            <Video size={10} className="mr-1" />
-                            {oracle.credits_per_minute} <span className="opacity-60 ml-1">créditos/min</span>
+                        <div className={`flex items-center text-[8px] lg:text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-cyan' : 'text-slate-500'}`}>
+                            <Video size={9} className="mr-0.5" />
+                            {oracle.credits_per_minute} <span className="opacity-60 ml-0.5">cr/min</span>
                         </div>
                     )}
                     {oracle.allows_text && (
-                        <div className={`flex items-center text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-purple' : 'text-slate-500'}`}>
-                            <MessageSquare size={10} className="mr-1" />
-                            {oracle.price_per_message || 10} <span className="opacity-60 ml-1">créditos/msg</span>
+                        <div className={`flex items-center text-[8px] lg:text-[9px] font-bold uppercase tracking-wider ${status === 'online' ? 'text-neon-purple' : 'text-slate-500'}`}>
+                            <MessageSquare size={9} className="mr-0.5" />
+                            {oracle.price_per_message || 10} <span className="opacity-60 ml-0.5">cr/msg</span>
                         </div>
                     )}
                 </div>
 
-                <p className="text-slate-400 text-[13px] line-clamp-2 min-h-[40px] px-1 leading-relaxed">
+                <p className="text-slate-400 text-[11px] lg:text-[12px] line-clamp-2 lg:line-clamp-2 min-h-[32px] px-1 leading-snug">
                     {oracle.bio}
                 </p>
 
                 {/* Schedule info */}
-                <div className="flex items-start space-x-2 px-3 py-1.5 rounded-lg bg-white/5 border border-white/5 w-full">
-                    <Clock size={11} className="text-slate-500 shrink-0 mt-0.5" />
-                    <span className="text-[9px] text-slate-400 font-medium leading-relaxed text-left flex-1">
+                <div className="flex items-start space-x-1.5 px-2 py-1 rounded-lg bg-white/5 border border-white/5 w-full">
+                    <Clock size={10} className="text-slate-500 shrink-0 mt-0.5" />
+                    <span className="text-[8px] lg:text-[9px] text-slate-400 font-medium leading-snug text-left flex-1 line-clamp-2">
                         {getScheduleSummary()}
                     </span>
                 </div>
 
-                {/* Feature Icons - Always visible based on config */}
+                {/* Feature Icons - Compact */}
                 {profile?.id !== oracle.id && (
-                    <div className="flex items-center justify-center space-x-6 py-2 text-slate-500 border-t border-white/5 w-full">
+                    <div className="flex items-center justify-center space-x-4 py-1 text-slate-500 border-t border-white/5 w-full">
                         {oracle.allows_text && (
-                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-purple/80' : 'opacity-40'}`}>
-                                <MessageSquare size={16} />
-                                <span className="text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
+                            <div className={`flex items-center space-x-1 ${status === 'online' ? 'text-neon-purple/80' : 'opacity-40'}`}>
+                                <MessageSquare size={12} />
+                                <span className="text-[7px] lg:text-[8px] uppercase font-black tracking-tighter">Mensagem</span>
                             </div>
                         )}
                         {!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video && (
-                            <div className={`flex flex-col items-center space-y-1 ${status === 'online' ? 'text-neon-cyan/80' : 'opacity-40'}`}>
-                                <Video size={16} />
-                                <span className="text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
+                            <div className={`flex items-center space-x-1 ${status === 'online' ? 'text-neon-cyan/80' : 'opacity-40'}`}>
+                                <Video size={12} />
+                                <span className="text-[7px] lg:text-[8px] uppercase font-black tracking-tighter">Vídeo</span>
                             </div>
                         )}
                     </div>
                 )}
 
                 {profile?.id !== oracle.id ? (
-                    <div className="mt-2 w-full">
+                    <div className="mt-1 w-full">
                         {(!oracle.is_ai && oracle.oracle_type !== 'ai' && oracle.allows_video) && oracle.allows_text ? (
                             /* Human with both options */
                             <div className="grid grid-cols-2 gap-2">
@@ -441,7 +441,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                     variant="green"
                                     size="sm"
                                     disabled={status !== 'online'}
-                                    className={`h-9 px-0 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                                    className={`h-8 px-0 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                                     onClick={(e) => {
                                         if (status !== 'online') return
                                         e.stopPropagation()
@@ -460,7 +460,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         if (!isAuthenticated) return handleStartConsultation(e)
                                         router.push(`/app/consulta/${oracle.id}?type=message`)
                                     }}
-                                    className="h-9 px-0"
+                                    className="h-8 px-0"
                                 >
                                     <MessageSquare size={14} className="mr-1" />
                                     <span className="text-[10px] whitespace-nowrap">Mensagem</span>
@@ -478,7 +478,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                             if (!isAuthenticated) return handleStartConsultation(e)
                                             router.push(`/app/consulta/${oracle.id}?type=message`)
                                         }}
-                                        className="h-9 w-1/2"
+                                        className="h-8 w-1/2"
                                     >
                                         <MessageSquare size={14} className="mr-1" />
                                         <span className="text-[10px] whitespace-nowrap">{status === 'online' ? 'Mensagem' : 'Mensagem'}</span>
@@ -488,7 +488,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                                         variant="green"
                                         size="sm"
                                         disabled={status !== 'online'}
-                                        className={`h-9 w-1/2 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
+                                        className={`h-8 w-1/2 ${status !== 'online' ? 'opacity-50 grayscale cursor-not-allowed' : ''}`}
                                         onClick={(e) => {
                                             if (status !== 'online') return
                                             e.stopPropagation()
