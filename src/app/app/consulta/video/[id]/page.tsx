@@ -23,8 +23,10 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
+import { VideoChat } from '@/components/video/VideoChat'
 
 const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 Créditos
+const CONNECTION_TIMEOUT_MS = 60000 // 1 minuto para conectar ou cancelar sem taxa
 
 export default function VideoConsultationPage() {
     const { id } = useParams() // consultation_id
@@ -54,6 +56,7 @@ export default function VideoConsultationPage() {
     const hasChargedInitialFee = useRef(false)
     const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
     const [hasEstablishedConnection, setHasEstablishedConnection] = useState(false)
+    const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const [callError, setCallError] = useState<string | null>(null)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const [isFinalizing, setIsFinalizing] = useState(false)
@@ -109,6 +112,21 @@ export default function VideoConsultationPage() {
                     stabilizationTimer.current = setTimeout(async () => {
                         setHasEstablishedConnection(true)
 
+                        // Sync with DB: Set status to active and started_at to now
+                        const { data: updatedCons } = await supabase.from('consultations')
+                            .update({
+                                status: 'active',
+                                started_at: new Date().toISOString()
+                            })
+                            .eq('id', id)
+                            .is('started_at', null)
+                            .select()
+                            .single()
+
+                        if (updatedCons) {
+                            setConsultation(updatedCons)
+                        }
+
                         // Charge initial fee only once connection is established
                         if (profile?.role === 'client' && !hasChargedInitialFee.current) {
                             if (oracle?.initial_fee_credits > 0) {
@@ -118,7 +136,7 @@ export default function VideoConsultationPage() {
                         }
 
                         stabilizationTimer.current = null
-                    }, 3000) // 3 seconds of stable video before charging anything
+                    }, 3000)
                 }
             }
             if (mediaType === 'audio') {
@@ -196,7 +214,7 @@ export default function VideoConsultationPage() {
                 body: JSON.stringify({
                     channelName: id,
                     uid: profile!.id,
-                    role: profile?.role === 'oracle' ? 'publisher' : 'subscriber'
+                    role: 'publisher' // Ambos agora usam publisher para permitir áudio/vídeo nos dois sentidos
                 })
             })
             const { token, appId } = await response.json()
@@ -212,9 +230,16 @@ export default function VideoConsultationPage() {
             }
 
             setJoined(true)
-            // No need to play again, it's already playing via preview
 
-            // Billing is now triggered in user-published event
+            // Inicia timer de timeout de conexão (se em 3 minutos o oraculista não entrar, cancela sem taxa)
+            if (!connectionTimeoutRef.current) {
+                connectionTimeoutRef.current = setTimeout(() => {
+                    if (!hasEstablishedConnection) {
+                        toast.error('O oraculista não conectou a tempo. Chamada encerrada sem cobrança.')
+                        autoFinalizeCall('oracle', true) // true = no charge
+                    }
+                }, CONNECTION_TIMEOUT_MS)
+            }
         } catch (err: any) {
             console.error('Error starting call:', err)
             let msg = err.message || 'Erro desconhecido'
@@ -234,8 +259,8 @@ export default function VideoConsultationPage() {
                     setDuration(prev => {
                         const newDuration = prev + 1
 
-                        // Cobrança a cada minuto (60 segundos)
-                        if (newDuration > 0 && newDuration % 60 === 0) {
+                        // Cobrança a cada minuto (60 segundos) APENAS se a conexão estiver estável
+                        if (hasEstablishedConnection && newDuration > 0 && newDuration % 60 === 0) {
                             processMinuteBilling().then(success => {
                                 if (!success) {
                                     toast.error('Saldo esgotado. Chamada encerrada.')
@@ -260,7 +285,7 @@ export default function VideoConsultationPage() {
                 billingInterval.current = null
             }
         }
-    }, [joined, remoteUsers.length, hasEstablishedConnection])
+    }, [joined, remoteUsers.length, hasEstablishedConnection, consultation?.started_at])
 
     const processInitialFee = async () => {
         try {
@@ -320,17 +345,20 @@ export default function VideoConsultationPage() {
         await autoFinalizeCall('client')
     }
 
-    const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
+    const autoFinalizeCall = async (endedBy: 'client' | 'oracle', skipCharge = false) => {
         if (isFinalizing) return
         setIsFinalizing(true)
 
         if (billingInterval.current) clearInterval(billingInterval.current)
+        if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
 
         try {
+            // Se skipCharge for true e duração for muito pequena, podemos tratar como cancelamento no banco se necessário
+            // Por enquanto vamos apenas finalizar com duração 0 se não estabilizou
             await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: id,
-                p_duration_seconds: duration,
-                p_end_reason: endedBy === 'client' ? 'client_ended' : 'oracle_left'
+                p_duration_seconds: hasEstablishedConnection ? Math.floor(duration) : 0,
+                p_end_reason: skipCharge ? 'timeout_no_connection' : (endedBy === 'client' ? 'client_ended' : 'oracle_left')
             })
         } catch (err) {
             console.error('Error finalizing call:', err)
@@ -454,11 +482,17 @@ export default function VideoConsultationPage() {
                 </div>
 
                 <div className="flex flex-row items-center space-x-2 md:space-x-6 shrink-0">
-                    <div className="flex items-center bg-white/5 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10">
-                        <Clock size={14} className="text-neon-cyan mr-1.5 md:mr-2" />
-                        <span className="font-mono text-xs md:text-sm">
-                            {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
-                        </span>
+                    <div className="flex items-center bg-white/5 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10 min-w-[80px] justify-center">
+                        {consultation?.started_at ? (
+                            <>
+                                <Clock size={14} className="text-neon-cyan mr-1.5 md:mr-2" />
+                                <span className="font-mono text-xs md:text-sm">
+                                    {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+                                </span>
+                            </>
+                        ) : (
+                            <span className="text-[10px] text-slate-500 uppercase font-bold animate-pulse">Aguardando...</span>
+                        )}
                     </div>
                     {profile?.role === 'client' && (
                         <div className={`hidden sm:flex items-center px-4 py-2 rounded-full border ${profile.credits! < WARNING_THRESHOLD ? 'bg-red-500/20 border-red-500/50 text-red-400' : 'bg-white/5 border-white/10 text-neon-gold'}`}>
@@ -553,6 +587,14 @@ export default function VideoConsultationPage() {
                                 </div>
                             </GlassCard>
                         </div>
+                    )}
+                    {/* Chat sidecar */}
+                    {consultation && profile && (
+                        <VideoChat
+                            channelId={id as string}
+                            userId={profile.id}
+                            userName={profile.full_name || 'Consulente'}
+                        />
                     )}
                 </div>
             </div>

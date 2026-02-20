@@ -335,72 +335,65 @@ export default function ConsultationResponsePage() {
 
             {/* Questions & Answers */}
             <div className="space-y-6">
-                {questions.map((q, idx) => (
-                    <motion.div
-                        key={q.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.1 }}
-                    >
-                        <GlassCard className="border-white/5" hover={false}>
-                            {/* Pergunta */}
-                            <div className="mb-6">
-                                <div className="flex items-center space-x-3 mb-3">
-                                    <div className="w-8 h-8 rounded-full bg-neon-purple/10 border border-neon-purple/30 flex items-center justify-center text-neon-purple text-sm font-bold">
-                                        {idx + 1}
-                                    </div>
-                                    <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Sua Mensagem</h3>
-                                </div>
-                                <p className="text-white leading-relaxed pl-11">{q.question_text}</p>
-                            </div>
+                {(() => {
+                    const isFullyAnswered = consultation.status === 'answered' || consultation.status === 'completed'
+                    const isCanceled = consultation.status === 'canceled' || consultation.status === 'rejected'
 
-                            {/* Resposta */}
-                            <div className="border-t border-white/5 pt-6">
-                                <div className="flex items-center space-x-3 mb-3">
-                                    <Sparkles size={20} className="text-neon-gold" />
-                                    <h3 className="text-sm font-bold text-neon-gold uppercase tracking-wider">Resposta do Oráculo</h3>
+                    return questions.map((q, idx) => (
+                        <motion.div
+                            key={q.id}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ delay: idx * 0.1 }}
+                        >
+                            <GlassCard className="border-white/5" hover={false}>
+                                {/* Pergunta */}
+                                <div className="mb-6">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <div className="w-8 h-8 rounded-full bg-neon-purple/10 border border-neon-purple/30 flex items-center justify-center text-neon-purple text-sm font-bold">
+                                            {idx + 1}
+                                        </div>
+                                        <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider">Sua Mensagem</h3>
+                                    </div>
+                                    <p className="text-white leading-relaxed pl-11">{q.question_text}</p>
                                 </div>
-                                <div className="bg-gradient-to-br from-neon-purple/5 to-transparent p-6 rounded-xl border border-neon-purple/10">
-                                    <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
-                                        {q.answer_text || (
-                                            <div className="space-y-4">
-                                                {consultation.status === 'canceled' || consultation.status === 'rejected' ? (
-                                                    <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
-                                                        <p className="flex items-center text-red-400 font-bold mb-2">
-                                                            <Clock size={16} className="mr-2" />
-                                                            Consulta Cancelada / Expirada
-                                                        </p>
-                                                        <p className="text-sm text-slate-300">
-                                                            O oráculo não respondeu dentro do prazo ou a consulta foi cancelada.
-                                                            <br /><strong className="text-white">Os créditos foram estornados para sua carteira.</strong>
-                                                        </p>
-                                                    </div>
-                                                ) : (
-                                                    <>
-                                                        <p className="flex items-center text-neon-cyan animate-pulse">
-                                                            <Clock size={16} className="mr-2" />
-                                                            Aguardando resposta do oráculo...
-                                                        </p>
-                                                        {consultation.status === 'pending' && (
-                                                            <button
-                                                                onClick={handleCancelConsultation}
-                                                                disabled={isCancelling}
-                                                                className="text-xs text-red-400 hover:text-red-300 underline mt-2 disabled:opacity-50"
-                                                            >
-                                                                {isCancelling ? 'Cancelando...' : 'Cancelar consulta e estornar créditos'}
-                                                            </button>
-                                                        )}
-                                                    </>
-                                                )}
+
+                                {/* Resposta */}
+                                <div className="border-t border-white/5 pt-6">
+                                    <div className="flex items-center space-x-3 mb-3">
+                                        <Sparkles size={20} className="text-neon-gold" />
+                                        <h3 className="text-sm font-bold text-neon-gold uppercase tracking-wider">Resposta do Oráculo</h3>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-neon-purple/5 to-transparent p-6 rounded-xl border border-neon-purple/10">
+                                        {isFullyAnswered && q.answer_text ? (
+                                            <p className="text-slate-200 leading-relaxed whitespace-pre-wrap">
+                                                {q.answer_text}
+                                            </p>
+                                        ) : isCanceled ? (
+                                            <div className="p-4 bg-red-500/10 border border-red-500/20 rounded-xl">
+                                                <p className="flex items-center text-red-400 font-bold mb-2">
+                                                    <Clock size={16} className="mr-2" />
+                                                    Consulta Cancelada / Expirada
+                                                </p>
+                                                <p className="text-sm text-slate-300">
+                                                    O oráculo não respondeu dentro do prazo ou a consulta foi cancelada.
+                                                    <br /><strong className="text-white">Os créditos foram estornados para sua carteira.</strong>
+                                                </p>
                                             </div>
+                                        ) : (
+                                            <p className="flex items-center text-neon-cyan animate-pulse">
+                                                <Clock size={16} className="mr-2" />
+                                                Aguardando resposta do oráculo...
+                                            </p>
                                         )}
-                                    </p>
+                                    </div>
                                 </div>
-                            </div>
-                        </GlassCard>
-                    </motion.div>
-                ))}
+                            </GlassCard>
+                        </motion.div>
+                    ))
+                })()}
             </div>
+
 
             {/* Video Call Summary (If video) */}
             {consultation.type === 'video' && (

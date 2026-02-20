@@ -16,9 +16,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Agora credentials not configured' }, { status: 500 })
         }
 
-        // Definir papel (1 = Publisher/Oracle, 2 = Subscriber/Client)
-        // No nosso caso, ambos publicam áudio/vídeo
-        const agoraRole = role === 'publisher' ? RtcRole.PUBLISHER : RtcRole.SUBSCRIBER
+        // Ambos precisam publicar áudio/vídeo
+        const agoraRole = RtcRole.PUBLISHER
 
         // Expiração (2 horas para garantir que não caia no meio)
         const expirationTimeInSeconds = 3600 * 2

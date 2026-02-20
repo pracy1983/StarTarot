@@ -23,6 +23,7 @@ import {
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { IAgoraRTCClient, ICameraVideoTrack, IMicrophoneAudioTrack } from 'agora-rtc-sdk-ng'
+import { VideoChat } from '@/components/video/VideoChat'
 
 function RemotePlayer({ user }: { user: any }) {
     const containerRef = React.useRef<HTMLDivElement>(null)
@@ -57,6 +58,8 @@ export default function ServiceRoomPage() {
     const [videoEnabled, setVideoEnabled] = React.useState(true)
     const [audioEnabled, setAudioEnabled] = React.useState(true)
     const clientRef = React.useRef<IAgoraRTCClient | null>(null)
+    const stabilizationTimer = React.useRef<NodeJS.Timeout | null>(null)
+    const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
 
     // Timer & Duration
     const [now, setNow] = useState(Date.now())
@@ -247,6 +250,30 @@ export default function ServiceRoomPage() {
                         if (prev.find(u => u.uid === user.uid)) return prev
                         return [...prev, user]
                     })
+
+                    // Stabilization logic for Oracle too
+                    if (!stabilizationTimer.current) {
+                        stabilizationTimer.current = setTimeout(async () => {
+                            setHasEstablishedConnection(true)
+
+                            // Try to set active if client hasn't yet
+                            const { data: updatedCons } = await supabase.from('consultations')
+                                .update({
+                                    status: 'active',
+                                    started_at: new Date().toISOString()
+                                })
+                                .eq('id', consultationId)
+                                .is('started_at', null)
+                                .select()
+                                .single()
+
+                            if (updatedCons) {
+                                setConsultation(updatedCons)
+                            }
+
+                            stabilizationTimer.current = null
+                        }, 3000)
+                    }
                 }
                 if (mediaType === 'audio') {
                     user.audioTrack?.play()
@@ -277,6 +304,7 @@ export default function ServiceRoomPage() {
                 body: JSON.stringify({
                     channelName: consultationId,
                     uid: profile!.id,
+                    role: 'publisher'
                 })
             })
 
@@ -311,21 +339,11 @@ export default function ServiceRoomPage() {
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 45000) // Increased to 45s
+                }, 60000) // 1 minute (60,000ms)
             }
 
-            // Update status to 'active' and set start time for timer
-            if (consultation?.status === 'pending') {
-                const nowIso = new Date().toISOString()
-                const { error: updateError } = await supabase
-                    .from('consultations')
-                    .update({ status: 'active', started_at: nowIso })
-                    .eq('id', consultationId)
-
-                if (!updateError) {
-                    setConsultation((prev: any) => ({ ...prev, status: 'active', started_at: nowIso }))
-                }
-            }
+            // Removed: premature DB update to 'active' here. 
+            // Now handled in user-published stabilization logic.
 
         } catch (err: any) {
             console.error('Error starting call:', err)
@@ -404,7 +422,7 @@ export default function ServiceRoomPage() {
         try {
             const { data: result, error } = await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: consultationId,
-                p_duration_seconds: duration,
+                p_duration_seconds: Math.floor(duration),
                 p_end_reason: endedBy === 'oracle' ? 'oracle_ended' : 'client_left'
             })
 
@@ -479,10 +497,14 @@ export default function ServiceRoomPage() {
                         </div>
                     </div>
 
-                    <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-lg">
-                        <span className="font-mono text-neon-cyan text-xl font-bold tracking-widest">
-                            {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
-                        </span>
+                    <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 shadow-lg min-w-[100px] flex justify-center">
+                        {consultation?.started_at ? (
+                            <span className="font-mono text-neon-cyan text-xl font-bold tracking-widest">
+                                {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+                            </span>
+                        ) : (
+                            <span className="text-[10px] text-slate-500 uppercase font-bold animate-pulse">Aguardando...</span>
+                        )}
                     </div>
                 </div>
 
@@ -579,6 +601,14 @@ export default function ServiceRoomPage() {
                             <p className="text-slate-400 text-sm">Registrando duração e créditos.</p>
                         </div>
                     </div>
+                )}
+                {/* Chat sidecar */}
+                {consultationId && profile && (
+                    <VideoChat
+                        channelId={consultationId}
+                        userId={profile.id}
+                        userName={profile.full_name || 'Oraculista'}
+                    />
                 )}
             </motion.div>
 
