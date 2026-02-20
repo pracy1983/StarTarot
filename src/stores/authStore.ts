@@ -54,6 +54,7 @@ interface Profile {
   custom_category?: string | null
   custom_topic?: string | null
   metadata?: any
+  force_password_change?: boolean
 }
 
 interface AuthState {
@@ -71,6 +72,9 @@ interface AuthState {
   setAuthMode: (mode: 'login' | 'register') => void
   registrationRole: UserRole
   setRegistrationRole: (role: UserRole) => void
+  updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>
+  requestPasswordReset: (email: string, phone: string) => Promise<{ success: boolean; error?: string }>
+  verifyResetOtp: (phone: string, code: string) => Promise<{ success: boolean; userId?: string; error?: string }>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -100,14 +104,11 @@ export const useAuthStore = create<AuthState>((set) => ({
           const { data: wallet } = await supabase
             .from('wallets')
             .select('balance')
-            .eq('user_id', profile.id)
+            .eq('user_id', session.user.id)
             .maybeSingle()
 
           set({
-            profile: {
-              ...profile,
-              credits: wallet?.balance || 0
-            },
+            profile: { ...profile, credits: wallet?.balance || 0 },
             isAuthenticated: true,
             isLoading: false
           })
@@ -119,9 +120,105 @@ export const useAuthStore = create<AuthState>((set) => ({
       } else {
         set({ profile: null, isAuthenticated: false, isLoading: false })
       }
-    } catch (error) {
-      console.error('Erro no checkAuth:', error)
+    } catch (err) {
+      console.error('Erro no checkAuth:', err)
       set({ profile: null, isAuthenticated: false, isLoading: false })
+    }
+  },
+
+  updatePassword: async (password: string) => {
+    try {
+      const { error } = await supabase.auth.updateUser({ password })
+      if (error) throw error
+
+      // Limpa flag de troca obrigatória
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        await supabase
+          .from('profiles')
+          .update({ force_password_change: false })
+          .eq('id', user.id)
+
+        // Atualiza estado local
+        const currentProfile = useAuthStore.getState().profile
+        if (currentProfile) {
+          set({ profile: { ...currentProfile, force_password_change: false } })
+        }
+      }
+
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  requestPasswordReset: async (email: string, phone: string) => {
+    try {
+      // Validação Dupla de Segurança: E-mail + Telefone
+      const cleanPhone = phone.replace(/\D/g, '')
+      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
+
+      const { data: userProfile, error: userError } = await supabase
+        .from('profiles')
+        .select('id, phone, full_name, email')
+        .eq('email', email.trim().toLowerCase())
+        .or(`phone.eq.+${fullPhone},phone.eq.${fullPhone}`)
+        .maybeSingle()
+
+      // Se não encontrar um perfil que tenha EXATAMENTE esse email E esse telefone
+      if (userError || !userProfile) {
+        // Delay artificial para evitar enumeration attacks
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        throw new Error('Dados não conferem. Verifique seu e-mail e telefone.')
+      }
+
+      const otp = Math.floor(100000 + Math.random() * 900000).toString()
+      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 min
+
+      // Salva no banco
+      const { error: otpError } = await supabase
+        .from('password_reset_otps')
+        .insert({
+          user_id: userProfile.id,
+          otp_code: otp,
+          expires_at: expiresAt
+        })
+
+      if (otpError) throw otpError
+
+      // Envia via WhatsApp
+      const EvolutionWhatsAppService = (await import('@/lib/whatsapp')).whatsappService
+      const success = await EvolutionWhatsAppService.sendTextMessage({
+        phone: userProfile.phone || '', // Usa o telefone do banco que sabemos que está correto
+        message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${userProfile.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
+      })
+
+      if (!success) throw new Error('Não foi possível enviar o código para o WhatsApp.')
+
+      return { success: true }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  verifyResetOtp: async (phone: string, code: string) => {
+    try {
+      const cleanPhone = phone.replace(/\D/g, '')
+      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
+
+      const { data, error } = await supabase.rpc('verify_password_reset_otp', {
+        p_phone: '+' + fullPhone,
+        p_otp_code: code
+      })
+
+      if (error) throw error
+
+      const result = Array.isArray(data) ? data[0] : data
+      if (!result.success) throw new Error(result.error)
+
+      return { success: true, userId: result.user_id }
+    } catch (error: any) {
+      return { success: false, error: error.message }
     }
   },
 

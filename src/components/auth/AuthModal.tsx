@@ -11,6 +11,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
+import { validatePassword, isPasswordStrong } from '@/utils/passwordUtils'
+import { PasswordStrength } from './PasswordStrength'
 
 const countryCodes = [
     { code: '+55', country: 'Brasil', flag: '🇧🇷' },
@@ -26,15 +28,33 @@ const TEST_PHONE = '11986224808'
 
 export const AuthModal = () => {
     const router = useRouter()
-    const { login, signUp, showAuthModal, setShowAuthModal, authMode, setAuthMode, registrationRole, setRegistrationRole } = useAuthStore()
+    const {
+        login,
+        signUp,
+        showAuthModal,
+        setShowAuthModal,
+        authMode,
+        setAuthMode,
+        registrationRole,
+        setRegistrationRole,
+        updatePassword,
+        requestPasswordReset,
+        verifyResetOtp,
+        profile
+    } = useAuthStore()
 
     const isRegistering = authMode === 'register'
     const setIsRegistering = (val: boolean) => setAuthMode(val ? 'register' : 'login')
     const [showOtpScreen, setShowOtpScreen] = useState(false)
+    const [localAuthMode, setLocalAuthMode] = useState<'auth' | 'forgot' | 'reset-otp' | 'new-password' | 'force-change'>(
+        profile?.force_password_change ? 'force-change' : 'auth'
+    )
 
     // Form States
     const [email, setEmail] = useState('')
     const [password, setPassword] = useState('')
+    const [newPassword, setNewPassword] = useState('')
+    const [confirmPassword, setConfirmPassword] = useState('')
     const [fullName, setFullName] = useState('')
     const [whatsapp, setWhatsapp] = useState('')
     const [countryPrefix, setCountryPrefix] = useState('+55')
@@ -45,6 +65,18 @@ export const AuthModal = () => {
     const [existingUser, setExistingUser] = useState<any>(null)
     const [upgradeMode, setUpgradeMode] = useState(false)
     const [rememberMe, setRememberMe] = useState(true)
+    const [resetEmail, setResetEmail] = useState('')
+    const [resetWhatsapp, setResetWhatsapp] = useState('')
+    const [resetUserId, setResetUserId] = useState<string | null>(null)
+
+    const passwordReqs = validatePassword(isRegistering ? password : newPassword)
+    const isStrong = isPasswordStrong(passwordReqs)
+
+    React.useEffect(() => {
+        if (profile?.force_password_change) {
+            setLocalAuthMode('force-change')
+        }
+    }, [profile])
 
     React.useEffect(() => {
         const savedEmail = localStorage.getItem('remembered_email')
@@ -72,6 +104,13 @@ export const AuthModal = () => {
         setFormLoading(true)
 
         try {
+            const requirements = validatePassword(password)
+            if (!isPasswordStrong(requirements)) {
+                setError('A senha deve ser forte para prosseguir.')
+                setFormLoading(false)
+                return
+            }
+
             const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
             const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
 
@@ -217,28 +256,95 @@ export const AuthModal = () => {
             const result = await login(email, password)
             if (!result.success) {
                 setError(result.error || 'Erro ao fazer login')
+                setFormLoading(false)
             } else {
-                // If we were in upgrade mode, activate the other role
-                if (upgradeMode || registrationRole === 'oracle') {
-                    await supabase
-                        .from('profiles')
-                        .update({ is_oracle: true })
-                        .eq('email', email.trim().toLowerCase())
-                }
+                // Login bem sucedido - checkAuth foi chamado no login do store
+                // O useEffect acima cuidará de mudar o modo se for force-change
                 if (rememberMe) {
                     localStorage.setItem('remembered_email', email)
                 } else {
                     localStorage.removeItem('remembered_email')
                 }
 
-                setShowAuthModal(false)
-                router.push('/app')
+                if (!useAuthStore.getState().profile?.force_password_change) {
+                    setShowAuthModal(false)
+                    router.push('/app')
+                }
             }
         } catch (err) {
             setError('Erro ao entrar no portal')
-        } finally {
             setFormLoading(false)
         }
+    }
+
+    const handleForceChange = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!isStrong) return setError('Senha muito fraca.')
+        if (newPassword !== confirmPassword) return setError('Senhas não conferem.')
+
+        setFormLoading(true)
+        const result = await updatePassword(newPassword)
+        if (result.success) {
+            toast.success('Senha atualizada com sucesso!')
+            setShowAuthModal(false)
+            router.push('/app')
+        } else {
+            setError(result.error || 'Erro ao atualizar senha.')
+        }
+        setFormLoading(false)
+    }
+
+    const handleRequestReset = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setFormLoading(true)
+
+        // Formata telefone
+        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+
+        const result = await requestPasswordReset(resetEmail, fullPhone)
+        if (result.success) {
+            toast.success('Código enviado via WhatsApp!')
+            setLocalAuthMode('reset-otp')
+        } else {
+            setError(result.error || 'Erro ao enviar código.')
+        }
+        setFormLoading(false)
+    }
+
+    const handleVerifyResetOtp = async (e: React.FormEvent) => {
+        e.preventDefault()
+        setFormLoading(true)
+        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+        const result = await verifyResetOtp(fullPhone, otpCode)
+        if (result.success) {
+            setResetUserId(result.userId!)
+            setLocalAuthMode('new-password')
+        } else {
+            setError(result.error || 'Código inválido.')
+        }
+        setFormLoading(false)
+    }
+
+    const handleResetPassword = async (e: React.FormEvent) => {
+        e.preventDefault()
+        if (!isStrong) return setError('Senha muito fraca.')
+        if (newPassword !== confirmPassword) return setError('Senhas não conferem.')
+
+        setFormLoading(true)
+        // Como o usuário não está logado, usamos uma RPC ou o supabase Auth admin
+        // Mas o Supabase padrão exige reset via link. Aqui simulamos o reset:
+        const { error: resetErr } = await supabase.auth.updateUser({ password: newPassword })
+
+        if (resetErr) {
+            setError(resetErr.message)
+        } else {
+            // Limpa o flag também se necessário
+            await supabase.from('profiles').update({ force_password_change: false }).eq('id', resetUserId)
+            toast.success('Senha redefinida com sucesso!')
+            setLocalAuthMode('auth')
+            setIsRegistering(false)
+        }
+        setFormLoading(false)
     }
 
     const handleUpgradeSubmit = async (e: React.FormEvent) => {
@@ -265,7 +371,150 @@ export const AuthModal = () => {
                 className="w-full max-w-md relative z-10"
             >
                 <GlassCard glowColor={registrationRole === 'oracle' ? 'gold' : 'purple'} className="p-8">
-                    {showOtpScreen ? (
+                    {localAuthMode === 'force-change' ? (
+                        <form onSubmit={handleForceChange} className="space-y-6">
+                            <div className="text-center space-y-2 mb-4">
+                                <h2 className="text-2xl font-bold text-white">Segurança Star Tarot</h2>
+                                <p className="text-sm text-slate-300">Como parte da nossa atualização de segurança, você precisa definir uma senha forte.</p>
+                            </div>
+
+                            <GlowInput
+                                label="Nova Senha"
+                                type="password"
+                                placeholder="••••••••"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                icon={<Lock size={18} />}
+                                required
+                            />
+
+                            <PasswordStrength requirements={passwordReqs} password={newPassword} />
+
+                            <GlowInput
+                                label="Confirmar Nova Senha"
+                                type="password"
+                                placeholder="••••••••"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                icon={<ShieldCheck size={18} />}
+                                required
+                            />
+
+                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+
+                            <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
+                                Atualizar e Entrar
+                            </NeonButton>
+                        </form>
+                    ) : localAuthMode === 'forgot' ? (
+                        <form onSubmit={handleRequestReset} className="space-y-6">
+                            <div className="text-center space-y-2 mb-4">
+                                <h2 className="text-2xl font-bold text-white">Esqueci a Senha</h2>
+                                <p className="text-sm text-slate-300">Por segurança, confirme seus dados para receber o código no WhatsApp.</p>
+                            </div>
+
+                            <GlowInput
+                                label="E-mail Cadastrado"
+                                type="email"
+                                placeholder="seu@email.com"
+                                value={resetEmail}
+                                onChange={(e) => setResetEmail(e.target.value)}
+                                icon={<Mail size={18} />}
+                                required
+                            />
+
+                            <div className="space-y-1.5">
+                                <label className="text-sm font-medium text-slate-400 ml-1">WhatsApp Cadastrado</label>
+                                <div className="flex gap-2">
+                                    <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white text-sm flex items-center justify-center">
+                                        🇧🇷 +55
+                                    </div>
+                                    <GlowInput
+                                        type="tel"
+                                        placeholder="(00) 00000-0000"
+                                        value={resetWhatsapp}
+                                        onChange={(e) => setResetWhatsapp(e.target.value)}
+                                        icon={<Phone size={18} />}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
+                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+
+                            <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
+                                Validar e Enviar Código
+                            </NeonButton>
+
+                            <button type="button" onClick={() => setLocalAuthMode('auth')} className="w-full text-xs text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-1">
+                                <ArrowLeft size={12} /> Voltar para o Login
+                            </button>
+                        </form>
+                    ) : localAuthMode === 'reset-otp' ? (
+                        <form onSubmit={handleVerifyResetOtp} className="space-y-6">
+                            <div className="text-center space-y-2 mb-4">
+                                <h2 className="text-2xl font-bold text-white">Verificação Especial</h2>
+                                <p className="text-sm text-slate-300">Digite o código enviado para o seu WhatsApp.</p>
+                            </div>
+
+                            <GlowInput
+                                label="Código de 6 dígitos"
+                                type="text"
+                                maxLength={6}
+                                placeholder="000000"
+                                value={otpCode}
+                                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ''))}
+                                icon={<ShieldCheck size={18} />}
+                                required
+                                className="text-center tracking-[0.5em] text-2xl font-bold"
+                            />
+
+                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+
+                            <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
+                                Validar Código
+                            </NeonButton>
+
+                            <button type="button" onClick={() => setLocalAuthMode('forgot')} className="w-full text-xs text-slate-500 hover:text-white transition-colors flex items-center justify-center gap-1">
+                                <ArrowLeft size={12} /> Digitei errado
+                            </button>
+                        </form>
+                    ) : localAuthMode === 'new-password' ? (
+                        <form onSubmit={handleResetPassword} className="space-y-6">
+                            <div className="text-center space-y-2 mb-4">
+                                <h2 className="text-2xl font-bold text-white">Nova Senha Forte</h2>
+                                <p className="text-sm text-slate-300">Agora escolha sua nova senha segura.</p>
+                            </div>
+
+                            <GlowInput
+                                label="Nova Senha"
+                                type="password"
+                                placeholder="••••••••"
+                                value={newPassword}
+                                onChange={(e) => setNewPassword(e.target.value)}
+                                icon={<Lock size={18} />}
+                                required
+                            />
+
+                            <PasswordStrength requirements={passwordReqs} password={newPassword} />
+
+                            <GlowInput
+                                label="Confirmar Nova Senha"
+                                type="password"
+                                placeholder="••••••••"
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                icon={<ShieldCheck size={18} />}
+                                required
+                            />
+
+                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+
+                            <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
+                                Redefinir Senha
+                            </NeonButton>
+                        </form>
+                    ) : showOtpScreen ? (
                         <form onSubmit={handleVerifyOtp} className="space-y-6">
                             <div className="text-center space-y-2 mb-4">
                                 <h2 className="text-2xl font-bold text-white">Verificação Especial</h2>
@@ -349,13 +598,16 @@ export const AuthModal = () => {
                                 icon={<Lock size={18} />}
                                 required
                             />
+
+                            <PasswordStrength requirements={passwordReqs} password={password} />
+
                             {upgradeMode && (
                                 <div className="p-3 bg-neon-purple/10 border border-neon-purple/20 rounded-xl text-xs text-slate-300 leading-relaxed">
                                     Ao fazer login, sua conta atual será mantida e você ganhará acesso extra como <strong>{registrationRole === 'oracle' ? 'Oraculista' : 'Membro'}</strong>.
                                 </div>
                             )}
                             {error && <div className={`text-sm p-3 rounded-lg border text-center ${upgradeMode ? 'text-neon-gold bg-neon-gold/10 border-neon-gold/20' : 'text-red-400 bg-red-400/10 border-red-400/20'}`}>{error}</div>}
-                            <NeonButton type="submit" variant={registrationRole === 'oracle' ? 'gold' : 'purple'} fullWidth loading={formLoading} size="lg">
+                            <NeonButton type="submit" variant={registrationRole === 'oracle' ? 'gold' : 'purple'} fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
                                 {upgradeMode ? 'Fazer Login e Ativar' : 'Gerar Código WhatsApp'}
                             </NeonButton>
                             <button type="button" onClick={() => { setIsRegistering(false); setUpgradeMode(false); setExistingUser(null); setError('') }} className="w-full text-sm text-slate-400 hover:text-white flex items-center justify-center pt-2">
@@ -374,15 +626,22 @@ export const AuthModal = () => {
                                 icon={<Mail size={18} />}
                                 required
                             />
-                            <GlowInput
-                                label="Senha"
-                                type="password"
-                                placeholder="••••••••"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                icon={<Lock size={18} />}
-                                required
-                            />
+                            <div className="space-y-1">
+                                <GlowInput
+                                    label="Senha"
+                                    type="password"
+                                    placeholder="••••••••"
+                                    value={password}
+                                    onChange={(e) => setPassword(e.target.value)}
+                                    icon={<Lock size={18} />}
+                                    required
+                                />
+                                <div className="flex justify-end">
+                                    <button type="button" onClick={() => setLocalAuthMode('forgot')} className="text-xs text-neon-gold hover:underline">
+                                        Esqueci a senha
+                                    </button>
+                                </div>
+                            </div>
 
                             <div className="flex items-center space-x-2 px-1">
                                 <input
