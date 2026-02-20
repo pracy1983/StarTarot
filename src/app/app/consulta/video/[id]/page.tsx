@@ -60,14 +60,42 @@ export default function VideoConsultationPage() {
     const [callError, setCallError] = useState<string | null>(null)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const [isFinalizing, setIsFinalizing] = useState(false)
+    const [now, setNow] = useState(Date.now())
 
     useEffect(() => {
         if (id) fetchDetails()
 
+        const interval = setInterval(() => setNow(Date.now()), 1000)
+
+        // Realtime sync for consultation status
+        const channel = supabase.channel(`video_consultation_${id}`)
+            .on('postgres_changes', {
+                event: 'UPDATE',
+                schema: 'public',
+                table: 'consultations',
+                filter: `id=eq.${id}`
+            }, (payload) => {
+                setConsultation((prev: any) => ({ ...prev, ...payload.new }))
+                if (payload.new.status === 'answered' || payload.new.status === 'canceled') {
+                    autoFinalizeCall('oracle')
+                }
+            })
+            .subscribe()
+
         return () => {
+            clearInterval(interval)
+            supabase.removeChannel(channel)
             endCall()
         }
     }, [id])
+
+    // Duration sync
+    useEffect(() => {
+        if (consultation?.started_at && consultation.status === 'active') {
+            const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
+            setDuration(Math.max(0, seconds))
+        }
+    }, [now, consultation?.started_at, consultation?.status])
 
     const fetchDetails = async () => {
         try {
@@ -112,20 +140,8 @@ export default function VideoConsultationPage() {
                     stabilizationTimer.current = setTimeout(async () => {
                         setHasEstablishedConnection(true)
 
-                        // Sync with DB: Set status to active and started_at to now
-                        const { data: updatedCons } = await supabase.from('consultations')
-                            .update({
-                                status: 'active',
-                                started_at: new Date().toISOString()
-                            })
-                            .eq('id', id)
-                            .is('started_at', null)
-                            .select()
-                            .single()
-
-                        if (updatedCons) {
-                            setConsultation(updatedCons)
-                        }
+                        // Sync with DB: Set status to active and started_at to now (only if not set)
+                        await supabase.rpc('start_video_consultation', { p_consultation_id: id })
 
                         // Charge initial fee only once connection is established
                         if (profile?.role === 'client' && !hasChargedInitialFee.current) {
@@ -554,22 +570,30 @@ export default function VideoConsultationPage() {
                         className="absolute right-4 top-4 w-28 h-40 md:w-48 md:h-64 bg-slate-800 rounded-2xl border-2 border-neon-purple/50 overflow-hidden shadow-2xl z-30 touch-none"
                     >
                         <div id="local-player" className="w-full h-full bg-slate-900 overflow-hidden">
-                            {!joined && (
-                                <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none p-2">
-                                    <div className="text-center space-y-2 pointer-events-auto bg-black/60 p-2 md:p-3 rounded-xl backdrop-blur-sm border border-white/10">
-                                        <p className="text-white font-bold text-[8px] md:text-[10px]">Câmera OK?</p>
-                                        <button onClick={startCall} className="bg-neon-purple px-2 md:px-3 py-1 rounded-full text-[8px] md:text-[10px] text-white font-bold hover:bg-neon-purple/80 transition-all">
-                                            Entrar
-                                        </button>
-                                    </div>
-                                </div>
-                            )}
                         </div>
                         <div className="absolute bottom-2 left-2 flex items-center space-x-1 bg-black/40 px-2 py-0.5 rounded-lg backdrop-blur-md">
                             <User size={10} className="text-neon-cyan" />
                             <span className="text-[8px] text-white">Você</span>
                         </div>
                     </motion.div>
+
+                    {/* Central Entry Button for Client */}
+                    {!joined && !loading && (
+                        <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+                            <GlassCard className="p-8 text-center space-y-6 max-w-sm mx-4 border-neon-purple/30 animate-in zoom-in duration-300">
+                                <div className="w-16 h-16 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <Camera className="text-neon-purple" size={32} />
+                                </div>
+                                <div className="space-y-2">
+                                    <h3 className="text-xl font-bold text-white">Câmera e Áudio OK?</h3>
+                                    <p className="text-sm text-slate-400">Verifique sua imagem no canto superior antes de entrar na sala.</p>
+                                </div>
+                                <NeonButton variant="purple" fullWidth onClick={startCall} size="lg">
+                                    Entrar na Consulta
+                                </NeonButton>
+                            </GlassCard>
+                        </div>
+                    )}
 
                     {/* Call Ended Modal Overlay */}
                     {callEndedBy && !showFeedback && (

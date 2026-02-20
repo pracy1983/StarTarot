@@ -256,20 +256,8 @@ export default function ServiceRoomPage() {
                         stabilizationTimer.current = setTimeout(async () => {
                             setHasEstablishedConnection(true)
 
-                            // Try to set active if client hasn't yet
-                            const { data: updatedCons } = await supabase.from('consultations')
-                                .update({
-                                    status: 'active',
-                                    started_at: new Date().toISOString()
-                                })
-                                .eq('id', consultationId)
-                                .is('started_at', null)
-                                .select()
-                                .single()
-
-                            if (updatedCons) {
-                                setConsultation(updatedCons)
-                            }
+                            // Try to set active if client hasn't yet (atomic RPC)
+                            await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId })
 
                             stabilizationTimer.current = null
                         }, 3000)

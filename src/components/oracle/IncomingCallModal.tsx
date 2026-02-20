@@ -68,7 +68,7 @@ export function IncomingCallModal({ call, isAccepting = false, onAccept, onRejec
             videoTrack.close()
 
             // Proceed with original accept logic
-            onAccept()
+            await onAccept()
         } catch (err: any) {
             console.error('Hardware check failed during accept:', err)
             let msg = 'Erro ao acessar câmera ou microfone.'
