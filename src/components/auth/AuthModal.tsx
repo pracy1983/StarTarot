@@ -135,20 +135,53 @@ export const AuthModal = () => {
                 return
             }
 
-            // Tenta cadastro
+            // ESTRATÉGIA: Tenta login primeiro. Se não existir, faz cadastro.
+            // Isso evita o erro 422 "User already registered" do Supabase.
+            const loginAttempt = await login(email, password)
+
+            if (loginAttempt.success) {
+                // Usuário já existia e logou com sucesso
+                // Atualiza telefone e role se oraculista
+                const updates: any = { phone: fullPhone }
+                if (registrationRole === 'oracle') {
+                    updates.is_oracle = true
+                    updates.application_status = 'pending'
+                }
+                await supabase.from('profiles').update(updates).eq('email', email.trim().toLowerCase())
+
+                toast.success('Bem-vindo de volta ao Templo!')
+                setShowAuthModal(false)
+                router.push('/app')
+                return
+            }
+
+            // Login falhou por senha errada (usuário existe, mas senha incorreta)
+            const isWrongPassword = loginAttempt.error?.includes('E-mail ou senha incorretos') ||
+                loginAttempt.error?.includes('Invalid login credentials')
+
+            if (isWrongPassword) {
+                setError('Este e-mail já está cadastrado. Verifique a senha.')
+                setFormLoading(false)
+                return
+            }
+
+            // Login falhou porque não existe conta — fazer cadastro normalmente
             const result = await signUp(email, password, fullName, fullPhone, registrationRole)
             if (!result.success) {
-                // Se falhar por usuário já existente, tenta login
-                if (result.error?.includes('already registered') || result.error?.includes('já está cadastrado')) {
+                // Últimas tentativas: usuário existente com erro diferente
+                if (result.error?.toLowerCase().includes('already registered') ||
+                    result.error?.toLowerCase().includes('already been registered')) {
+                    // Tenta login como fallback final
                     await performLogin(email, password, fullPhone)
                 } else {
                     setError(result.error || 'Erro ao criar conta')
                     setFormLoading(false)
                 }
             } else {
+                // Cadastro criado, faz login automático
                 const loginResult = await login(email, password)
                 if (loginResult.success) {
-                    toast.success('Bem-vindo ao Templo!')
+                    toast.success('Bem-vindo ao Templo! 🔮')
                     setShowAuthModal(false)
                     router.push('/app')
                 } else {
