@@ -234,8 +234,6 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const safeRole = (role === 'owner') ? 'client' : role;
 
-      console.log('[SignUp] Iniciando cadastro:', { email, full_name, safeRole, phone })
-
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -248,38 +246,22 @@ export const useAuthStore = create<AuthState>((set) => ({
         }
       })
 
-      console.log('[SignUp] Resposta do Supabase Auth:', {
-        userId: data?.user?.id,
-        error: error?.message,
-        identities: data?.user?.identities?.length
-      })
-
       if (error) throw error
 
-      // IMPORTANTE: Supabase retorna user com identities=[] se o email já existe mas sem confirmação
-      // Neste caso, data.user existe, mas identities é vazio = usuário fantasma
       if (data.user && data.user.identities && data.user.identities.length === 0) {
-        console.warn('[SignUp] Usuário fantasma detectado (identities vazio) - email já existe no Auth')
         return { success: false, error: 'User already registered' }
       }
 
       if (data.user) {
-        console.log('[SignUp] Usuário criado no Auth! ID:', data.user.id)
-
-        // 1. Aguarda um momento para a trigger rodar
         await new Promise(resolve => setTimeout(resolve, 2000));
 
-        // 2. Verifica se o perfil foi criado pela trigger
         const { data: profile } = await supabase
           .from('profiles')
           .select('id, role, application_status')
           .eq('id', data.user.id)
           .maybeSingle()
 
-        console.log('[SignUp] Perfil após trigger:', profile)
-
         if (!profile) {
-          console.log('[SignUp] Trigger falhou, criando perfil via RPC...')
           const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile', {
             p_user_id: data.user.id,
             p_email: email.trim().toLowerCase(),
@@ -287,34 +269,28 @@ export const useAuthStore = create<AuthState>((set) => ({
             p_role: safeRole
           })
 
-          console.log('[SignUp] Resultado RPC:', { rpcData, rpcError: rpcError?.message })
-
           const isSuccessful = Array.isArray(rpcData)
             ? (rpcData[0] as any)?.success
             : (rpcData as any)?.success
 
           if (rpcError || !isSuccessful) {
-            console.error('[SignUp] RPC fallback falhou:', rpcError || rpcData)
-            console.log('[SignUp] Debug RPC Full Data:', rpcData)
-            console.log('[SignUp] Debug RPC Error:', rpcError)
+            console.error('Failed to create profile via RPC fallback:', rpcError || rpcData)
             return { success: false, error: 'Erro ao criar perfil de usuário. Tente novamente.' }
           } else {
             await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
           }
         } else {
           if (safeRole === 'oracle' && profile.application_status !== 'pending') {
-            console.warn('[SignUp] Oracle criado mas status é', profile.application_status)
+            console.warn('Oracle created but status is', profile.application_status)
           }
         }
 
-        console.log('[SignUp] Cadastro completo com sucesso!')
         return { success: true }
       }
 
-      console.error('[SignUp] data.user é null')
       return { success: false, error: 'Ocorreu um erro ao criar a conta.' }
     } catch (error: any) {
-      console.error('[SignUp] Erro:', error.message)
+      console.error('Erro no signUp:', error.message)
       return { success: false, error: error.message || 'Erro ao criar conta' }
     }
   },
