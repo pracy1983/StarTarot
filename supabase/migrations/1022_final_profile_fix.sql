@@ -2,7 +2,6 @@
 -- ===================================================================
 
 -- 1. Ensure ALL expected columns exist in profiles table
--- This prevents "column does not exist" errors in the RPC
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS is_oracle BOOLEAN DEFAULT false;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS application_status TEXT;
 ALTER TABLE public.profiles ADD COLUMN IF NOT EXISTS name_fantasy TEXT;
@@ -34,21 +33,23 @@ CREATE OR REPLACE FUNCTION public.ensure_user_profile(
     p_name_fantasy TEXT DEFAULT NULL
 ) RETURNS JSONB AS $$
 DECLARE
-    v_profile_exists BOOLEAN;
-    v_final_role TEXT;
+    v_final_role user_role;  -- Declarado como ENUM correto
     v_app_status TEXT;
 BEGIN
-    -- Detect desired role and status (matching 1016/1017 logic)
+    -- Detect desired role and status
+    -- Cast explícito para o tipo ENUM 'user_role'
     IF p_role = 'oracle' THEN
-        v_final_role := 'oracle';
+        v_final_role := 'oracle'::user_role;
         v_app_status := 'pending';
+    ELSIF p_role = 'owner' THEN
+        v_final_role := 'owner'::user_role;
+        v_app_status := NULL;
     ELSE
-        v_final_role := 'client';
-        v_app_status := NULL; -- Clients should have NULL status
+        v_final_role := 'client'::user_role;
+        v_app_status := NULL;
     END IF;
 
-    -- 1. Upsert Profile
-    -- Using ON CONFLICT to handle the "already exists" case robustly
+    -- Upsert Profile usando ON CONFLICT para robustez
     INSERT INTO public.profiles (
         id, 
         email, 
@@ -67,7 +68,7 @@ BEGIN
         v_final_role,
         v_app_status,
         COALESCE(p_name_fantasy, p_full_name),
-        (v_final_role = 'oracle'),
+        (v_final_role = 'oracle'::user_role),
         false,
         now(),
         now()
@@ -77,10 +78,10 @@ BEGIN
         full_name = COALESCE(profiles.full_name, EXCLUDED.full_name),
         role = COALESCE(profiles.role, EXCLUDED.role),
         application_status = COALESCE(profiles.application_status, EXCLUDED.application_status),
-        is_oracle = CASE WHEN profiles.role = 'oracle' THEN true ELSE (EXCLUDED.role = 'oracle') END,
+        is_oracle = CASE WHEN profiles.role = 'oracle'::user_role THEN true ELSE (EXCLUDED.role = 'oracle'::user_role) END,
         updated_at = now();
 
-    -- 2. Ensure Wallet exists
+    -- Garante que a carteira existe
     INSERT INTO public.wallets (user_id, balance)
     VALUES (p_user_id, 0)
     ON CONFLICT (user_id) DO NOTHING;
@@ -88,7 +89,6 @@ BEGIN
     RETURN jsonb_build_object('success', true, 'message', 'Profile and wallet verified/created');
 
 EXCEPTION WHEN OTHERS THEN
-    -- Return useful error for debugging
     RETURN jsonb_build_object(
         'success', false, 
         'error', SQLERRM, 
