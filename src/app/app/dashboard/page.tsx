@@ -228,43 +228,49 @@ export default function OracleDashboard() {
                 </motion.div>
             )}
 
-            <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <header className="flex flex-col md:flex-row md:items-start justify-between gap-6">
                 <div>
                     <h1 className="text-3xl font-bold text-white">Painel do <span className="neon-text-purple">Oraculista</span></h1>
                     <p className="text-slate-400">Gerencie seus atendimentos e acompanhe seus resultados.</p>
                 </div>
 
-                <div className="flex flex-wrap bg-white/5 border border-white/10 rounded-2xl p-2 gap-2">
-                    <button
-                        onClick={() => toggleStatus('message')}
-                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_text
-                            ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
-                            : 'text-slate-500 hover:text-white'
-                            }`}
-                    >
-                        <MessageSquare size={18} className="mr-2" />
-                        Mensagens
-                    </button>
-
-                    <button
-                        onClick={() => toggleStatus('video')}
-                        className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_video
-                            ? 'bg-neon-cyan text-deep-space font-bold shadow-[0_0_15px_rgba(34,211,238,0.3)]'
-                            : 'text-slate-500 hover:text-white'
-                            }`}
-                    >
-                        <Video size={18} className="mr-2" />
-                        Vídeo
-                    </button>
-
-                    {/* Botão de Status Online/Offline - AGORA NO HEADER GLOBAL */}
-                    {profile?.allows_video && (
-                        <div className="pl-2 border-l border-white/10 ml-2 flex items-center">
-                            <span className={`text-xs font-bold ${profile?.is_online ? 'text-green-400' : 'text-slate-500'}`}>
-                                {profile?.is_online ? 'ONLINE GLOBALMENTE' : 'OFFLINE'}
-                            </span>
+                <div className="flex flex-col gap-2">
+                    <div className="flex items-center space-x-2">
+                        <span className="text-sm font-bold text-white uppercase tracking-wider">Desejo atender com:</span>
+                        <div className="group relative">
+                            <Info size={16} className="text-slate-400 hover:text-white cursor-help transition-colors" />
+                            <div className="absolute right-0 top-6 w-64 p-3 bg-deep-space border border-white/10 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 pointer-events-none">
+                                <p className="text-xs text-slate-300">
+                                    <strong className="text-neon-cyan">Vídeo:</strong> Exige que você esteja <strong className="text-green-400">Online</strong> para receber chamadas em tempo real.<br /><br />
+                                    <strong className="text-neon-purple">Mensagens:</strong> Você pode receber perguntas mesmo estando Offline, e tem até 24h para responder gravando um vídeo.
+                                </p>
+                            </div>
                         </div>
-                    )}
+                    </div>
+
+                    <div className="flex flex-wrap bg-white/5 border border-white/10 rounded-2xl p-2 gap-2 shadow-inner">
+                        <button
+                            onClick={() => toggleStatus('message')}
+                            className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_text
+                                ? 'bg-neon-purple text-white shadow-[0_0_15px_rgba(168,85,247,0.3)]'
+                                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <MessageSquare size={18} className="mr-2" />
+                            Mensagens
+                        </button>
+
+                        <button
+                            onClick={() => toggleStatus('video')}
+                            className={`flex items-center px-4 py-2 rounded-xl transition-all ${profile?.allows_video
+                                ? 'bg-neon-cyan text-deep-space font-bold shadow-[0_0_15px_rgba(34,211,238,0.3)]'
+                                : 'text-slate-500 hover:text-white hover:bg-white/5'
+                                }`}
+                        >
+                            <Video size={18} className="mr-2" />
+                            Vídeo
+                        </button>
+                    </div>
                 </div>
             </header>
 

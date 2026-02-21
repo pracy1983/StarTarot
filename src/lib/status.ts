@@ -52,7 +52,8 @@ export function getOracleStatus(isOnline: boolean, schedules: Schedule[] = [], l
     let isPulseActive = false
     if (lastHeartbeatAt) {
         const lastPulse = new Date(lastHeartbeatAt).getTime()
-        isPulseActive = (now.getTime() - lastPulse) < 120000 // 2 minutes
+        // Incremented to 3 minutes (180000ms) to be more forgiving with mobile browsers/tab throttling
+        isPulseActive = (now.getTime() - lastPulse) < 180000
     }
 
     const effectiveOnline = isOnline && isPulseActive

@@ -200,7 +200,7 @@ export default function LandingPage() {
       {/* Header Sticky */}
       <nav className="sticky top-0 z-50 w-full glass-header py-4 px-6 border-b border-white/5 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => router.push('/')}>
+          <div className="flex items-center space-x-2 cursor-pointer" onClick={() => router.push('/app')}>
             <img src="/logo.png" alt="StarTarot" className="w-8 h-8 object-contain" />
             <span className="text-xl font-bold tracking-tighter text-white">Star<span className="text-neon-purple">Tarot</span></span>
           </div>
@@ -264,32 +264,32 @@ export default function LandingPage() {
         </header>
 
         {/* Como Funciona Section - Moved up and made smaller */}
-        <section className="mb-16 py-8 border-y border-white/5 relative bg-white/[0.015] rounded-[30px] px-6">
+        <section className="mb-16 py-12 border-y border-white/5 relative bg-white/[0.015] rounded-[30px] px-6">
           <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/5 via-transparent to-neon-cyan/5 pointer-events-none rounded-[30px]" />
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
-            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
-              <div className="w-12 h-12 bg-neon-purple/10 rounded-xl flex items-center justify-center text-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">
-                <Search size={22} />
+            <div className="flex flex-col items-center text-center space-y-4 p-4 md:p-8 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 md:w-20 md:h-20 bg-neon-purple/10 rounded-xl flex items-center justify-center text-neon-purple shadow-[0_0_15px_rgba(168,85,247,0.1)] group-hover:scale-110 transition-transform">
+                <Search size={22} className="md:size-10" />
               </div>
-              <h3 className="font-bold text-white text-sm">1. Escolha seu Guia</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Veja as especialidades, bios e avaliações de cada oraculista.</p>
+              <h3 className="font-bold text-white text-sm md:text-2xl">1. Escolha seu Guia</h3>
+              <p className="text-[11px] md:text-base text-slate-400 leading-relaxed px-4">Veja as especialidades, bios e avaliações de cada oraculista.</p>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
-              <div className="w-12 h-12 bg-neon-cyan/10 rounded-xl flex items-center justify-center text-neon-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)] group-hover:scale-110 transition-transform">
-                <Sparkles size={22} />
+            <div className="flex flex-col items-center text-center space-y-4 p-4 md:p-8 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 md:w-20 md:h-20 bg-neon-cyan/10 rounded-xl flex items-center justify-center text-neon-cyan shadow-[0_0_15px_rgba(34,211,238,0.1)] group-hover:scale-110 transition-transform">
+                <Sparkles size={22} className="md:size-10" />
               </div>
-              <h3 className="font-bold text-white text-sm">2. Adicione Créditos</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Carregue sua carteira via PIX ou Cartão. Seus créditos nunca expiram.</p>
+              <h3 className="font-bold text-white text-sm md:text-2xl">2. Adicione Créditos</h3>
+              <p className="text-[11px] md:text-base text-slate-400 leading-relaxed px-4">Carregue sua carteira via PIX ou Cartão. Seus créditos nunca expiram.</p>
             </div>
 
-            <div className="flex flex-col items-center text-center space-y-2 p-4 group hover:bg-white/[0.02] rounded-2xl transition-all">
-              <div className="w-12 h-12 bg-neon-gold/10 rounded-xl flex items-center justify-center text-neon-gold shadow-[0_0_15px_rgba(251,191,36,0.1)] group-hover:scale-110 transition-transform">
-                <MessageSquare size={22} />
+            <div className="flex flex-col items-center text-center space-y-4 p-4 md:p-8 group hover:bg-white/[0.02] rounded-2xl transition-all">
+              <div className="w-12 h-12 md:w-20 md:h-20 bg-neon-gold/10 rounded-xl flex items-center justify-center text-neon-gold shadow-[0_0_15px_rgba(251,191,36,0.1)] group-hover:scale-110 transition-transform">
+                <MessageSquare size={22} className="md:size-10" />
               </div>
-              <h3 className="font-bold text-white text-sm">3. Inicie a Jornada</h3>
-              <p className="text-[11px] text-slate-500 leading-relaxed px-4">Consulta por Mensagem ou Vídeo com total privacidade e segurança.</p>
+              <h3 className="font-bold text-white text-sm md:text-2xl">3. Inicie a Jornada</h3>
+              <p className="text-[11px] md:text-base text-slate-400 leading-relaxed px-4">Consulta por Mensagem ou Vídeo com total privacidade e segurança.</p>
             </div>
           </div>
         </section>

@@ -22,6 +22,7 @@ export default function MarketplacePage() {
     const [filterVideo, setFilterVideo] = useState(false)
     const [filterMessage, setFilterMessage] = useState(false)
     const [favorites, setFavorites] = useState<string[]>([])
+    const [visibleCount, setVisibleCount] = useState(12)
 
     const [categories, setCategories] = useState<string[]>([]) // Added categories state
     const [specialties, setSpecialties] = useState<string[]>([])
@@ -153,10 +154,7 @@ export default function MarketplacePage() {
         }
     }
 
-    const [page, setPage] = useState(1)
-    const oraclesPerPage = 6
-
-    // Filtrar suspensos
+    // Paginação Lite (Load More)
     const availableOracles = oracles.filter(o => {
         if (!o.suspended_until) return true
         return new Date(o.suspended_until) < new Date()
@@ -164,6 +162,7 @@ export default function MarketplacePage() {
 
     const filteredOracles = availableOracles.filter(o => {
         const matchesSearch = o.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (o.name_fantasy && o.name_fantasy.toLowerCase().includes(searchTerm.toLowerCase())) ||
             o.specialty.toLowerCase().includes(searchTerm.toLowerCase())
 
         let matchesStatus = true
@@ -173,21 +172,15 @@ export default function MarketplacePage() {
             } else {
                 const lastPulse = o.last_heartbeat_at ? new Date(o.last_heartbeat_at).getTime() : 0
                 const now = new Date().getTime()
-                const isPulseActive = (now - lastPulse) < 120000
+                // Increased to 3 minutes to match status.ts
+                const isPulseActive = (now - lastPulse) < 180000
                 matchesStatus = !!o.is_online && isPulseActive
             }
         }
 
-
-
         // Categories Filter
         let matchesCategory = true
         if (selectedCategories.length > 0) {
-            // Check if oracle has at least one of the selected categories
-            // Assuming oracle has a 'categories' array or 'category' string
-            // If single category string:
-            // matchesCategory = selectedCategories.includes(o.category)
-            // If array:
             matchesCategory = selectedCategories.some(c => o.categories?.includes(c))
         }
 
@@ -208,41 +201,40 @@ export default function MarketplacePage() {
         return matchesSearch && matchesStatus && matchesCategory && matchesSpecialty && matchesCapabilities
     })
 
-    // Paginação
-    const totalPages = Math.ceil(filteredOracles.length / oraclesPerPage)
-    const paginatedOracles = filteredOracles.slice((page - 1) * oraclesPerPage, page * oraclesPerPage)
+    const paginatedOracles = filteredOracles.slice(0, visibleCount)
+    const hasMore = filteredOracles.length > visibleCount
 
     return (
         <div className="space-y-4 md:space-y-6 max-w-full overflow-x-hidden">
             {/* Hero / Intro */}
-            <section className="relative py-4 md:py-6 px-4 md:px-6 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
+            <section className="relative py-2 md:py-6 px-4 md:px-6 rounded-2xl md:rounded-3xl overflow-hidden glass border-white/5">
                 <div className="absolute top-0 right-0 w-1/3 h-full bg-neon-purple/10 blur-[100px] z-0" />
                 <div className="absolute bottom-0 left-0 w-1/3 h-full bg-neon-cyan/10 blur-[100px] z-0" />
 
-                <div className="relative z-10 max-w-2xl">
+                <div className="relative z-10 max-w-2xl text-center md:text-left mx-auto md:mx-0">
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="flex items-center space-x-2 text-neon-gold mb-3"
+                        className="flex items-center justify-center md:justify-start space-x-2 text-neon-gold mb-2"
                     >
-                        <Sparkles size={16} />
-                        <span className="text-[10px] font-bold uppercase tracking-[0.3em]">O Templo dos Arcanos</span>
+                        <Sparkles size={14} />
+                        <span className="text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] md:tracking-[0.3em]">O Templo dos Arcanos</span>
                     </motion.div>
                     <motion.h1
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="text-xl md:text-3xl font-bold font-raleway text-white mb-2 md:mb-3 leading-tight"
+                        className="text-lg md:text-3xl font-bold font-raleway text-white mb-1 md:mb-3 leading-tight"
                     >
                         A resposta que você busca está <span className="neon-text-purple">escrita nas estrelas.</span>
                     </motion.h1>
                     <motion.p
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.2 }}
-                        className="text-slate-400 text-xs md:text-sm leading-relaxed mb-3 md:mb-4"
+                        className="text-slate-400 text-[11px] md:text-sm leading-relaxed mb-2 md:mb-4"
                     >
-                        Escolha seu guia, concentre sua energia e inicie sua jornada de autoconhecimento agora mesmo.
+                        Conecte-se com os melhores oraculistas em consultas em tempo real ou mensagens.
                     </motion.p>
                 </div>
             </section>
@@ -250,40 +242,40 @@ export default function MarketplacePage() {
             {/* How it Works Section - Visible only for new/unauthenticated users */}
             {!profile && (
                 <motion.section
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 }}
-                    className="grid grid-cols-1 md:grid-cols-3 gap-6"
+                    className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-6"
                 >
-                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-purple/30 transition-all duration-500">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-purple/5 blur-3xl group-hover:bg-neon-purple/20 transition-all" />
-                        <div className="w-12 h-12 rounded-2xl bg-neon-purple/10 flex items-center justify-center text-neon-purple mb-4 group-hover:scale-110 transition-transform">
-                            <Search size={24} />
+                    <div className="glass-card p-4 md:p-6 border-white/5 relative overflow-hidden group hover:border-neon-purple/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-neon-purple/5 blur-3xl group-hover:bg-neon-purple/20 transition-all" />
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-neon-purple/10 flex items-center justify-center text-neon-purple mb-2 md:mb-4 group-hover:scale-110 transition-transform">
+                            <Search className="w-4 h-4 md:w-6 md:h-6" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">1. Escolha seu Guia</h3>
-                        <p className="text-sm text-slate-400 leading-relaxed">
+                        <h3 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-2">1. Escolha seu Guia</h3>
+                        <p className="text-[10px] md:text-sm text-slate-400 leading-relaxed hidden sm:block">
                             Navegue pelos perfis e encontre o oraculista que mais ressoa com sua energia. Filtre por especialidade, preço ou modalidade.
                         </p>
                     </div>
 
-                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-cyan/30 transition-all duration-500">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-cyan/5 blur-3xl group-hover:bg-neon-cyan/20 transition-all" />
-                        <div className="w-12 h-12 rounded-2xl bg-neon-cyan/10 flex items-center justify-center text-neon-cyan mb-4 group-hover:scale-110 transition-transform">
-                            <Star size={24} />
+                    <div className="glass-card p-4 md:p-6 border-white/5 relative overflow-hidden group hover:border-neon-cyan/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-neon-cyan/5 blur-3xl group-hover:bg-neon-cyan/20 transition-all" />
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-neon-cyan/10 flex items-center justify-center text-neon-cyan mb-2 md:mb-4 group-hover:scale-110 transition-transform">
+                            <Star className="w-4 h-4 md:w-6 md:h-6" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">2. Defina o Formato</h3>
-                        <p className="text-sm text-slate-400 leading-relaxed">
+                        <h3 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-2">2. Defina o Formato</h3>
+                        <p className="text-[10px] md:text-sm text-slate-400 leading-relaxed hidden sm:block">
                             Prefere o olho no olho? Escolha <b>Vídeo</b>. Quer algo mais discreto ou detalhado? Envie uma <b>Mensagem</b> direta ao guia.
                         </p>
                     </div>
 
-                    <div className="glass-card p-6 border-white/5 relative overflow-hidden group hover:border-neon-gold/30 transition-all duration-500">
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-neon-gold/5 blur-3xl group-hover:bg-neon-gold/20 transition-all" />
-                        <div className="w-12 h-12 rounded-2xl bg-neon-gold/10 flex items-center justify-center text-neon-gold mb-4 group-hover:scale-110 transition-transform">
-                            <Clock size={24} />
+                    <div className="glass-card p-4 md:p-6 border-white/5 relative overflow-hidden group hover:border-neon-gold/30 transition-all duration-500">
+                        <div className="absolute top-0 right-0 w-16 h-16 md:w-24 md:h-24 bg-neon-gold/5 blur-3xl group-hover:bg-neon-gold/20 transition-all" />
+                        <div className="w-8 h-8 md:w-12 md:h-12 rounded-xl bg-neon-gold/10 flex items-center justify-center text-neon-gold mb-2 md:mb-4 group-hover:scale-110 transition-transform">
+                            <Clock className="w-4 h-4 md:w-6 md:h-6" />
                         </div>
-                        <h3 className="text-lg font-bold text-white mb-2">3. Resposta Garantida</h3>
-                        <p className="text-sm text-slate-400 leading-relaxed">
+                        <h3 className="text-sm md:text-lg font-bold text-white mb-1 md:mb-2">3. Resposta Garantida</h3>
+                        <p className="text-[10px] md:text-sm text-slate-400 leading-relaxed hidden sm:block">
                             Se o guia estiver offline, deixe sua pergunta! Você só é cobrado quando receber a resposta. Simples, justo e transparente.
                         </p>
                     </div>
@@ -357,25 +349,16 @@ export default function MarketplacePage() {
                 </div>
             </section>
 
-            {/* Pagination Controls */}
-            {!loading && totalPages > 1 && (
-                <div className="flex justify-center items-center space-x-4 pb-20">
+            {/* Load More Controls */}
+            {!loading && hasMore && (
+                <div className="flex justify-center items-center pt-8 pb-20">
                     <button
-                        onClick={() => setPage(p => Math.max(1, p - 1))}
-                        disabled={page === 1}
-                        className={`px-4 py-2 rounded-xl border border-white/10 text-sm font-bold transition-all ${page === 1 ? 'opacity-50 cursor-not-allowed text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white'}`}
+                        onClick={() => setVisibleCount(v => v + 12)}
+                        className="group relative flex items-center space-x-3 px-8 py-4 bg-white/5 border border-white/10 rounded-2xl text-white font-bold hover:bg-white/10 hover:border-neon-purple/50 transition-all shadow-xl overflow-hidden"
                     >
-                        Anterior
-                    </button>
-                    <span className="text-slate-400 text-sm font-mono">
-                        Página {page} de {totalPages}
-                    </span>
-                    <button
-                        onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                        disabled={page === totalPages}
-                        className={`px-4 py-2 rounded-xl border border-white/10 text-sm font-bold transition-all ${page === totalPages ? 'opacity-50 cursor-not-allowed text-slate-500' : 'bg-white/5 hover:bg-white/10 text-white'}`}
-                    >
-                        Próxima
+                        <div className="absolute inset-0 bg-gradient-to-r from-neon-purple/0 via-neon-purple/10 to-neon-purple/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                        <Sparkles size={20} className="text-neon-purple" />
+                        <span>Carregar mais Oraculistas</span>
                     </button>
                 </div>
             )}

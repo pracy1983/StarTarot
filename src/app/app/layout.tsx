@@ -199,7 +199,6 @@ export default function ClientLayout({ children }: { children: React.ReactNode }
 
     const oracleNav = [
         { label: 'Dashboard', icon: <LayoutDashboard size={22} />, href: '/app/dashboard' },
-        { label: 'Sala', icon: <Radio size={22} />, href: '/app/dashboard/sala' },
         { label: 'Ganhos', icon: <Wallet size={22} />, href: '/app/dashboard/ganhos' },
         { label: 'Mensagens', icon: <Inbox size={22} />, href: '/app/mensagens?view=oracle' },
         { label: 'Meu perfil de oraculista', icon: <User size={22} />, href: '/app/dashboard/perfil' },
