@@ -14,6 +14,7 @@ import toast from 'react-hot-toast'
 import { OracleCard } from '@/components/client/OracleCard'
 import { OracleFilters } from '@/components/client/OracleFilters'
 import { AuthModal } from '@/components/auth/AuthModal'
+import { getOracleStatus } from '@/lib/status'
 
 const countryCodes = [
   { code: '+55', country: 'Brasil', flag: '🇧🇷' },
@@ -125,33 +126,29 @@ export default function LandingPage() {
     }
   }
 
-  const isOnline = (o: any) => {
-    const now = new Date()
-    const currentDay = now.getDay()
-    const currentTime = now.getHours() * 60 + now.getMinutes()
-    const todaySchedules = (o.schedules || []).filter((s: any) => s.day_of_week === currentDay && s.is_active)
-
-    const isInSchedule = todaySchedules.some((s: any) => {
-      const [startH, startM] = s.start_time.split(':').map(Number)
-      const [endH, endM] = s.end_time.split(':').map(Number)
-      return currentTime >= (startH * 60 + startM) && currentTime <= (endH * 60 + endM)
-    })
-
-    if (o.is_ai || o.oracle_type === 'ai') {
-      return isInSchedule
-    }
-
-    if (!o.is_online || !o.last_heartbeat_at) return false
-    const lastPulse = new Date(o.last_heartbeat_at).getTime()
-    return (now.getTime() - lastPulse) < 120000 // 2 minutes
-  }
-
   const getSortedOracles = (list: any[]) => {
     const favoritesList = list.filter(o => favorites.includes(o.id))
     const remaining = list.filter(o => !favorites.includes(o.id))
 
-    const onlineList = remaining.filter(o => isOnline(o)).sort(() => Math.random() - 0.5)
-    const offlineList = remaining.filter(o => !isOnline(o))
+    const onlineList = remaining.filter(o => {
+      const { status } = getOracleStatus(
+        o.is_online,
+        o.schedules || [],
+        o.last_heartbeat_at,
+        o.is_ai || o.oracle_type === 'ai'
+      )
+      return status === 'online'
+    }).sort(() => Math.random() - 0.5)
+
+    const offlineList = remaining.filter(o => {
+      const { status } = getOracleStatus(
+        o.is_online,
+        o.schedules || [],
+        o.last_heartbeat_at,
+        o.is_ai || o.oracle_type === 'ai'
+      )
+      return status === 'offline'
+    })
 
     return [...favoritesList, ...onlineList, ...offlineList]
   }
@@ -167,7 +164,13 @@ export default function LandingPage() {
 
       let matchesStatus = true
       if (filter === 'online') {
-        matchesStatus = isOnline(o)
+        const { status } = getOracleStatus(
+          o.is_online,
+          o.schedules || [],
+          o.last_heartbeat_at,
+          o.is_ai || o.oracle_type === 'ai'
+        )
+        matchesStatus = status === 'online'
       }
 
       let matchesSpecialty = true

@@ -9,6 +9,7 @@ import { Sparkles, Search, Star, Clock } from 'lucide-react'
 import { useSearchParams } from 'next/navigation'
 
 import { useAuthStore } from '@/stores/authStore'
+import { getOracleStatus } from '@/lib/status'
 
 export default function MarketplacePage() {
     const { profile } = useAuthStore()
@@ -118,32 +119,29 @@ export default function MarketplacePage() {
             }))
 
             // 4. Lógica de Ordenação: Favoritos > Online (Randômico) > Offline
-            const isOnline = (o: any) => {
-                const now = new Date()
-                const currentDay = now.getDay()
-                const currentTime = now.getHours() * 60 + now.getMinutes()
-                const todaySchedules = (o.schedules || []).filter((s: any) => s.day_of_week === currentDay && s.is_active)
-
-                const isInSchedule = todaySchedules.some((s: any) => {
-                    const [startH, startM] = s.start_time.split(':').map(Number)
-                    const [endH, endM] = s.end_time.split(':').map(Number)
-                    return currentTime >= (startH * 60 + startM) && currentTime <= (endH * 60 + endM)
-                })
-
-                if (o.is_ai || o.oracle_type === 'ai') {
-                    return isInSchedule
-                }
-
-                if (!o.is_online || !o.last_heartbeat_at) return false
-                const lastPulse = new Date(o.last_heartbeat_at).getTime()
-                return (now.getTime() - lastPulse) < 120000 // 2 minutes
-            }
-
+            // 4. Lógica de Ordenação: Favoritos > Online (Randômico) > Offline
             const favoritesList = oraclesWithSchedules.filter(o => favorites.includes(o.id))
             const remaining = oraclesWithSchedules.filter(o => !favorites.includes(o.id))
 
-            const onlineList = remaining.filter(o => isOnline(o)).sort(() => Math.random() - 0.5)
-            const offlineList = remaining.filter(o => !isOnline(o))
+            const onlineList = remaining.filter(o => {
+                const { status } = getOracleStatus(
+                    o.is_online,
+                    o.schedules || [],
+                    o.last_heartbeat_at,
+                    o.is_ai || o.oracle_type === 'ai'
+                )
+                return status === 'online'
+            }).sort(() => Math.random() - 0.5)
+
+            const offlineList = remaining.filter(o => {
+                const { status } = getOracleStatus(
+                    o.is_online,
+                    o.schedules || [],
+                    o.last_heartbeat_at,
+                    o.is_ai || o.oracle_type === 'ai'
+                )
+                return status === 'offline'
+            })
 
             const sortedOracles = [...favoritesList, ...onlineList, ...offlineList]
             setOracles(sortedOracles)
@@ -167,15 +165,13 @@ export default function MarketplacePage() {
 
         let matchesStatus = true
         if (filter === 'online') {
-            if (o.is_ai || o.oracle_type === 'ai') {
-                matchesStatus = !!o.is_online
-            } else {
-                const lastPulse = o.last_heartbeat_at ? new Date(o.last_heartbeat_at).getTime() : 0
-                const now = new Date().getTime()
-                // Increased to 3 minutes to match status.ts
-                const isPulseActive = (now - lastPulse) < 180000
-                matchesStatus = !!o.is_online && isPulseActive
-            }
+            const { status } = getOracleStatus(
+                o.is_online,
+                o.schedules || [],
+                o.last_heartbeat_at,
+                o.is_ai || o.oracle_type === 'ai'
+            )
+            matchesStatus = status === 'online'
         }
 
         // Categories Filter
