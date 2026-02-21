@@ -102,6 +102,12 @@ export default function VideoConsultationPage() {
             const { data: cons } = await supabase.from('consultations').select('*').eq('id', id).single()
             if (!cons) throw new Error('Consulta não encontrada')
 
+            if (cons.status === 'canceled' || cons.status === 'answered' || cons.status === 'finalized' || cons.status === 'completed') {
+                toast.error('Esta consulta já foi encerrada.')
+                router.push(profile?.role === 'oracle' ? '/app/dashboard/sala' : `/app/consulta/resposta/${id}`)
+                return
+            }
+
             setConsultation(cons)
 
             const { data: o } = await supabase.from('profiles').select('*').eq('id', cons.oracle_id).single()

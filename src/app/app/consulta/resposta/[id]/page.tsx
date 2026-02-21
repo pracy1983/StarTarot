@@ -580,7 +580,7 @@ export default function ConsultationResponsePage() {
                         </NeonButton>
                         <NeonButton
                             variant="purple"
-                            onClick={() => router.push(`/app/consulta/${oracle.id}`)}
+                            onClick={() => router.push(consultation.type === 'video' ? `/app/consulta/${oracle.id}?type=video` : `/app/consulta/${oracle.id}`)}
                         >
                             <MessageSquare size={18} className="mr-2" />
                             Tentar Novamente
@@ -589,7 +589,7 @@ export default function ConsultationResponsePage() {
                 ) : (
                     <NeonButton
                         variant="purple"
-                        onClick={() => router.push(`/app/consulta/${oracle.id}`)}
+                        onClick={() => router.push(consultation.type === 'video' ? `/app/consulta/${oracle.id}?type=video` : `/app/consulta/${oracle.id}`)}
                     >
                         <MessageSquare size={18} className="mr-2" />
                         Nova Consulta

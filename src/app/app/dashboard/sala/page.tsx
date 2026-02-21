@@ -230,6 +230,13 @@ export default function ServiceRoomPage() {
             router.push('/app/dashboard')
             return
         }
+
+        if (data.status === 'canceled' || data.status === 'answered' || data.status === 'finalized' || data.status === 'completed' || data.status === 'ended' || data.status === 'cancelled') {
+            toast.error('Esta consulta já foi encerrada.')
+            router.push('/app/dashboard')
+            return
+        }
+
         setConsultation(data)
         setLoading(false)
     }
