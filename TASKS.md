@@ -1,6 +1,7 @@
 # 🔮 Star Tarot - Lista de Tarefas (TASKS)
 
 ## ⏳ Em Progresso
+- [x] **Setup do Ambiente (Windows PowerShell)**
 - [x] **UI/UX: Unificação de Filtros e Melhoria de Cards**
     - [x] Componente `OracleFilters` unificado (Dashboard + Landing)
     - [x] Botão Favorito/Avisar com estilo Neon Purple e expand-on-hover

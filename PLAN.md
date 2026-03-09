@@ -46,3 +46,9 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 - [ ] **Otimização de UI de Aceite:**
     - Feedback visual de processamento ao clicar em aceitar.
     - Fechamento imediato do modal e transição fluida para a sala.
+
+## 🖥️ Setup do Ambiente de Desenvolvimento
+Para manter a paridade com outros ambientes (Mac/Linux), utilizamos aliases no PowerShell do Windows (`$PROFILE`):
+- `ia-portal`: Abre o OmniRoute em `http://localhost:20128`.
+- `ia-celular`: Inicia o remote chat para celular.
+- `ia-iniciar`: Inicia o Antigravity com porta de depuração remota ativada.

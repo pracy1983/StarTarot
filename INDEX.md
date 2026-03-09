@@ -8,6 +8,7 @@ Marketplace de consultas esotéricas (Tarot, Astrologia, Búzios) com oraculista
 - [TASKS.md](./TASKS.md): Controle de tarefas e progresso.
 - [GLOBAL_RULES.md](./GLOBAL_RULES.md): Regras de desenvolvimento.
 - [WORKFLOW.md](./WORKFLOW.md): Processos operacionais.
+- [PLAN.md#setup-do-ambiente-de-desenvolvimento](./PLAN.md#setup-do-ambiente-de-desenvolvimento): Setup Aliases.
 
 ## 🚀 Links Úteis
 - **GitHub:** [pracy1983/StarTarot](https://github.com/pracy1983/StarTarot)

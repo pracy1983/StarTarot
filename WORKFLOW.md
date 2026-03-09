@@ -13,6 +13,12 @@
 4. Frontend Implementation.
 5. Commit & Push.
 
+## 🛠️ Workflow de Setup de Ambiente (Windows)
+1. Confirmar Node.js e Antigravity instalado.
+2. Criar/Editar PowerShell Profile (`$PROFILE`).
+3. Adicionar funções para `ia-portal`, `ia-celular` e `ia-iniciar`.
+4. Recarregar profile (`. $PROFILE`).
+
 ## 🤖 Workflow de IA (DeepSeek)
 1. System Prompt definition.
 2. Thinking Delay implementation (10-30s).
