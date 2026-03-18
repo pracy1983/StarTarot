@@ -162,7 +162,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         .from('profiles')
         .select('id, phone, full_name, email')
         .eq('email', email.trim().toLowerCase())
-        .or(`phone.eq.+${fullPhone},phone.eq.${fullPhone}`)
+        .or(`phone.eq.+${fullPhone},phone.eq.${fullPhone},phone.eq.${cleanPhone},phone.eq.${cleanPhone.replace(/^55/, '')}`)
         .maybeSingle()
 
       // Se não encontrar um perfil que tenha EXATAMENTE esse email E esse telefone

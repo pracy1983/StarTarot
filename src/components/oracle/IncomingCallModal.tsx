@@ -38,53 +38,8 @@ export function IncomingCallModal({ call, isAccepting = false, onAccept, onRejec
         }
     }, [call])
 
-    const handleAcceptClick = async () => {
-        setIsCheckingHardware(true)
-        setHardwareError(null)
-
-        try {
-            // Import Agora dynamicly to ensure it only runs on client
-            const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
-
-            // Check for camera/mic availability
-            // We create tracks and then immediately close them
-            const audioTrack = await AgoraRTC.createMicrophoneAudioTrack().catch(err => {
-                console.error('Audio track failed', err)
-                throw err
-            })
-
-            const videoTrack = await AgoraRTC.createCameraVideoTrack().catch(err => {
-                console.error('Video track failed', err)
-                // If video fails but audio works, we should still stop audio
-                audioTrack.stop()
-                audioTrack.close()
-                throw err
-            })
-
-            // Success: Clean up tracks before moving to sala
-            audioTrack.stop()
-            audioTrack.close()
-            videoTrack.stop()
-            videoTrack.close()
-
-            // Proceed with original accept logic
-            await onAccept()
-        } catch (err: any) {
-            console.error('Hardware check failed during accept:', err)
-            let msg = 'Erro ao acessar câmera ou microfone.'
-
-            if (err.name === 'NotReadableError' || err.message?.includes('NotReadableError')) {
-                msg = 'Sua câmera já está sendo usada por outro aplicativo. Feche-o e tente novamente.'
-            } else if (err.name === 'NotAllowedError') {
-                msg = 'Permissão negada. Por favor, libere a câmera e microfone no seu navegador.'
-            } else if (err.name === 'NotFoundError') {
-                msg = 'Câmera ou microfone não encontrados. Verifique a conexão do hardware.'
-            }
-
-            setHardwareError(msg)
-        } finally {
-            setIsCheckingHardware(false)
-        }
+    const handleAcceptClick = () => {
+        onAccept()
     }
 
     if (!call) return null
