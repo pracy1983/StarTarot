@@ -154,43 +154,33 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   requestPasswordReset: async (email: string, phone: string) => {
     try {
-      // Validação Dupla de Segurança: E-mail + Telefone
       const cleanPhone = phone.replace(/\D/g, '')
       const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
 
-      const { data: userProfile, error: userError } = await supabase
-        .from('profiles')
-        .select('id, phone, full_name, email')
-        .eq('email', email.trim().toLowerCase())
-        .or(`phone.eq.+${fullPhone},phone.eq.${fullPhone},phone.eq.${cleanPhone},phone.eq.${cleanPhone.replace(/^55/, '')}`)
-        .maybeSingle()
-
-      // Se não encontrar um perfil que tenha EXATAMENTE esse email E esse telefone
-      if (userError || !userProfile) {
-        // Delay artificial para evitar enumeration attacks
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        throw new Error('Dados não conferem. Verifique seu e-mail e telefone.')
-      }
-
+      // 1. Gerar OTP
       const otp = Math.floor(100000 + Math.random() * 900000).toString()
       const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 min
 
-      // Salva no banco
-      const { error: otpError } = await supabase
-        .from('password_reset_otps')
-        .insert({
-          user_id: userProfile.id,
-          otp_code: otp,
-          expires_at: expiresAt
-        })
+      // 2. Chama o banco usando a nova RPC para bypass de RLS
+      const { data: rpcData, error: rpcError } = await supabase.rpc('request_password_reset', {
+        p_email: email,
+        p_phone: fullPhone,
+        p_otp_code: otp,
+        p_expires_at: expiresAt
+      })
 
-      if (otpError) throw otpError
+      if (rpcError) throw new Error(rpcError.message)
+      
+      const result = Array.isArray(rpcData) ? rpcData[0] : rpcData
+      if (!result || !result.success) {
+        throw new Error(result?.error || 'Dados não conferem. Verifique seu e-mail e telefone.')
+      }
 
-      // Envia via WhatsApp
+      // 3. Envia via WhatsApp (agora temos o nome e o telefone correto do banco)
       const EvolutionWhatsAppService = (await import('@/lib/whatsapp')).whatsappService
       const success = await EvolutionWhatsAppService.sendTextMessage({
-        phone: userProfile.phone || '', // Usa o telefone do banco que sabemos que está correto
-        message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${userProfile.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
+        phone: result.user_phone || fullPhone,
+        message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${result.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
       })
 
       if (!success) throw new Error('Não foi possível enviar o código para o WhatsApp.')
