@@ -373,7 +373,7 @@ export default function OracleProfilePage() {
             {/* Iniciar Consulta Buttons */}
             {profile?.id !== oracle.id && (oracle.allows_video || oracle.allows_text) && (
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    {!isAI && oracle.allows_video && (
+                    {!isAI && oracle.allows_video && isOnline && (
                         <NeonButton
                             variant="green"
                             size="md"
