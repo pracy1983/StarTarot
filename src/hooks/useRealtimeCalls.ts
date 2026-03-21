@@ -157,6 +157,7 @@ export function useRealtimeCalls() {
             return null
         } finally {
             setIsAccepting(false)
+            setIncomingCall(null)
         }
     }
 
