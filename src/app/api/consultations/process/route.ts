@@ -144,7 +144,7 @@ export async function POST(req: Request) {
             const isOracleOnline = oracle.is_online === true
             if (!isOracleOnline && oracle.whatsapp_notification_enabled && oracle.phone) {
                 try {
-                    await whatsappService.sendNewConsultationNotificationToOracle(oracle.phone)
+                    await whatsappService.sendNewConsultationNotification(oracle.phone, client.full_name)
                 } catch (waErr) {
                     console.error('Error sending WA to oracle:', waErr)
                 }
