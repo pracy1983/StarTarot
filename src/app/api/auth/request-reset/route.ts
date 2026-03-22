@@ -51,13 +51,15 @@ export async function POST(req: Request) {
         }
 
         // 4. Envia via WhatsApp
-        const success = await whatsappService.sendTextMessage({
+        const resultWA = await whatsappService.sendTextMessage({
             phone: result.user_phone || fullPhone,
             message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${result.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
         })
 
-        if (!success) {
-            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp. Tente novamente em instantes.' }, { status: 500 })
+        if (!resultWA.success) {
+            return NextResponse.json({ 
+                error: `Erro ao enviar WhatsApp: ${resultWA.error || 'Erro desconhecido'}. Verifique se o serviço está online.` 
+            }, { status: 500 })
         }
 
         return NextResponse.json({ success: true })

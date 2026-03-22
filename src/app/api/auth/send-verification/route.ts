@@ -10,13 +10,15 @@ export async function POST(req: Request) {
         }
 
         // Envia via WhatsApp
-        const success = await whatsappService.sendTextMessage({
+        const resultWA = await whatsappService.sendTextMessage({
             phone: phone,
             message: `✨ *Star Tarot* \n\nSeu código de verificação é: *${code}*\n\nNão compartilhe este código com ninguém.`
         })
 
-        if (!success) {
-            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp. Verifique o número e tente novamente.' }, { status: 500 })
+        if (!resultWA.success) {
+            return NextResponse.json({ 
+                error: `Erro ao enviar WhatsApp: ${resultWA.error || 'Erro desconhecido'}.` 
+            }, { status: 500 })
         }
 
         return NextResponse.json({ success: true })
