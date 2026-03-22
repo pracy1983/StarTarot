@@ -1,8 +1,8 @@
 // Evolution API WhatsApp Integration Service
 
 const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || 'https://pracy-evolution-api.vrdrcy.easypanel.host'
-const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || 'F94AEAC10C7D-4842-9AFD-6388C7B8B0B4'
-const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PRACYAT1'
+const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || 'ED3E4B433C76-466E-828D-478208E824BC'
+const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAT2'
 
 interface SendMessageParams {
     phone: string
