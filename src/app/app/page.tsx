@@ -37,6 +37,27 @@ export default function MarketplacePage() {
         const m = localStorage.getItem('pref_filter_message') === 'true'
         if (v) setFilterVideo(true)
         if (m) setFilterMessage(true)
+
+        // REALTIME SUBSCRIPTION FOR STATUS CHANGES
+        const channel = supabase
+            .channel('marketplace_status')
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'profiles',
+                    filter: 'role=in.(oracle,owner)'
+                },
+                () => {
+                    fetchOracles()
+                }
+            )
+            .subscribe()
+
+        return () => {
+            supabase.removeChannel(channel)
+        }
     }, [profile?.id])
 
     const fetchSpecialties = async () => {
