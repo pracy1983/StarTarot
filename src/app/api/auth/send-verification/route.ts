@@ -16,7 +16,7 @@ export async function POST(req: Request) {
         })
 
         if (!success) {
-            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp.' }, { status: 500 })
+            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp. Verifique o número e tente novamente.' }, { status: 500 })
         }
 
         return NextResponse.json({ success: true })

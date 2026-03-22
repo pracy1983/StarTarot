@@ -10,10 +10,17 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Email e telefone são obrigatórios' }, { status: 400 })
         }
 
-        const supabaseAdmin = createClient(
-            process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.SUPABASE_SERVICE_ROLE_KEY!
-        )
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+        if (!supabaseUrl || !supabaseServiceKey) {
+            console.error('MISSING ENV VARS:', { hasUrl: !!supabaseUrl, hasServiceKey: !!supabaseServiceKey })
+            return NextResponse.json({ 
+                error: 'Erro de configuração no servidor (Service Role Key ausente). Contate o administrador.' 
+            }, { status: 500 })
+        }
+
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
         // 1. Limpa e formata o telefone
         const cleanPhone = phone.replace(/\D/g, '')
@@ -43,14 +50,14 @@ export async function POST(req: Request) {
             }, { status: 404 })
         }
 
-        // 4. Envia via WhatsApp (agora temos o nome e o telefone correto do banco)
+        // 4. Envia via WhatsApp
         const success = await whatsappService.sendTextMessage({
             phone: result.user_phone || fullPhone,
             message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${result.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
         })
 
         if (!success) {
-            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp.' }, { status: 500 })
+            return NextResponse.json({ error: 'Não foi possível enviar o código para o WhatsApp. Tente novamente em instantes.' }, { status: 500 })
         }
 
         return NextResponse.json({ success: true })
