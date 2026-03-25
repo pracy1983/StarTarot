@@ -262,15 +262,24 @@ export default function ServiceRoomPage() {
                     return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
                 });
 
+                // Stabilization: Now accepting BOTH audio or video to consider connection "established"
+                if (!stabilizationTimer.current && !hasEstablishedConnection) {
+                    stabilizationTimer.current = setTimeout(async () => {
+                        setHasEstablishedConnection(true)
+                        
+                        // Try to set active if client hasn't yet, and use result to update local state immediately
+                        const { data: updatedConsultation } = await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId });
+                        if (updatedConsultation) {
+                            setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                        }
+                        
+                        stabilizationTimer.current = null
+                    }, 2000) // Reduced to 2 seconds for faster feedback
+                }
+
                 if (mediaType === 'video') {
-                    // Stabilization logic for Oracle too
-                    if (!stabilizationTimer.current) {
-                        stabilizationTimer.current = setTimeout(async () => {
-                            setHasEstablishedConnection(true)
-                            // Try to set active if client hasn't yet (atomic RPC)
-                            await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId })
-                            stabilizationTimer.current = null
-                        }, 3000)
+                    if (localPlayerRef.current) {
+                        // Re-fetch to ensure we have the track if it was just published
                     }
                 }
                 if (mediaType === 'audio') {

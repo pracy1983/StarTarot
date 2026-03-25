@@ -147,24 +147,28 @@ export default function VideoConsultationPage() {
                 return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
             });
 
-            if (mediaType === 'video') {
-                // Stabilization: Only consider connection "established" after 3 seconds of video
-                if (!stabilizationTimer.current) {
-                    stabilizationTimer.current = setTimeout(async () => {
-                        setHasEstablishedConnection(true)
-                        // Sync with DB: Set status to active and started_at to now (only if not set)
-                        await supabase.rpc('start_video_consultation', { p_consultation_id: id })
-                        // Charge initial fee only once connection is established
-                        if (profile?.role === 'client' && !hasChargedInitialFee.current) {
-                            if (oracle?.initial_fee_credits > 0) {
-                                await processInitialFee()
-                                hasChargedInitialFee.current = true
-                            }
+            // Stabilization: Now accepting BOTH audio or video to consider connection "established"
+            if (!stabilizationTimer.current && !hasEstablishedConnection) {
+                stabilizationTimer.current = setTimeout(async () => {
+                    setHasEstablishedConnection(true)
+                    
+                    // Sync with DB and use result to update state immediately
+                    const { data: updatedConsultation } = await supabase.rpc('start_video_consultation', { p_consultation_id: id });
+                    if (updatedConsultation) {
+                        setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                    }
+
+                    // Charge initial fee only once connection is established
+                    if (profile?.role === 'client' && !hasChargedInitialFee.current) {
+                        if (oracle?.initial_fee_credits > 0) {
+                            await processInitialFee()
+                            hasChargedInitialFee.current = true
                         }
-                        stabilizationTimer.current = null
-                    }, 3000)
-                }
+                    }
+                    stabilizationTimer.current = null
+                }, 2000) // Reduced to 2 seconds
             }
+
             if (mediaType === 'audio') {
                 user.audioTrack?.play()
             }
