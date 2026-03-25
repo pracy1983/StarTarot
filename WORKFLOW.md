@@ -23,3 +23,8 @@
 1. System Prompt definition.
 2. Thinking Delay implementation (10-30s).
 3. Realtime response synchronization.
+
+## ⚙️ Workflow RPA (Antigravity Kit)
+1. Definir o agente em `rpa/.agent/`.
+2. Testar scripts localmente.
+3. Integrar com o backend via Edge Functions ou scripts locais.

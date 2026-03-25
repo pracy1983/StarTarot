@@ -8,6 +8,7 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 - **Backend:** Supabase (Auth, DB, Realtime, Edge Functions).
 - **IA:** DeepSeek API.
 - **Pagamentos:** Asaas Sandbox.
+- **RPA:** Antigravity Kit (Automação de Agentes).
 
 ## 🎨 Design System: Ethereal Neon
 - **Fundo:** Deep Space (`#0a0a1a`).
@@ -37,6 +38,8 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
     - Filtros de especialidade unificados (Dropdown/Search).
     - Botões de favoritos com interação `hover-expand` e cores temáticas.
     - Middleware atualizado para proteção de rotas e acesso público a perfis.
+- **Integração RPA:**
+    - Adicionado `antigravity-kit` na pasta `rpa/` para suporte a automações.
 
 ## 🛠️ Próximas Implementações (Bugfixes & UX)
 - [ ] **Verificação de Hardware Pré-Consulta (Oráculo):**
@@ -48,7 +51,8 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
     - Fechamento imediato do modal e transição fluida para a sala.
 
 ## 🖥️ Setup do Ambiente de Desenvolvimento
-Para manter a paridade com outros ambientes (Mac/Linux), utilizamos aliases no PowerShell do Windows (`$PROFILE`):
-- `ia-portal`: Abre o OmniRoute em `http://localhost:20128`.
-- `ia-celular`: Inicia o remote chat para celular.
-- `ia-iniciar`: Inicia o Antigravity com porta de depuração remota ativada.
+Para manter a paridade com outros ambientes e permitir atualizações rápidas, utilizamos ferramentas locais clonadas em `C:\Users\pracy\OneDrive\Desktop\omni-tools\`:
+- `ia-portal`: Abre o OmniRoute local via `npm start`.
+- `ia-celular`: Inicia o remote chat para celular local.
+- `ia-iniciar`: Inicia o Antigravity com porta de depuração remota.
+- `ia-atualizar`: Vai até as pastas dos projetos e executa `git pull` + `npm install` para atualizar tudo automaticamente.
