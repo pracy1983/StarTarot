@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 interface Message {
     id: string
     sender_id: string
+    sender_name: string
     text: string
     timestamp: number
 }
@@ -28,13 +29,16 @@ export function VideoChat({ channelId, userId, userName }: VideoChatProps) {
     useEffect(() => {
         const channel = supabase.channel(`video_chat_${channelId}`, {
             config: {
-                broadcast: { self: true }
+                broadcast: { self: false } // Disable self to prevent duplication
             }
         })
 
         channel
             .on('broadcast', { event: 'chat_message' }, ({ payload }) => {
-                setMessages(prev => [...prev, payload])
+                setMessages(prev => {
+                    if (prev.find(m => m.id === payload.id)) return prev
+                    return [...prev, payload]
+                })
             })
             .subscribe()
 
@@ -57,9 +61,13 @@ export function VideoChat({ channelId, userId, userName }: VideoChatProps) {
         const newMessage: Message = {
             id: Math.random().toString(36).substr(2, 9),
             sender_id: userId,
+            sender_name: userName, // Use the provided user name
             text: inputText.trim(),
             timestamp: Date.now()
         }
+
+        // Add locally first for instant feedback
+        setMessages(prev => [...prev, newMessage])
 
         channelRef.current.send({
             type: 'broadcast',
@@ -95,6 +103,9 @@ export function VideoChat({ channelId, userId, userName }: VideoChatProps) {
                             ) : (
                                 messages.map(msg => (
                                     <div key={msg.id} className={`flex flex-col ${msg.sender_id === userId ? 'items-end' : 'items-start'}`}>
+                                        <span className="text-[10px] text-slate-500 mb-1 px-1">
+                                            {msg.sender_id === userId ? 'Você' : msg.sender_name}
+                                        </span>
                                         <div className={`max-w-[80%] p-2.5 rounded-2xl text-sm ${msg.sender_id === userId ? 'bg-neon-purple text-white rounded-tr-none' : 'bg-white/10 text-slate-200 rounded-tl-none'}`}>
                                             {msg.text}
                                         </div>

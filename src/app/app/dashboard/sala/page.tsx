@@ -357,11 +357,8 @@ export default function ServiceRoomPage() {
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 90000) // Increased to 90 seconds for better tolerance
+                }, 90000)
             }
-
-            // Removed: premature DB update to 'active' here. 
-            // Now handled in user-published stabilization logic.
 
         } catch (err: any) {
             console.error('Error starting call:', err)

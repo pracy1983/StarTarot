@@ -264,10 +264,21 @@ export default function VideoConsultationPage() {
             // 2. Join Channel
             await clientRef.current.join(appId, id as string, token, profile!.id)
 
-            // 3. Publish Tracks (Reuse created ones)
-            if (localAudioTrack && localVideoTrack) {
-                await clientRef.current.publish([localAudioTrack, localVideoTrack])
+            // 3. Ensure Tracks are created (if not already by preview)
+            let audioT = localAudioTrack
+            let videoT = localVideoTrack
+
+            if (!audioT || !videoT) {
+                const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+                if (!audioT) audioT = await AgoraRTC.createMicrophoneAudioTrack()
+                if (!videoT) videoT = await AgoraRTC.createCameraVideoTrack()
+                
+                setLocalAudioTrack(audioT)
+                setLocalVideoTrack(videoT)
             }
+
+            // 4. Publish Tracks
+            await clientRef.current.publish([audioT, videoT])
 
             setJoined(true)
 
