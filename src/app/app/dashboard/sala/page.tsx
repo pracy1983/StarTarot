@@ -60,6 +60,7 @@ export default function ServiceRoomPage() {
     const clientRef = React.useRef<IAgoraRTCClient | null>(null)
     const stabilizationTimer = React.useRef<NodeJS.Timeout | null>(null)
     const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
+    const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
 
     // Timer & Duration
     const [now, setNow] = useState(Date.now())
@@ -253,14 +254,17 @@ export default function ServiceRoomPage() {
             client.on('user-published', async (user, mediaType) => {
                 await client.subscribe(user, mediaType)
                 
-                // Track remote users and their mute status
+                // Track remote users (STORE ORIGINAL OBJECT)
                 setRemoteUsers(prev => {
-                    const existing = prev.find(u => u.uid === user.uid);
-                    if (existing) {
-                        return prev.map(u => u.uid === user.uid ? { ...u, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo } : u);
-                    }
-                    return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
+                    if (prev.find(u => u.uid === user.uid)) return prev;
+                    return [...prev, user];
                 });
+
+                // Track mute status separately
+                setMuteStatus(prev => ({
+                    ...prev,
+                    [user.uid.toString()]: !user.hasAudio
+                }));
 
                 // Stabilization: Now accepting BOTH audio or video to consider connection "established"
                 if (!stabilizationTimer.current && !hasEstablishedConnection) {
@@ -269,39 +273,34 @@ export default function ServiceRoomPage() {
                         
                         // Try to set active if client hasn't yet, and use result to update local state immediately
                         const { data: updatedConsultation } = await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId });
+                        
                         if (updatedConsultation) {
                             setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                        } else {
+                            // If RPC returns null, it means it was already started. Re-fetch or at least show active locally.
+                            setConsultation((prev: any) => ({ ...prev, status: 'active' }));
                         }
                         
                         stabilizationTimer.current = null
-                    }, 2000) // Reduced to 2 seconds for faster feedback
+                    }, 2000)
                 }
 
-                if (mediaType === 'video') {
-                    if (localPlayerRef.current) {
-                        // Re-fetch to ensure we have the track if it was just published
-                    }
-                }
                 if (mediaType === 'audio') {
                     user.audioTrack?.play()
                 }
             })
 
             client.on('user-unpublished', (user, mediaType) => {
-                setRemoteUsers(prev => prev.map(u => {
-                    if (u.uid === user.uid) {
-                        return { 
-                            ...u, 
-                            audioMuted: mediaType === 'audio' ? true : u.audioMuted,
-                            videoMuted: mediaType === 'video' ? true : u.videoMuted
-                        };
-                    }
-                    return u;
-                }));
+                if (mediaType === 'audio') {
+                    setMuteStatus(prev => ({ ...prev, [user.uid.toString()]: true }));
+                }
+                if (mediaType === 'video') {
+                    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+                }
             })
 
             client.on('user-mute-updated', (uid: any, muted: boolean) => {
-                setRemoteUsers(prev => prev.map(u => u.uid === uid ? { ...u, audioMuted: muted } : u));
+                setMuteStatus(prev => ({ ...prev, [uid.toString()]: muted }));
             })
 
             client.on('user-left', async (user) => {
@@ -514,7 +513,7 @@ export default function ServiceRoomPage() {
                                 <p className="text-slate-300 text-xs font-medium">
                                     {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
                                 </p>
-                                {remoteUsers[0]?.audioMuted && (
+                                {muteStatus[remoteUsers[0]?.uid?.toString()] && (
                                     <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px] font-bold border border-red-500/30 animate-pulse">
                                         <MicOff size={10} /> MUTADO
                                     </span>

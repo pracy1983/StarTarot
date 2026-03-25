@@ -55,7 +55,8 @@ export default function VideoConsultationPage() {
     const clientRef = useRef<IAgoraRTCClient | null>(null)
     const hasChargedInitialFee = useRef(false)
     const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
-    const [hasEstablishedConnection, setHasEstablishedConnection] = useState(false)
+    const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
+    const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const [callError, setCallError] = useState<string | null>(null)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
@@ -139,13 +140,17 @@ export default function VideoConsultationPage() {
         client.on('user-published', async (user, mediaType) => {
             await client.subscribe(user, mediaType)
             
+            // Track remote users (STORE ORIGINAL OBJECT)
             setRemoteUsers(prev => {
-                const existing = prev.find(u => u.uid === user.uid);
-                if (existing) {
-                    return prev.map(u => u.uid === user.uid ? { ...u, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo } : u);
-                }
-                return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
+                if (prev.find(u => u.uid === user.uid)) return prev;
+                return [...prev, user];
             });
+
+            // Track mute status separately
+            setMuteStatus(prev => ({
+                ...prev,
+                [user.uid.toString()]: !user.hasAudio
+            }));
 
             // Stabilization: Now accepting BOTH audio or video to consider connection "established"
             if (!stabilizationTimer.current && !hasEstablishedConnection) {
@@ -154,8 +159,12 @@ export default function VideoConsultationPage() {
                     
                     // Sync with DB and use result to update state immediately
                     const { data: updatedConsultation } = await supabase.rpc('start_video_consultation', { p_consultation_id: id });
+                    
                     if (updatedConsultation) {
                         setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                    } else {
+                        // If RPC returns null, it means it was already started. Re-fetch or at least show active locally.
+                        setConsultation((prev: any) => ({ ...prev, status: 'active' }));
                     }
 
                     // Charge initial fee only once connection is established
@@ -166,7 +175,7 @@ export default function VideoConsultationPage() {
                         }
                     }
                     stabilizationTimer.current = null
-                }, 2000) // Reduced to 2 seconds
+                }, 2000)
             }
 
             if (mediaType === 'audio') {
@@ -175,20 +184,16 @@ export default function VideoConsultationPage() {
         })
 
         client.on('user-unpublished', (user, mediaType) => {
-            setRemoteUsers(prev => prev.map(u => {
-                if (u.uid === user.uid) {
-                    return { 
-                        ...u, 
-                        audioMuted: mediaType === 'audio' ? true : u.audioMuted,
-                        videoMuted: mediaType === 'video' ? true : u.videoMuted
-                    };
-                }
-                return u;
-            }));
+            if (mediaType === 'audio') {
+                setMuteStatus(prev => ({ ...prev, [user.uid.toString()]: true }));
+            }
+            if (mediaType === 'video') {
+                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+            }
         })
 
         client.on('user-mute-updated', (uid: any, muted: boolean) => {
-            setRemoteUsers(prev => prev.map(u => u.uid === uid ? { ...u, audioMuted: muted } : u));
+            setMuteStatus(prev => ({ ...prev, [uid.toString()]: muted }));
         })
 
         client.on('user-left', async (user) => {
@@ -514,7 +519,7 @@ export default function VideoConsultationPage() {
                     <div className="min-w-0">
                         <div className="flex items-center gap-2">
                             <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
-                            {remoteUsers[0]?.audioMuted && (
+                            {muteStatus[remoteUsers[0]?.uid?.toString()] && (
                                 <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-400 text-white rounded text-[8px] md:text-[10px] font-bold animate-pulse">
                                     <MicOff size={10} /> MUTADO
                                 </span>
