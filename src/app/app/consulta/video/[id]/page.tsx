@@ -138,17 +138,22 @@ export default function VideoConsultationPage() {
         // Handlers
         client.on('user-published', async (user, mediaType) => {
             await client.subscribe(user, mediaType)
-            if (mediaType === 'video') {
-                setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user])
+            
+            setRemoteUsers(prev => {
+                const existing = prev.find(u => u.uid === user.uid);
+                if (existing) {
+                    return prev.map(u => u.uid === user.uid ? { ...u, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo } : u);
+                }
+                return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
+            });
 
+            if (mediaType === 'video') {
                 // Stabilization: Only consider connection "established" after 3 seconds of video
                 if (!stabilizationTimer.current) {
                     stabilizationTimer.current = setTimeout(async () => {
                         setHasEstablishedConnection(true)
-
                         // Sync with DB: Set status to active and started_at to now (only if not set)
                         await supabase.rpc('start_video_consultation', { p_consultation_id: id })
-
                         // Charge initial fee only once connection is established
                         if (profile?.role === 'client' && !hasChargedInitialFee.current) {
                             if (oracle?.initial_fee_credits > 0) {
@@ -156,7 +161,6 @@ export default function VideoConsultationPage() {
                                 hasChargedInitialFee.current = true
                             }
                         }
-
                         stabilizationTimer.current = null
                     }, 3000)
                 }
@@ -167,15 +171,20 @@ export default function VideoConsultationPage() {
         })
 
         client.on('user-unpublished', (user, mediaType) => {
-            if (mediaType === 'video') {
-                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-
-                // Pause billing if video stops (temporary interruption)
-                if (billingInterval.current) {
-                    clearInterval(billingInterval.current)
-                    billingInterval.current = null
+            setRemoteUsers(prev => prev.map(u => {
+                if (u.uid === user.uid) {
+                    return { 
+                        ...u, 
+                        audioMuted: mediaType === 'audio' ? true : u.audioMuted,
+                        videoMuted: mediaType === 'video' ? true : u.videoMuted
+                    };
                 }
-            }
+                return u;
+            }));
+        })
+
+        client.on('user-mute-updated', (uid: any, muted: boolean) => {
+            setRemoteUsers(prev => prev.map(u => u.uid === uid ? { ...u, audioMuted: muted } : u));
         })
 
         client.on('user-left', async (user) => {
@@ -256,11 +265,12 @@ export default function VideoConsultationPage() {
             // Inicia timer de timeout de conexão (se em 3 minutos o oraculista não entrar, cancela sem taxa)
             if (!connectionTimeoutRef.current) {
                 connectionTimeoutRef.current = setTimeout(() => {
-                    if (!hasEstablishedConnection) {
+                    const hasAnyoneJoined = (clientRef.current?.remoteUsers?.length || 0) > 0;
+                    if (!hasAnyoneJoined) {
                         toast.error('O oraculista não conectou a tempo. Chamada encerrada sem cobrança.')
                         autoFinalizeCall('oracle', true) // true = no charge
                     }
-                }, CONNECTION_TIMEOUT_MS)
+                }, 120000) // 2 minutes for client waiting for oracle
             }
         } catch (err: any) {
             console.error('Error starting call:', err)
@@ -498,7 +508,14 @@ export default function VideoConsultationPage() {
                         <img src={oracle?.avatar_url || `https://ui-avatars.com/api/?name=${oracle?.full_name}`} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
+                            {remoteUsers[0]?.audioMuted && (
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-400 text-white rounded text-[8px] md:text-[10px] font-bold animate-pulse">
+                                    <MicOff size={10} /> MUTADO
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[10px] md:text-xs text-neon-cyan uppercase truncate">{oracle?.specialty}</p>
                     </div>
                 </div>

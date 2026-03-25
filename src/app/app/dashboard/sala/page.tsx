@@ -252,20 +252,23 @@ export default function ServiceRoomPage() {
 
             client.on('user-published', async (user, mediaType) => {
                 await client.subscribe(user, mediaType)
-                if (mediaType === 'video') {
-                    setRemoteUsers(prev => {
-                        if (prev.find(u => u.uid === user.uid)) return prev
-                        return [...prev, user]
-                    })
+                
+                // Track remote users and their mute status
+                setRemoteUsers(prev => {
+                    const existing = prev.find(u => u.uid === user.uid);
+                    if (existing) {
+                        return prev.map(u => u.uid === user.uid ? { ...u, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo } : u);
+                    }
+                    return [...prev, { ...user, audioMuted: !user.hasAudio, videoMuted: !user.hasVideo }];
+                });
 
+                if (mediaType === 'video') {
                     // Stabilization logic for Oracle too
                     if (!stabilizationTimer.current) {
                         stabilizationTimer.current = setTimeout(async () => {
                             setHasEstablishedConnection(true)
-
                             // Try to set active if client hasn't yet (atomic RPC)
                             await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId })
-
                             stabilizationTimer.current = null
                         }, 3000)
                     }
@@ -276,9 +279,20 @@ export default function ServiceRoomPage() {
             })
 
             client.on('user-unpublished', (user, mediaType) => {
-                if (mediaType === 'video') {
-                    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-                }
+                setRemoteUsers(prev => prev.map(u => {
+                    if (u.uid === user.uid) {
+                        return { 
+                            ...u, 
+                            audioMuted: mediaType === 'audio' ? true : u.audioMuted,
+                            videoMuted: mediaType === 'video' ? true : u.videoMuted
+                        };
+                    }
+                    return u;
+                }));
+            })
+
+            client.on('user-mute-updated', (uid: any, muted: boolean) => {
+                setRemoteUsers(prev => prev.map(u => u.uid === uid ? { ...u, audioMuted: muted } : u));
             })
 
             client.on('user-left', async (user) => {
@@ -323,18 +337,19 @@ export default function ServiceRoomPage() {
                 videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
 
-            if (consultation?.status === 'pending') {
+            if (!connectionTimeoutRef.current) {
                 connectionTimeoutRef.current = setTimeout(async () => {
-                    if (remoteUsers.length === 0) {
+                    const hasAnyoneJoined = client.remoteUsers.length > 0;
+                    if (!hasAnyoneJoined) {
                         toast.error('O cliente não conectou a tempo. Cancelando consulta sem cobrança.')
                         await supabase.from('consultations').update({
                             status: 'cancelled',
-                            metadata: { cancel_reason: 'client_timeout_no_connection' }
+                            metadata: { cancel_reason: 'client_timeout_no_connection_v2' }
                         }).eq('id', consultationId)
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 60000) // 1 minute (60,000ms)
+                }, 90000) // Increased to 90 seconds for better tolerance
             }
 
             // Removed: premature DB update to 'active' here. 
@@ -486,9 +501,16 @@ export default function ServiceRoomPage() {
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-lg leading-none shadow-black drop-shadow-md">{consultation?.client?.full_name}</h3>
-                            <p className="text-slate-300 text-xs mt-1 font-medium">
-                                {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-slate-300 text-xs font-medium">
+                                    {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
+                                </p>
+                                {remoteUsers[0]?.audioMuted && (
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px] font-bold border border-red-500/30 animate-pulse">
+                                        <MicOff size={10} /> MUTADO
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 
