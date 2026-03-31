@@ -61,6 +61,7 @@ export default function VideoConsultationPage() {
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const [isFinalizing, setIsFinalizing] = useState(false)
     const [now, setNow] = useState(Date.now())
+    const [localStartedAt, setLocalStartedAt] = useState<number | null>(null)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -91,11 +92,12 @@ export default function VideoConsultationPage() {
 
     // Duration sync
     useEffect(() => {
-        if (consultation?.started_at && consultation.status === 'active') {
-            const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
+        const effectiveStartedAt = consultation?.started_at ? new Date(consultation.started_at).getTime() : localStartedAt
+        if (effectiveStartedAt && (consultation?.status === 'active' || (joined && remoteUsers.length > 0))) {
+            const seconds = Math.floor((now - effectiveStartedAt) / 1000)
             setDuration(Math.max(0, seconds))
         }
-    }, [now, consultation?.started_at, consultation?.status])
+    }, [now, consultation?.started_at, consultation?.status, localStartedAt, joined, remoteUsers.length])
 
     const fetchDetails = async () => {
         try {
@@ -145,9 +147,27 @@ export default function VideoConsultationPage() {
                 if (!stabilizationTimer.current) {
                     stabilizationTimer.current = setTimeout(async () => {
                         setHasEstablishedConnection(true)
+                        const startTime = Date.now()
+                        setLocalStartedAt(startTime)
 
                         // Sync with DB: Set status to active and started_at to now (only if not set)
-                        await supabase.rpc('start_video_consultation', { p_consultation_id: id })
+                        let retryCount = 0
+                        const maxRetries = 3
+
+                        const syncStart = async () => {
+                            try {
+                                const { error } = await supabase.rpc('start_video_consultation', { p_consultation_id: id })
+                                if (error) throw error
+                                console.log('[Video] Consultation started in DB successfully')
+                            } catch (err) {
+                                console.error(`[Video] Error starting consultation (retry ${retryCount}):`, err)
+                                if (retryCount < maxRetries) {
+                                    retryCount++
+                                    setTimeout(syncStart, 2000)
+                                }
+                            }
+                        }
+                        syncStart()
 
                         // Charge initial fee only once connection is established
                         if (profile?.role === 'client' && !hasChargedInitialFee.current) {
@@ -377,9 +397,11 @@ export default function VideoConsultationPage() {
         try {
             // Se skipCharge for true e duração for muito pequena, podemos tratar como cancelamento no banco se necessário
             // Por enquanto vamos apenas finalizar com duração 0 se não estabilizou
+            const finalDuration = hasEstablishedConnection ? Math.floor(duration) : 0
+            
             await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: id,
-                p_duration_seconds: hasEstablishedConnection ? Math.floor(duration) : 0,
+                p_duration_seconds: finalDuration,
                 p_end_reason: skipCharge ? 'timeout_no_connection' : (endedBy === 'client' ? 'client_ended' : 'oracle_left')
             })
         } catch (err) {
@@ -505,7 +527,7 @@ export default function VideoConsultationPage() {
 
                 <div className="flex flex-row items-center space-x-2 md:space-x-6 shrink-0">
                     <div className="flex items-center bg-white/5 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10 min-w-[80px] justify-center">
-                        {consultation?.started_at ? (
+                        {(consultation?.started_at || localStartedAt) ? (
                             <>
                                 <Clock size={14} className="text-neon-cyan mr-1.5 md:mr-2" />
                                 <span className="font-mono text-xs md:text-sm">
