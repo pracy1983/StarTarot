@@ -6,7 +6,6 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { Mail, Lock, User, ArrowLeft, Phone, ShieldCheck } from 'lucide-react'
-import { whatsappService } from '@/lib/whatsapp'
 import { supabase } from '@/lib/supabase'
 import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
@@ -132,18 +131,18 @@ export const AuthModal = () => {
             const code = generateOtp()
             setGeneratedOtp(code)
 
-            const success = await whatsappService.sendTextMessage({
-                phone: fullPhone,
-                message: `✨ *Star Tarot* \n\nSeu código de verificação é: *${code}*\n\nNão compartilhe este código com ninguém.`
+            const response = await fetch('/api/auth/send-verification', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone: fullPhone, code })
             })
 
-            if (success) {
+            const data = await response.json()
+            if (response.ok) {
                 setShowOtpScreen(true)
                 toast.success(`Código enviado para o WhatsApp ${fullPhone}`)
             } else {
-                setError('Erro ao enviar código para o WhatsApp. Verifique o número.')
-                // Em caso de erro no envio, podemos resetar o upgradeMode se necessário, 
-                // mas aqui paramos o fluxo de qualquer forma.
+                setError(data.error || 'Erro ao enviar código para o WhatsApp. Verifique o número.')
             }
         } catch (err) {
             console.error(err)

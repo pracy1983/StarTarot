@@ -60,6 +60,7 @@ export default function ServiceRoomPage() {
     const clientRef = React.useRef<IAgoraRTCClient | null>(null)
     const stabilizationTimer = React.useRef<NodeJS.Timeout | null>(null)
     const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
+    const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
 
     // Timer & Duration
     const [now, setNow] = useState(Date.now())
@@ -252,33 +253,54 @@ export default function ServiceRoomPage() {
 
             client.on('user-published', async (user, mediaType) => {
                 await client.subscribe(user, mediaType)
-                if (mediaType === 'video') {
-                    setRemoteUsers(prev => {
-                        if (prev.find(u => u.uid === user.uid)) return prev
-                        return [...prev, user]
-                    })
+                
+                // Track remote users (STORE ORIGINAL OBJECT)
+                setRemoteUsers(prev => {
+                    if (prev.find(u => u.uid === user.uid)) return prev;
+                    return [...prev, user];
+                });
 
-                    // Stabilization logic for Oracle too
-                    if (!stabilizationTimer.current) {
-                        stabilizationTimer.current = setTimeout(async () => {
-                            setHasEstablishedConnection(true)
+                // Track mute status separately
+                setMuteStatus(prev => ({
+                    ...prev,
+                    [user.uid.toString()]: !user.hasAudio
+                }));
 
-                            // Try to set active if client hasn't yet (atomic RPC)
-                            await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId })
-
-                            stabilizationTimer.current = null
-                        }, 3000)
-                    }
+                // Stabilization: Now accepting BOTH audio or video to consider connection "established"
+                if (!stabilizationTimer.current && !hasEstablishedConnection) {
+                    stabilizationTimer.current = setTimeout(async () => {
+                        setHasEstablishedConnection(true)
+                        
+                        // Try to set active if client hasn't yet, and use result to update local state immediately
+                        const { data: updatedConsultation } = await supabase.rpc('start_video_consultation', { p_consultation_id: consultationId });
+                        
+                        if (updatedConsultation) {
+                            setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                        } else {
+                            // If RPC returns null, it means it was already started. Re-fetch or at least show active locally.
+                            setConsultation((prev: any) => ({ ...prev, status: 'active' }));
+                        }
+                        
+                        stabilizationTimer.current = null
+                    }, 2000)
                 }
+
                 if (mediaType === 'audio') {
                     user.audioTrack?.play()
                 }
             })
 
             client.on('user-unpublished', (user, mediaType) => {
-                if (mediaType === 'video') {
-                    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
+                if (mediaType === 'audio') {
+                    setMuteStatus(prev => ({ ...prev, [user.uid.toString()]: true }));
                 }
+                if (mediaType === 'video') {
+                    setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+                }
+            })
+
+            client.on('user-mute-updated', (uid: any, muted: boolean) => {
+                setMuteStatus(prev => ({ ...prev, [uid.toString()]: muted }));
             })
 
             client.on('user-left', async (user) => {
@@ -323,22 +345,20 @@ export default function ServiceRoomPage() {
                 videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
 
-            if (consultation?.status === 'pending') {
+            if (!connectionTimeoutRef.current) {
                 connectionTimeoutRef.current = setTimeout(async () => {
-                    if (remoteUsers.length === 0) {
+                    const hasAnyoneJoined = client.remoteUsers.length > 0;
+                    if (!hasAnyoneJoined) {
                         toast.error('O cliente não conectou a tempo. Cancelando consulta sem cobrança.')
                         await supabase.from('consultations').update({
                             status: 'cancelled',
-                            metadata: { cancel_reason: 'client_timeout_no_connection' }
+                            metadata: { cancel_reason: 'client_timeout_no_connection_v2' }
                         }).eq('id', consultationId)
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 60000) // 1 minute (60,000ms)
+                }, 90000)
             }
-
-            // Removed: premature DB update to 'active' here. 
-            // Now handled in user-published stabilization logic.
 
         } catch (err: any) {
             console.error('Error starting call:', err)
@@ -486,9 +506,16 @@ export default function ServiceRoomPage() {
                         </div>
                         <div>
                             <h3 className="text-white font-bold text-lg leading-none shadow-black drop-shadow-md">{consultation?.client?.full_name}</h3>
-                            <p className="text-slate-300 text-xs mt-1 font-medium">
-                                {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
-                            </p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <p className="text-slate-300 text-xs font-medium">
+                                    {joined && remoteUsers.length > 0 ? 'Conectado' : 'Aguardando...'}
+                                </p>
+                                {muteStatus[remoteUsers[0]?.uid?.toString()] && (
+                                    <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-500/20 text-red-400 rounded text-[10px] font-bold border border-red-500/30 animate-pulse">
+                                        <MicOff size={10} /> MUTADO
+                                    </span>
+                                )}
+                            </div>
                         </div>
                     </div>
 

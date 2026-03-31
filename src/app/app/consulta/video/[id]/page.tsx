@@ -55,7 +55,8 @@ export default function VideoConsultationPage() {
     const clientRef = useRef<IAgoraRTCClient | null>(null)
     const hasChargedInitialFee = useRef(false)
     const stabilizationTimer = useRef<NodeJS.Timeout | null>(null)
-    const [hasEstablishedConnection, setHasEstablishedConnection] = useState(false)
+    const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
+    const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const [callError, setCallError] = useState<string | null>(null)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
@@ -140,62 +141,79 @@ export default function VideoConsultationPage() {
         // Handlers
         client.on('user-published', async (user, mediaType) => {
             await client.subscribe(user, mediaType)
-            if (mediaType === 'video') {
-                setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user])
 
-                // Stabilization: Only consider connection "established" after 3 seconds of video
-                if (!stabilizationTimer.current) {
-                    stabilizationTimer.current = setTimeout(async () => {
-                        setHasEstablishedConnection(true)
-                        const startTime = Date.now()
-                        setLocalStartedAt(startTime)
+            // Track remote users (STORE ORIGINAL OBJECT)
+            setRemoteUsers(prev => {
+                if (prev.find(u => u.uid === user.uid)) return prev;
+                return [...prev, user];
+            });
 
-                        // Sync with DB: Set status to active and started_at to now (only if not set)
-                        let retryCount = 0
-                        const maxRetries = 3
+            // Track mute status separately
+            setMuteStatus(prev => ({
+                ...prev,
+                [user.uid.toString()]: !user.hasAudio
+            }));
 
-                        const syncStart = async () => {
-                            try {
-                                const { error } = await supabase.rpc('start_video_consultation', { p_consultation_id: id })
-                                if (error) throw error
-                                console.log('[Video] Consultation started in DB successfully')
-                            } catch (err) {
-                                console.error(`[Video] Error starting consultation (retry ${retryCount}):`, err)
-                                if (retryCount < maxRetries) {
-                                    retryCount++
-                                    setTimeout(syncStart, 2000)
-                                }
+            // Stabilization: Now accepting BOTH audio or video to consider connection "established"
+            if (!stabilizationTimer.current && !hasEstablishedConnection) {
+                stabilizationTimer.current = setTimeout(async () => {
+                    setHasEstablishedConnection(true)
+                    const startTime = Date.now()
+                    setLocalStartedAt(startTime)
+
+                    // Sync with DB: Set status to active and started_at to now (only if not set)
+                    let retryCount = 0
+                    const maxRetries = 3
+
+                    const syncStart = async () => {
+                        try {
+                            const { data: updatedConsultation, error } = await supabase.rpc('start_video_consultation', { p_consultation_id: id })
+                            if (error) throw error
+                            
+                            if (updatedConsultation) {
+                                setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
+                                console.log('[Video] Consultation started in DB successfully');
+                            } else {
+                                // If RPC returns null, it means it was already started. Show active locally.
+                                setConsultation((prev: any) => ({ ...prev, status: 'active' }));
+                            }
+                        } catch (err) {
+                            console.error(`[Video] Error starting consultation (retry ${retryCount}):`, err)
+                            if (retryCount < maxRetries) {
+                                retryCount++
+                                setTimeout(syncStart, 2000)
                             }
                         }
-                        syncStart()
+                    }
+                    syncStart()
 
-                        // Charge initial fee only once connection is established
-                        if (profile?.role === 'client' && !hasChargedInitialFee.current) {
-                            if (oracle?.initial_fee_credits > 0) {
-                                await processInitialFee()
-                                hasChargedInitialFee.current = true
-                            }
+                    // Charge initial fee only once connection is established
+                    if (profile?.role === 'client' && !hasChargedInitialFee.current) {
+                        if (oracle?.initial_fee_credits > 0) {
+                            await processInitialFee()
+                            hasChargedInitialFee.current = true
                         }
-
-                        stabilizationTimer.current = null
-                    }, 3000)
-                }
+                    }
+                    stabilizationTimer.current = null
+                }, 2000)
             }
+
             if (mediaType === 'audio') {
                 user.audioTrack?.play()
             }
         })
 
         client.on('user-unpublished', (user, mediaType) => {
-            if (mediaType === 'video') {
-                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-
-                // Pause billing if video stops (temporary interruption)
-                if (billingInterval.current) {
-                    clearInterval(billingInterval.current)
-                    billingInterval.current = null
-                }
+            if (mediaType === 'audio') {
+                setMuteStatus(prev => ({ ...prev, [user.uid.toString()]: true }));
             }
+            if (mediaType === 'video') {
+                setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
+            }
+        })
+
+        client.on('user-mute-updated', (uid: any, muted: boolean) => {
+            setMuteStatus(prev => ({ ...prev, [uid.toString()]: muted }));
         })
 
         client.on('user-left', async (user) => {
@@ -266,21 +284,33 @@ export default function VideoConsultationPage() {
             // 2. Join Channel
             await clientRef.current.join(appId, id as string, token, profile!.id)
 
-            // 3. Publish Tracks (Reuse created ones)
-            if (localAudioTrack && localVideoTrack) {
-                await clientRef.current.publish([localAudioTrack, localVideoTrack])
+            // 3. Ensure Tracks are created (if not already by preview)
+            let audioT = localAudioTrack
+            let videoT = localVideoTrack
+
+            if (!audioT || !videoT) {
+                const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
+                if (!audioT) audioT = await AgoraRTC.createMicrophoneAudioTrack()
+                if (!videoT) videoT = await AgoraRTC.createCameraVideoTrack()
+                
+                setLocalAudioTrack(audioT)
+                setLocalVideoTrack(videoT)
             }
+
+            // 4. Publish Tracks
+            await clientRef.current.publish([audioT, videoT])
 
             setJoined(true)
 
             // Inicia timer de timeout de conexão (se em 3 minutos o oraculista não entrar, cancela sem taxa)
             if (!connectionTimeoutRef.current) {
                 connectionTimeoutRef.current = setTimeout(() => {
-                    if (!hasEstablishedConnection) {
+                    const hasAnyoneJoined = (clientRef.current?.remoteUsers?.length || 0) > 0;
+                    if (!hasAnyoneJoined) {
                         toast.error('O oraculista não conectou a tempo. Chamada encerrada sem cobrança.')
                         autoFinalizeCall('oracle', true) // true = no charge
                     }
-                }, CONNECTION_TIMEOUT_MS)
+                }, 120000) // 2 minutes for client waiting for oracle
             }
         } catch (err: any) {
             console.error('Error starting call:', err)
@@ -520,7 +550,14 @@ export default function VideoConsultationPage() {
                         <img src={oracle?.avatar_url || `https://ui-avatars.com/api/?name=${oracle?.full_name}`} alt="" className="w-full h-full object-cover" />
                     </div>
                     <div className="min-w-0">
-                        <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
+                        <div className="flex items-center gap-2">
+                            <h3 className="font-bold text-sm md:text-base truncate">{oracle?.full_name}</h3>
+                            {muteStatus[remoteUsers[0]?.uid?.toString()] && (
+                                <span className="flex items-center gap-1 px-1.5 py-0.5 bg-red-400 text-white rounded text-[8px] md:text-[10px] font-bold animate-pulse">
+                                    <MicOff size={10} /> MUTADO
+                                </span>
+                            )}
+                        </div>
                         <p className="text-[10px] md:text-xs text-neon-cyan uppercase truncate">{oracle?.specialty}</p>
                     </div>
                 </div>

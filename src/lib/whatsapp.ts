@@ -1,12 +1,17 @@
 // Evolution API WhatsApp Integration Service
 
 const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || 'https://pracy-evolution-api.vrdrcy.easypanel.host'
-const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || '5DDE367613D4-4254-99E6-E393189459E5'
-const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAt'
+const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || 'ED3E4B433C76-466E-828D-478208E824BC'
+const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAT2'
 
 interface SendMessageParams {
     phone: string
     message: string
+}
+
+export type WhatsAppResult = {
+    success: boolean
+    error?: string
 }
 
 export class EvolutionWhatsAppService {
@@ -23,7 +28,7 @@ export class EvolutionWhatsAppService {
     /**
      * Envia mensagem de texto via WhatsApp
      */
-    async sendTextMessage({ phone, message }: SendMessageParams): Promise<boolean> {
+    async sendTextMessage({ phone, message }: SendMessageParams): Promise<WhatsAppResult> {
         try {
             const formattedPhone = this.formatPhone(phone)
 
@@ -42,101 +47,68 @@ export class EvolutionWhatsAppService {
             if (!response.ok) {
                 const errorData = await response.text()
                 console.error('Evolution API Error:', errorData)
-                return false
+                try {
+                    const jsonError = JSON.parse(errorData)
+                    return { success: false, error: jsonError.message || errorData }
+                } catch {
+                    return { success: false, error: errorData }
+                }
             }
 
             const data = await response.json()
             console.log('WhatsApp message sent successfully:', data)
-            return true
-        } catch (error) {
+            return { success: true }
+        } catch (error: any) {
             console.error('Error sending WhatsApp message:', error)
-            return false
+            return { success: false, error: error.message }
         }
     }
 
     /**
      * Envia notificação de consulta respondida
      */
-    async sendConsultationAnsweredNotification(phone: string, clientName: string, oracleName: string): Promise<boolean> {
-        const message = `✨ *Sua consulta foi respondida!*
-
-Olá ${clientName}! 👋
-
-O oraculista *${oracleName}* respondeu suas mensagens.
-
-🔮 Acesse agora para ver as respostas:
-https://startarot.netlify.app/app/mensagens
-
-(mande um oi para o link ficar clicável ou adicione este contato)
-⭐`
-
+    async sendConsultationAnsweredNotification(phone: string, clientName: string, oracleName: string): Promise<WhatsAppResult> {
+        const message = `✨ *Star Tarot* \n\nOlá ${clientName}, sua consulta com o oraculista *${oracleName}* foi respondida! \n\nAcesse o histórico do app para ver sua resposta.`
         return this.sendTextMessage({ phone, message })
     }
 
     /**
-     * Notifica o oráculo sobre nova consulta pendente
+     * Envia notificação de nova consulta para o oráculo
      */
-    async sendNewConsultationNotificationToOracle(phone: string): Promise<boolean> {
-        const message = `Alguém quer fazer uma consulta. Responda agora:
-https://startarot.netlify.app/app/dashboard`
+    async sendNewConsultationNotification(phone: string, clientName: string): Promise<WhatsAppResult> {
+        const message = `✨ *Star Tarot* \n\nVocê recebeu uma nova consulta de *${clientName}*! \n\nAcesse o painel do oraculista para responder.`
         return this.sendTextMessage({ phone, message })
     }
 
     /**
-     * Notifica seguidores sobre oráculo online
+     * Envia notificação de que o oráculo está online para os seguidores
      */
-    async sendOracleOnlineNotification(phone: string, clientName: string, oracleName: string): Promise<boolean> {
-        const message = `🌟 *O Oráculo ${oracleName} está Online!*
-        
-Olá ${clientName}! 👋
-
-O oraculista que você favoritou, *${oracleName}*, acaba de ficar online e está disponível para atendimentos por vídeo ou chat.
-
-🔮 Conecte-se agora:
-https://startarot.netlify.app/app/oraculo/${oracleName}
-
-Aproveite este momento para tirar suas dúvidas! ✨`
+    async sendOracleOnlineNotification(phone: string, oracleName: string): Promise<WhatsAppResult> {
+        const message = `✨ *Star Tarot* \n\n*${oracleName}* acabou de entrar online! Aproveite para tirar suas dúvidas agora mesmo.`
         return this.sendTextMessage({ phone, message })
     }
 
-    /**
-     * Formata número de telefone para padrão internacional
-     * Aceita: (11) 98765-4321, 11987654321, +5511987654321
-     * Retorna: 5511987654321
-     */
     private formatPhone(phone: string): string {
-        // Remove todos os caracteres não numéricos
-        let cleaned = phone.replace(/\D/g, '')
-
-        // Se não começar com 55 (código do Brasil), adiciona
-        if (!cleaned.startsWith('55')) {
-            cleaned = '55' + cleaned
+        const clean = phone.replace(/\D/g, '')
+        if (clean.length === 11 && clean.startsWith('1')) {
+            // Se for número BR sem DDI mas com DDD
+            return '55' + clean
         }
-
-        return cleaned
+        return clean
     }
 
-    /**
-     * Verifica se a instância está conectada
-     */
-    async checkConnection(): Promise<boolean> {
+    async getConnectionState(): Promise<string> {
         try {
             const response = await fetch(`${this.baseUrl}/instance/connectionState/${this.instance}`, {
-                headers: {
-                    'apikey': this.apiKey
-                }
+                headers: { 'apikey': this.apiKey }
             })
-
-            if (!response.ok) return false
-
             const data = await response.json()
-            return data.state === 'open'
+            return data.instance.state || 'DISCONNECTED'
         } catch (error) {
-            console.error('Error checking Evolution API connection:', error)
-            return false
+            console.error('Error getting connection state:', error)
+            return 'ERROR'
         }
     }
 }
 
-// Singleton instance
 export const whatsappService = new EvolutionWhatsAppService()

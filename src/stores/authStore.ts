@@ -154,46 +154,14 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   requestPasswordReset: async (email: string, phone: string) => {
     try {
-      // Validação Dupla de Segurança: E-mail + Telefone
-      const cleanPhone = phone.replace(/\D/g, '')
-      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
-
-      const { data: userProfile, error: userError } = await supabase
-        .from('profiles')
-        .select('id, phone, full_name, email')
-        .eq('email', email.trim().toLowerCase())
-        .or(`phone.eq.+${fullPhone},phone.eq.${fullPhone}`)
-        .maybeSingle()
-
-      // Se não encontrar um perfil que tenha EXATAMENTE esse email E esse telefone
-      if (userError || !userProfile) {
-        // Delay artificial para evitar enumeration attacks
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        throw new Error('Dados não conferem. Verifique seu e-mail e telefone.')
-      }
-
-      const otp = Math.floor(100000 + Math.random() * 900000).toString()
-      const expiresAt = new Date(Date.now() + 15 * 60 * 1000).toISOString() // 15 min
-
-      // Salva no banco
-      const { error: otpError } = await supabase
-        .from('password_reset_otps')
-        .insert({
-          user_id: userProfile.id,
-          otp_code: otp,
-          expires_at: expiresAt
-        })
-
-      if (otpError) throw otpError
-
-      // Envia via WhatsApp
-      const EvolutionWhatsAppService = (await import('@/lib/whatsapp')).whatsappService
-      const success = await EvolutionWhatsAppService.sendTextMessage({
-        phone: userProfile.phone || '', // Usa o telefone do banco que sabemos que está correto
-        message: `🔐 *Recuperação de Senha - Star Tarot* \n\nOlá ${userProfile.full_name}, seu código para redefinir sua senha é: *${otp}*\n\nEste código expira em 15 minutos.`
+      const response = await fetch('/api/auth/request-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, phone })
       })
 
-      if (!success) throw new Error('Não foi possível enviar o código para o WhatsApp.')
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Erro ao processar solicitação')
 
       return { success: true }
     } catch (error: any) {

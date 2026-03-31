@@ -52,7 +52,6 @@ export async function POST(req: Request) {
                         try {
                             await whatsappService.sendOracleOnlineNotification(
                                 client.phone,
-                                client.full_name || 'Cliente',
                                 oracle.full_name
                             )
                             // Delay of 3 seconds between each participant to avoid WhatsApp flags
