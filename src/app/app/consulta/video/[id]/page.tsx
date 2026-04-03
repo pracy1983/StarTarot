@@ -62,7 +62,11 @@ export default function VideoConsultationPage() {
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const [isFinalizing, setIsFinalizing] = useState(false)
     const [now, setNow] = useState(Date.now())
+<<<<<<< HEAD
     const [localStartedAt, setLocalStartedAt] = useState<number | null>(null)
+=======
+    const lastMinuteCharged = useRef(0)
+>>>>>>> 9bd0fd07 (fix: delay video billing until 60s, sync clocks, and improve client setup UI)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -91,14 +95,58 @@ export default function VideoConsultationPage() {
         }
     }, [id])
 
-    // Duration sync
+    // Duration sync and Billing Trigger
     useEffect(() => {
+<<<<<<< HEAD
         const effectiveStartedAt = consultation?.started_at ? new Date(consultation.started_at).getTime() : localStartedAt
         if (effectiveStartedAt && (consultation?.status === 'active' || (joined && remoteUsers.length > 0))) {
             const seconds = Math.floor((now - effectiveStartedAt) / 1000)
             setDuration(Math.max(0, seconds))
         }
     }, [now, consultation?.started_at, consultation?.status, localStartedAt, joined, remoteUsers.length])
+=======
+        if (consultation?.started_at && consultation.status === 'active') {
+            const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
+            const currentDuration = Math.max(0, seconds)
+            setDuration(currentDuration)
+
+            // Billing logic for CLIENT
+            if (profile?.role === 'client' && hasEstablishedConnection) {
+                // 1. Initial Fee at 1 minute (60s)
+                if (!hasChargedInitialFee.current && currentDuration >= 60) {
+                    if (oracle?.initial_fee_credits > 0) {
+                        processInitialFee();
+                    }
+                    hasChargedInitialFee.current = true;
+                }
+
+                // 2. Per-minute billing (starting from 2 minutes)
+                const currentMinute = Math.floor(currentDuration / 60)
+                if (currentMinute > lastMinuteCharged.current && currentMinute > 0) {
+                    // Note: If minute 1 was just charged as initial fee, the first per-minute charge will happen at minute 2 (120s)
+                    // Or if we consider the first minute "paid" by the initial fee, we only charge from minute 2 onwards.
+                    // But if there is NO initial fee, we charge per minute from minute 1.
+                    
+                    const isFirstMinute = currentMinute === 1;
+                    const shouldChargeMinute = !isFirstMinute || (isFirstMinute && (!oracle?.initial_fee_credits || oracle.initial_fee_credits === 0));
+
+                    if (shouldChargeMinute) {
+                        processMinuteBilling().then(success => {
+                            if (!success) {
+                                toast.error('Saldo esgotado. Chamada encerrada.')
+                                endCall()
+                            }
+                        })
+                        lastMinuteCharged.current = currentMinute;
+                    } else if (isFirstMinute) {
+                        // Mark as handled because initial fee covered it
+                        lastMinuteCharged.current = 1;
+                    }
+                }
+            }
+        }
+    }, [now, consultation?.started_at, consultation?.status, hasEstablishedConnection])
+>>>>>>> 9bd0fd07 (fix: delay video billing until 60s, sync clocks, and improve client setup UI)
 
     const fetchDetails = async () => {
         try {
@@ -187,13 +235,8 @@ export default function VideoConsultationPage() {
                     }
                     syncStart()
 
-                    // Charge initial fee only once connection is established
-                    if (profile?.role === 'client' && !hasChargedInitialFee.current) {
-                        if (oracle?.initial_fee_credits > 0) {
-                            await processInitialFee()
-                            hasChargedInitialFee.current = true
-                        }
-                    }
+                    // We no longer charge initial fee here. 
+                    // It will be charged after 60 seconds of stable connection in the billing interval.
                     stabilizationTimer.current = null
                 }, 2000)
             }
@@ -323,41 +366,15 @@ export default function VideoConsultationPage() {
         }
     }
 
-    // Unified Billing Effect for Client
+    // The unified billing logic is now in the main timer useEffect
     useEffect(() => {
-        if (joined && remoteUsers.length > 0 && hasEstablishedConnection && profile?.role === 'client') {
-            if (!billingInterval.current) {
-                billingInterval.current = setInterval(async () => {
-                    setDuration(prev => {
-                        const newDuration = prev + 1
-
-                        // Cobrança a cada minuto (60 segundos) APENAS se a conexão estiver estável
-                        if (hasEstablishedConnection && newDuration > 0 && newDuration % 60 === 0) {
-                            processMinuteBilling().then(success => {
-                                if (!success) {
-                                    toast.error('Saldo esgotado. Chamada encerrada.')
-                                    endCall()
-                                }
-                            })
-                        }
-                        return newDuration
-                    })
-                }, 1000)
-            }
-        } else {
-            if (billingInterval.current) {
-                clearInterval(billingInterval.current)
-                billingInterval.current = null
-            }
-        }
-
         return () => {
             if (billingInterval.current) {
                 clearInterval(billingInterval.current)
                 billingInterval.current = null
             }
         }
-    }, [joined, remoteUsers.length, hasEstablishedConnection, consultation?.started_at])
+    }, [])
 
     const processInitialFee = async () => {
         try {
@@ -649,12 +666,25 @@ export default function VideoConsultationPage() {
                                 <div className="w-16 h-16 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
                                     <Camera className="text-neon-purple" size={32} />
                                 </div>
-                                <div className="space-y-2">
+                                <div className="space-y-4">
                                     <h3 className="text-xl font-bold text-white">Câmera e Áudio OK?</h3>
-                                    <p className="text-sm text-slate-400">Verifique sua imagem no canto superior antes de entrar na sala.</p>
+                                    {!localVideoTrack ? (
+                                        <div className="flex items-center justify-center gap-2 text-neon-cyan animate-pulse">
+                                            <RefreshCw size={16} className="animate-spin" />
+                                            <span className="text-sm">Acessando câmera e microfone...</span>
+                                        </div>
+                                    ) : (
+                                        <p className="text-sm text-slate-400">Verifique sua imagem no canto superior antes de entrar na sala.</p>
+                                    )}
                                 </div>
-                                <NeonButton variant="purple" fullWidth onClick={startCall} size="lg">
-                                    Entrar na Consulta
+                                <NeonButton 
+                                    variant="purple" 
+                                    fullWidth 
+                                    onClick={startCall} 
+                                    size="lg"
+                                    disabled={!localVideoTrack}
+                                >
+                                    {localVideoTrack ? 'Entrar na Consulta' : 'Aguardando Câmera...'}
                                 </NeonButton>
                             </GlassCard>
                         </div>

@@ -349,15 +349,15 @@ export default function ServiceRoomPage() {
                 connectionTimeoutRef.current = setTimeout(async () => {
                     const hasAnyoneJoined = client.remoteUsers.length > 0;
                     if (!hasAnyoneJoined) {
-                        toast.error('O cliente não conectou a tempo. Cancelando consulta sem cobrança.')
+                        toast.error('O cliente não conectou a tempo. Chamada expirada sem cobrança.')
                         await supabase.from('consultations').update({
                             status: 'cancelled',
-                            metadata: { cancel_reason: 'client_timeout_no_connection_v2' }
+                            metadata: { cancel_reason: 'client_timeout_no_connection_v3' }
                         }).eq('id', consultationId)
                         leaveCall()
                         router.push('/app/dashboard')
                     }
-                }, 90000)
+                }, 180000) // 3 minutes timeout
             }
 
         } catch (err: any) {
