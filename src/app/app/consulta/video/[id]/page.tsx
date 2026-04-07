@@ -28,6 +28,7 @@ import { VideoChat } from '@/components/video/VideoChat'
 const WARNING_THRESHOLD = 50.00 // Avisar quando saldo for < 50 Créditos
 const CONNECTION_TIMEOUT_MS = 60000 // 1 minuto para conectar ou cancelar sem taxa
 
+// Versão Limpa - Corrigindo conflitos de merge residuais do remoto
 export default function VideoConsultationPage() {
     const { id } = useParams() // consultation_id
     const { profile, setProfile } = useAuthStore()
@@ -58,15 +59,13 @@ export default function VideoConsultationPage() {
     const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
     const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+    const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [callError, setCallError] = useState<string | null>(null)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
-    const [isFinalizing, setIsFinalizing] = useState(false)
+    const isFinalizingRef = useRef(false)
     const [now, setNow] = useState(Date.now())
-<<<<<<< HEAD
     const [localStartedAt, setLocalStartedAt] = useState<number | null>(null)
-=======
     const lastMinuteCharged = useRef(0)
->>>>>>> 9bd0fd07 (fix: delay video billing until 60s, sync clocks, and improve client setup UI)
 
     useEffect(() => {
         if (id) fetchDetails()
@@ -97,16 +96,9 @@ export default function VideoConsultationPage() {
 
     // Duration sync and Billing Trigger
     useEffect(() => {
-<<<<<<< HEAD
         const effectiveStartedAt = consultation?.started_at ? new Date(consultation.started_at).getTime() : localStartedAt
         if (effectiveStartedAt && (consultation?.status === 'active' || (joined && remoteUsers.length > 0))) {
             const seconds = Math.floor((now - effectiveStartedAt) / 1000)
-            setDuration(Math.max(0, seconds))
-        }
-    }, [now, consultation?.started_at, consultation?.status, localStartedAt, joined, remoteUsers.length])
-=======
-        if (consultation?.started_at && consultation.status === 'active') {
-            const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
             const currentDuration = Math.max(0, seconds)
             setDuration(currentDuration)
 
@@ -145,8 +137,7 @@ export default function VideoConsultationPage() {
                 }
             }
         }
-    }, [now, consultation?.started_at, consultation?.status, hasEstablishedConnection])
->>>>>>> 9bd0fd07 (fix: delay video billing until 60s, sync clocks, and improve client setup UI)
+    }, [now, consultation?.started_at, consultation?.status, localStartedAt, joined, remoteUsers.length, hasEstablishedConnection])
 
     const fetchDetails = async () => {
         try {
@@ -201,6 +192,13 @@ export default function VideoConsultationPage() {
                 ...prev,
                 [user.uid.toString()]: !user.hasAudio
             }));
+
+            // Clear any disconnect timer if they re-join
+            if (disconnectTimerRef.current) {
+                clearTimeout(disconnectTimerRef.current)
+                disconnectTimerRef.current = null
+                toast.success('Usuário reconectado!', { id: 'reconnect' })
+            }
 
             // Stabilization: Now accepting BOTH audio or video to consider connection "established"
             if (!stabilizationTimer.current && !hasEstablishedConnection) {
@@ -261,9 +259,15 @@ export default function VideoConsultationPage() {
 
         client.on('user-left', async (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-            setCallEndedBy('oracle')
-            // Se o oráculo saiu de vez, o cliente finaliza
-            setTimeout(() => autoFinalizeCall('oracle'), 1000)
+            
+            toast.error('O oraculista desconectou. Aguardando reconexão...', { id: 'reconnect', duration: 15000 })
+            
+            // Set grace period for reconnect (30 seconds)
+            if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
+            disconnectTimerRef.current = setTimeout(() => {
+                setCallEndedBy('oracle')
+                autoFinalizeCall('oracle')
+            }, 30000)
         })
 
         // AUTO-PREVIEW: Start local tracks on init
@@ -429,14 +433,14 @@ export default function VideoConsultationPage() {
     const [isSubmitting, setIsSubmitting] = useState(false)
 
     const endCall = async () => {
-        if (!id || isFinalizing) return
+        if (!id || isFinalizingRef.current) return
         setCallEndedBy('client')
         await autoFinalizeCall('client')
     }
 
     const autoFinalizeCall = async (endedBy: 'client' | 'oracle', skipCharge = false) => {
-        if (isFinalizing) return
-        setIsFinalizing(true)
+        if (isFinalizingRef.current) return
+        isFinalizingRef.current = true
 
         if (billingInterval.current) clearInterval(billingInterval.current)
         if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
