@@ -68,6 +68,11 @@ export default function VideoConsultationPage() {
     const [localStartedAt, setLocalStartedAt] = useState<number | null>(null)
     const lastMinuteCharged = useRef(0)
 
+    const [showFeedback, setShowFeedback] = useState(false)
+    const [stars, setStars] = useState(0)
+    const [comment, setComment] = useState('')
+    const [isSubmitting, setIsSubmitting] = useState(false)
+
     useEffect(() => {
         if (id) fetchDetails()
 
@@ -81,9 +86,27 @@ export default function VideoConsultationPage() {
                 table: 'consultations',
                 filter: `id=eq.${id}`
             }, (payload) => {
+                const newStatus = payload.new.status
                 setConsultation((prev: any) => ({ ...prev, ...payload.new }))
-                if (payload.new.status === 'answered' || payload.new.status === 'canceled') {
-                    autoFinalizeCall('oracle')
+                
+                // If consultation was finished, answered or canceled, end immediately
+                if (newStatus === 'finished' || newStatus === 'answered' || newStatus === 'canceled') {
+                    if (disconnectTimerRef.current) {
+                        clearTimeout(disconnectTimerRef.current)
+                        disconnectTimerRef.current = null
+                    }
+                    
+                    // Force feedback/end state
+                    if (!showFeedback && !isFinalizingRef.current) {
+                        setShowFeedback(true)
+                        setJoined(false)
+                        // Local tracks cleanup
+                        localAudioTrack?.stop()
+                        localAudioTrack?.close()
+                        localVideoTrack?.stop()
+                        localVideoTrack?.close()
+                        if (clientRef.current) clientRef.current.leave().catch(() => {})
+                    }
                 }
             })
             .subscribe()
@@ -93,7 +116,7 @@ export default function VideoConsultationPage() {
             supabase.removeChannel(channel)
             endCall()
         }
-    }, [id])
+    }, [id, localAudioTrack, localVideoTrack, showFeedback])
 
     // Duration sync and Billing Trigger
     useEffect(() => {
@@ -218,7 +241,13 @@ export default function VideoConsultationPage() {
                             
                             if (updatedConsultation) {
                                 setConsultation((prev: any) => ({ ...prev, ...updatedConsultation }));
-                                console.log('[Video] Consultation started in DB successfully');
+                                
+                                // FORCE SYNC: Use the DB timestamp as the official local start time
+                                if (updatedConsultation.started_at) {
+                                    const dbStartTime = new Date(updatedConsultation.started_at).getTime();
+                                    setLocalStartedAt(dbStartTime);
+                                    console.log('[Video] Timer synced with DB successfully:', updatedConsultation.started_at);
+                                }
                             } else {
                                 // If RPC returns null, it means it was already started. Show active locally.
                                 setConsultation((prev: any) => ({ ...prev, status: 'active' }));
@@ -433,10 +462,6 @@ export default function VideoConsultationPage() {
         }
     }
 
-    const [showFeedback, setShowFeedback] = useState(false)
-    const [stars, setStars] = useState(0)
-    const [comment, setComment] = useState('')
-    const [isSubmitting, setIsSubmitting] = useState(false)
 
     const endCall = async () => {
         if (!id || isFinalizingRef.current) return

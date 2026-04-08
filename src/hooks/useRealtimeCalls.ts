@@ -7,6 +7,7 @@ export type IncomingCall = {
     id: string
     client_id: string
     client_name?: string
+    client_avatar?: string
     topic?: string
     created_at: string
     is_using_bonus?: boolean
@@ -40,7 +41,7 @@ export function useRealtimeCalls() {
                     id, 
                     client_id, 
                     created_at,
-                    client:client_id (full_name)
+                    client:client_id (full_name, avatar_url)
                 `)
                 .eq('oracle_id', profile.id)
                 .eq('status', 'pending')
@@ -54,6 +55,7 @@ export function useRealtimeCalls() {
                     id: data.id,
                     client_id: data.client_id,
                     client_name: (data as any).client?.full_name || 'Cliente',
+                    client_avatar: (data as any).client?.avatar_url,
                     created_at: data.created_at
                 })
             }
@@ -75,13 +77,13 @@ export function useRealtimeCalls() {
                 },
                 async (payload) => {
                     // Don't ring if already in a call (sala)
-                    if (typeof window !== 'undefined' && window.location.pathname.includes('/sala')) return
+                    if (typeof window !== 'undefined' && window.location.pathname.includes('/video')) return
 
                     if (payload.new.status === 'pending') {
-                        // Fetch client name
+                        // Fetch client name and avatar
                         const { data: userData } = await supabase
                             .from('profiles')
-                            .select('full_name')
+                            .select('full_name, avatar_url')
                             .eq('id', payload.new.client_id)
                             .single()
 
@@ -89,6 +91,7 @@ export function useRealtimeCalls() {
                             id: payload.new.id,
                             client_id: payload.new.client_id,
                             client_name: userData?.full_name || 'Cliente',
+                            client_avatar: userData?.avatar_url,
                             created_at: payload.new.created_at
                         })
                         playRing()

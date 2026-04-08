@@ -66,14 +66,27 @@ export function IncomingCallModal({ call, isAccepting = false, onAccept, onRejec
 
                     <div className="p-6 text-center space-y-4">
                         {!showProcessing && (
-                            <div className="w-16 h-16 mx-auto bg-neon-cyan/10 rounded-full flex items-center justify-center border border-neon-cyan/30">
-                                <Video size={32} className="text-neon-cyan" />
+                            <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center border-2 border-neon-cyan/50 p-1 bg-deep-space relative">
+                                <div className="w-full h-full rounded-full overflow-hidden bg-white/5 flex items-center justify-center">
+                                    {call.client_avatar ? (
+                                        <img src={call.client_avatar} alt={call.client_name} className="w-full h-full object-cover" />
+                                    ) : (
+                                        <div className="w-full h-full bg-neon-cyan/10 flex items-center justify-center">
+                                            <Video size={36} className="text-neon-cyan" />
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="absolute -bottom-1 -right-1 bg-neon-cyan p-1.5 rounded-full shadow-lg shadow-neon-cyan/50">
+                                    <Video size={12} className="text-black" />
+                                </div>
                             </div>
                         )}
 
                         {showProcessing && (
-                            <div className="w-16 h-16 mx-auto bg-neon-purple/10 rounded-full flex items-center justify-center border border-neon-purple/30">
-                                <Loader2 size={32} className="text-neon-purple animate-spin" />
+                            <div className="w-20 h-20 mx-auto rounded-full flex items-center justify-center border-2 border-neon-purple/50 p-1 bg-deep-space relative">
+                                <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center">
+                                    <Loader2 size={36} className="text-neon-purple animate-spin" />
+                                </div>
                             </div>
                         )}
 
