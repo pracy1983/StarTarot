@@ -61,6 +61,7 @@ export default function VideoConsultationPage() {
     const connectionTimeoutRef = useRef<NodeJS.Timeout | null>(null)
     const disconnectTimerRef = useRef<NodeJS.Timeout | null>(null)
     const [callError, setCallError] = useState<string | null>(null)
+    const [isDeviceBusy, setIsDeviceBusy] = useState(false)
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const isFinalizingRef = useRef(false)
     const [now, setNow] = useState(Date.now())
@@ -96,8 +97,12 @@ export default function VideoConsultationPage() {
 
     // Duration sync and Billing Trigger
     useEffect(() => {
+        // O cronômetro só deve rodar se o status for 'active' (já sincronizado no banco) 
+        // OU se ambos estiverem na sala localmente e se vendo
+        const isConnected = joined && remoteUsers.length > 0;
         const effectiveStartedAt = consultation?.started_at ? new Date(consultation.started_at).getTime() : localStartedAt
-        if (effectiveStartedAt && (consultation?.status === 'active' || (joined && remoteUsers.length > 0))) {
+        
+        if (effectiveStartedAt && (consultation?.status === 'active' || isConnected)) {
             const seconds = Math.floor((now - effectiveStartedAt) / 1000)
             const currentDuration = Math.max(0, seconds)
             setDuration(currentDuration)
@@ -115,10 +120,6 @@ export default function VideoConsultationPage() {
                 // 2. Per-minute billing (starting from 2 minutes)
                 const currentMinute = Math.floor(currentDuration / 60)
                 if (currentMinute > lastMinuteCharged.current && currentMinute > 0) {
-                    // Note: If minute 1 was just charged as initial fee, the first per-minute charge will happen at minute 2 (120s)
-                    // Or if we consider the first minute "paid" by the initial fee, we only charge from minute 2 onwards.
-                    // But if there is NO initial fee, we charge per minute from minute 1.
-                    
                     const isFirstMinute = currentMinute === 1;
                     const shouldChargeMinute = !isFirstMinute || (isFirstMinute && (!oracle?.initial_fee_credits || oracle.initial_fee_credits === 0));
 
@@ -131,7 +132,6 @@ export default function VideoConsultationPage() {
                         })
                         lastMinuteCharged.current = currentMinute;
                     } else if (isFirstMinute) {
-                        // Mark as handled because initial fee covered it
                         lastMinuteCharged.current = 1;
                     }
                 }
@@ -272,6 +272,7 @@ export default function VideoConsultationPage() {
 
         // AUTO-PREVIEW: Start local tracks on init
         try {
+            setIsDeviceBusy(false);
             const audioTrack = await AgoraRTC.createMicrophoneAudioTrack()
             const videoTrack = await AgoraRTC.createCameraVideoTrack()
 
@@ -288,9 +289,14 @@ export default function VideoConsultationPage() {
             if (playerContainer) {
                 videoTrack.play(playerContainer, { fit: 'cover' })
             }
-        } catch (err) {
+        } catch (err: any) {
             console.error('Error initializing client preview:', err)
-            toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso.')
+            if (err.code === 'NOT_READABLE' || err.message?.includes('NotReadableError') || err.message?.includes('Device in use')) {
+                setIsDeviceBusy(true);
+                toast.error('Câmera ocupada por outro aplicativo. Feche-os e tente novamente.', { duration: 6000 });
+            } else {
+                toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso.');
+            }
         }
     }
 
@@ -526,21 +532,44 @@ export default function VideoConsultationPage() {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
                     <GlassCard className="max-w-md w-full p-8 space-y-6 border-neon-purple/20">
                         <div className="text-center">
-                            <h2 className="text-2xl font-bold text-white mb-2">Como foi sua consulta?</h2>
-                            <p className="text-slate-400 text-sm">Sua avaliação ajuda outros consulentes e motiva o oraculista.</p>
+                            <h2 className="text-2xl font-bold text-white mb-2">Resumo da Consulta</h2>
+                            <div className="flex flex-col items-center gap-2 mb-6 bg-white/5 p-4 rounded-2xl border border-white/10">
+                                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Duração Total</span>
+                                <span className="text-3xl font-mono text-white">
+                                    {Math.floor(duration / 60).toString().padStart(2, '0')}:{(duration % 60).toString().padStart(2, '0')}
+                                </span>
+                                
+                                <div className="mt-2 pt-2 border-t border-white/5 w-full flex justify-between items-center text-sm">
+                                    <span className="text-slate-400">
+                                        {profile?.role === 'oracle' ? 'Total Recebido:' : 'Custo Total:'}
+                                    </span>
+                                    <span className={`font-bold ${profile?.role === 'oracle' ? 'text-green-400' : 'text-neon-gold'}`}>
+                                        {profile?.role === 'oracle' 
+                                            ? `+${Math.floor(duration / 60) * (oracle?.credits_per_minute || 0)} Cr.`
+                                            : `${Math.floor(duration / 60) * (oracle?.credits_per_minute || 0)} Cr.`
+                                        }
+                                    </span>
+                                </div>
+                            </div>
+                            
+                            {profile?.role === 'client' && (
+                                <p className="text-slate-400 text-sm">Sua avaliação ajuda outros consulentes e motiva o oraculista.</p>
+                            )}
                         </div>
 
-                        <div className="flex justify-center gap-2 py-4">
-                            {[1, 2, 3, 4, 5].map((star) => (
-                                <button
-                                    key={star}
-                                    onClick={() => setStars(star)}
-                                    className={`p-2 transition-all ${stars >= star ? 'text-neon-gold scale-125' : 'text-slate-600 hover:text-neon-gold/50'}`}
-                                >
-                                    <StarIcon fill={stars >= star ? 'currentColor' : 'none'} size={32} />
-                                </button>
-                            ))}
-                        </div>
+                        {profile?.role === 'client' && (
+                            <div className="flex justify-center gap-2 py-4">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                    <button
+                                        key={star}
+                                        onClick={() => setStars(star)}
+                                        className={`p-2 transition-all ${stars >= star ? 'text-neon-gold scale-125' : 'text-slate-600 hover:text-neon-gold/50'}`}
+                                    >
+                                        <StarIcon fill={stars >= star ? 'currentColor' : 'none'} size={32} />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
 
                         <textarea
                             value={comment}
@@ -585,7 +614,7 @@ export default function VideoConsultationPage() {
 
                 <div className="flex flex-row items-center space-x-2 md:space-x-6 shrink-0">
                     <div className="flex items-center bg-white/5 px-2 md:px-4 py-1.5 md:py-2 rounded-full border border-white/10 min-w-[80px] justify-center">
-                        {(consultation?.started_at || localStartedAt) ? (
+                        {(joined && remoteUsers.length > 0) || consultation?.status === 'active' ? (
                             <>
                                 <Clock size={14} className="text-neon-cyan mr-1.5 md:mr-2" />
                                 <span className="font-mono text-xs md:text-sm">
@@ -593,7 +622,7 @@ export default function VideoConsultationPage() {
                                 </span>
                             </>
                         ) : (
-                            <span className="text-[10px] text-slate-500 uppercase font-bold animate-pulse">Aguardando...</span>
+                            <span className="text-[10px] text-slate-500 uppercase font-bold animate-pulse">Aguardando Conexão...</span>
                         )}
                     </div>
                     {profile?.role === 'client' && (
@@ -668,11 +697,17 @@ export default function VideoConsultationPage() {
                         <div className="absolute inset-0 z-40 flex items-center justify-center bg-black/40 backdrop-blur-sm">
                             <GlassCard className="p-8 text-center space-y-6 max-w-sm mx-4 border-neon-purple/30 animate-in zoom-in duration-300">
                                 <div className="w-16 h-16 bg-neon-purple/20 rounded-full flex items-center justify-center mx-auto mb-4">
-                                    <Camera className="text-neon-purple" size={32} />
+                                    {isDeviceBusy ? <VideoOff className="text-red-500" size={32} /> : <Camera className="text-neon-purple" size={32} />}
                                 </div>
                                 <div className="space-y-4">
-                                    <h3 className="text-xl font-bold text-white">Câmera e Áudio OK?</h3>
-                                    {!localVideoTrack ? (
+                                    <h3 className="text-xl font-bold text-white">
+                                        {isDeviceBusy ? 'Câmera em Uso' : 'Câmera e Áudio OK?'}
+                                    </h3>
+                                    {isDeviceBusy ? (
+                                        <p className="text-sm text-red-400">
+                                            Identificamos que sua câmera está sendo usada por outro app ou aba. Feche tudo e clique abaixo.
+                                        </p>
+                                    ) : !localVideoTrack ? (
                                         <div className="flex items-center justify-center gap-2 text-neon-cyan animate-pulse">
                                             <RefreshCw size={16} className="animate-spin" />
                                             <span className="text-sm">Acessando câmera e microfone...</span>
@@ -682,13 +717,13 @@ export default function VideoConsultationPage() {
                                     )}
                                 </div>
                                 <NeonButton 
-                                    variant="purple" 
+                                    variant={isDeviceBusy ? 'purple' : 'purple'} 
                                     fullWidth 
-                                    onClick={startCall} 
+                                    onClick={isDeviceBusy ? initAgora : startCall} 
                                     size="lg"
-                                    disabled={!localVideoTrack}
+                                    disabled={!localVideoTrack && !isDeviceBusy}
                                 >
-                                    {localVideoTrack ? 'Entrar na Consulta' : 'Aguardando Câmera...'}
+                                    {isDeviceBusy ? 'Tentar Reativar Câmera' : (localVideoTrack ? 'Entrar na Consulta' : 'Aguardando Câmera...')}
                                 </NeonButton>
                             </GlassCard>
                         </div>
