@@ -61,6 +61,7 @@ export default function ServiceRoomPage() {
     const stabilizationTimer = React.useRef<NodeJS.Timeout | null>(null)
     const [hasEstablishedConnection, setHasEstablishedConnection] = React.useState(false)
     const [muteStatus, setMuteStatus] = React.useState<Record<string, boolean>>({})
+    const disconnectTimerRef = React.useRef<NodeJS.Timeout | null>(null)
 
     // Timer & Duration
     const [now, setNow] = useState(Date.now())
@@ -75,6 +76,7 @@ export default function ServiceRoomPage() {
     const [summaryData, setSummaryData] = useState({ duration: 0, credits: 0 })
     const [callEndedBy, setCallEndedBy] = useState<'client' | 'oracle' | null>(null)
     const [isFinalizing, setIsFinalizing] = useState(false)
+    const isEndedRef = useRef(false)
 
     // Error State
     const [callError, setCallError] = useState<string | null>(null)
@@ -136,13 +138,16 @@ export default function ServiceRoomPage() {
                     setConsultation((prev: any) => ({ ...prev, ...payload.new }))
 
                     if (newStatus === 'completed' || newStatus === 'ended' || newStatus === 'cancelled') {
-                        if (joined || !showSummary) {
+                        if (!isEndedRef.current) {
+                            isEndedRef.current = true;
                             toast('A consulta foi encerrada.', { icon: 'ℹ️' })
                             leaveCall()
-                            setSummaryData({
-                                duration: payload.new.duration_seconds || duration,
+                            
+                            // Usar functional update para pegar a duração mais recente
+                            setSummaryData(prev => ({
+                                duration: payload.new.duration_seconds || prev.duration,
                                 credits: payload.new.total_credits || 0
-                            })
+                            }))
                             setShowSummary(true)
                         }
                     }
@@ -266,6 +271,13 @@ export default function ServiceRoomPage() {
                     [user.uid.toString()]: !user.hasAudio
                 }));
 
+                // Clear any disconnect timer if they re-join
+                if (disconnectTimerRef.current) {
+                    clearTimeout(disconnectTimerRef.current)
+                    disconnectTimerRef.current = null
+                    toast.success('Usuário reconectado!', { id: 'reconnect' })
+                }
+
                 // Stabilization: Now accepting BOTH audio or video to consider connection "established"
                 if (!stabilizationTimer.current && !hasEstablishedConnection) {
                     stabilizationTimer.current = setTimeout(async () => {
@@ -305,8 +317,15 @@ export default function ServiceRoomPage() {
 
             client.on('user-left', async (user) => {
                 setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid))
-                setCallEndedBy('client')
-                autoFinalizeCall('client')
+                
+                toast.error('Cliente desconectado. Aguardando reconexão...', { id: 'reconnect', duration: 15000 })
+                
+                // Set grace period for reconnect (30 seconds)
+                if (disconnectTimerRef.current) clearTimeout(disconnectTimerRef.current)
+                disconnectTimerRef.current = setTimeout(() => {
+                    setCallEndedBy('client')
+                    autoFinalizeCall('client')
+                }, 30000)
             })
 
             client.on('connection-state-change', (curState, prevState) => {
@@ -433,6 +452,7 @@ export default function ServiceRoomPage() {
     const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
         if (!consultationId || isFinalizing) return
         setIsFinalizing(true)
+        isEndedRef.current = true;
 
         try {
             const { data: result, error } = await supabase.rpc('finalize_video_consultation', {

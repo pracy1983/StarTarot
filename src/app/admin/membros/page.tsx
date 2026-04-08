@@ -57,7 +57,18 @@ export default function AdminMembrosPage() {
                 .from('profiles')
                 .update({
                     full_name: editingMember.full_name,
-                    phone: editingMember.phone
+                    phone: editingMember.phone,
+                    cpf: editingMember.cpf,
+                    birth_date: editingMember.birth_date,
+                    birth_time: editingMember.birth_time,
+                    birth_place: editingMember.birth_place,
+                    zip_code: editingMember.zip_code,
+                    address: editingMember.address,
+                    address_number: editingMember.address_number,
+                    address_complement: editingMember.address_complement,
+                    neighborhood: editingMember.neighborhood,
+                    city: editingMember.city,
+                    state: editingMember.state
                 })
                 .eq('id', editingMember.id)
 
@@ -170,20 +181,100 @@ export default function AdminMembrosPage() {
                             exit={{ opacity: 0, scale: 0.9 }}
                             className="w-full max-w-md"
                         >
-                            <GlassCard glowColor="cyan" className="p-8">
+                        <GlassCard glowColor="cyan" className="p-8 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
                                 <h2 className="text-2xl font-bold text-white mb-6">Editar Membro</h2>
                                 <form onSubmit={handleUpdateMember} className="space-y-6">
-                                    <GlowInput
-                                        label="Nome Completo"
-                                        value={editingMember.full_name}
-                                        onChange={e => setEditingMember({ ...editingMember, full_name: e.target.value })}
-                                        required
-                                    />
-                                    <GlowInput
-                                        label="Telefone WhatsApp"
-                                        value={editingMember.phone || ''}
-                                        onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
-                                    />
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <GlowInput
+                                            label="Nome Completo"
+                                            value={editingMember.full_name}
+                                            onChange={e => setEditingMember({ ...editingMember, full_name: e.target.value })}
+                                            required
+                                        />
+                                        <GlowInput
+                                            label="E-mail (Apenas Leitura)"
+                                            value={editingMember.email}
+                                            readOnly
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                        <GlowInput
+                                            label="CPF"
+                                            value={editingMember.cpf || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, cpf: e.target.value })}
+                                        />
+                                        <GlowInput
+                                            label="Telefone WhatsApp"
+                                            value={editingMember.phone || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, phone: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-4 border-t border-white/5">
+                                        <GlowInput
+                                            label="Data Nascimento"
+                                            type="date"
+                                            value={editingMember.birth_date || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, birth_date: e.target.value })}
+                                        />
+                                        <GlowInput
+                                            label="Hora"
+                                            type="time"
+                                            value={editingMember.birth_time || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, birth_time: e.target.value })}
+                                        />
+                                        <GlowInput
+                                            label="Local"
+                                            value={editingMember.birth_place || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, birth_place: e.target.value })}
+                                        />
+                                    </div>
+
+                                    <div className="space-y-6 pt-4 border-t border-white/5">
+                                        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                                            <GlowInput
+                                                label="CEP"
+                                                value={editingMember.zip_code || ''}
+                                                onChange={e => setEditingMember({ ...editingMember, zip_code: e.target.value })}
+                                            />
+                                            <div className="md:col-span-2">
+                                                <GlowInput
+                                                    label="Rua"
+                                                    value={editingMember.address || ''}
+                                                    onChange={e => setEditingMember({ ...editingMember, address: e.target.value })}
+                                                />
+                                            </div>
+                                            <GlowInput
+                                                label="Núm."
+                                                value={editingMember.address_number || ''}
+                                                onChange={e => setEditingMember({ ...editingMember, address_number: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                            <GlowInput
+                                                label="Bairro"
+                                                value={editingMember.neighborhood || ''}
+                                                onChange={e => setEditingMember({ ...editingMember, neighborhood: e.target.value })}
+                                            />
+                                            <GlowInput
+                                                label="Cidade"
+                                                value={editingMember.city || ''}
+                                                onChange={e => setEditingMember({ ...editingMember, city: e.target.value })}
+                                            />
+                                            <GlowInput
+                                                label="UF"
+                                                value={editingMember.state || ''}
+                                                onChange={e => setEditingMember({ ...editingMember, state: e.target.value })}
+                                            />
+                                        </div>
+                                        <GlowInput
+                                            label="Complemento"
+                                            value={editingMember.address_complement || ''}
+                                            onChange={e => setEditingMember({ ...editingMember, address_complement: e.target.value })}
+                                        />
+                                    </div>
+
                                     <div className="pt-4 flex gap-4">
                                         <NeonButton variant="purple" fullWidth type="submit" loading={saving}>
                                             Salvar Alterações

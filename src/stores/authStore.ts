@@ -107,8 +107,16 @@ export const useAuthStore = create<AuthState>((set) => ({
             .eq('user_id', session.user.id)
             .maybeSingle()
 
+          // Forçar offline ao iniciar sessão para oraculistas
+          const isOracle = profile.role === 'oracle' || profile.role === 'owner'
+          const initialOnlineStatus = isOracle ? false : (profile.is_online || false)
+
           set({
-            profile: { ...profile, credits: wallet?.balance || 0 },
+            profile: { 
+              ...profile, 
+              credits: wallet?.balance || 0,
+              is_online: initialOnlineStatus 
+            },
             isAuthenticated: true,
             isLoading: false
           })
@@ -215,7 +223,7 @@ export const useAuthStore = create<AuthState>((set) => ({
             .eq('user_id', profile.id)
             .single()
 
-          // Force offline on login to prevent lingering online state
+          // Forçar offline no login para evitar status online "preso"
           if (profile.role === 'oracle' || profile.role === 'owner') {
             await supabase.from('profiles').update({ is_online: false }).eq('id', profile.id)
             profile.is_online = false

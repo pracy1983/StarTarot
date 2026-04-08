@@ -26,23 +26,7 @@ export function useRealtimeCalls() {
         }
     }, [profile])
 
-    // Heartbeat Effect: Updates last_heartbeat_at every 2 minutes while online
-    useEffect(() => {
-        if (!profile?.id || !isOnline) return
-
-        const interval = setInterval(async () => {
-            try {
-                await supabase
-                    .from('profiles')
-                    .update({ last_heartbeat_at: new Date().toISOString() })
-                    .eq('id', profile.id)
-            } catch (err) {
-                console.error('Heartbeat failed:', err)
-            }
-        }, 120000) // 2 minutes (lower than the 3min threshold in status.ts)
-
-        return () => clearInterval(interval)
-    }, [profile?.id, isOnline])
+    // Heartbeat handled by useHeartbeat() globally in layout.tsx
 
     // Realtime Subscription
     useEffect(() => {

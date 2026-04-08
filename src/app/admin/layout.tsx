@@ -73,8 +73,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const navItems = [
         { label: 'Visão Geral', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { label: 'Oraculistas', icon: <Users size={20} />, href: '/admin/oraculistas', badge: pendingOracles },
-        { label: 'Membros', icon: <Users size={20} />, href: '/admin/membros' },
+        { label: 'Gerenciar Usuários', icon: <Users size={20} />, href: '/admin/usuarios', badge: pendingOracles },
         { label: 'Créditos', icon: <Wallet size={20} />, href: '/admin/creditos' },
         { label: 'Consultas', icon: <MessageSquare size={20} />, href: '/admin/consultas' },
         { label: 'Cupons', icon: <Ticket size={20} />, href: '/admin/cupons' },

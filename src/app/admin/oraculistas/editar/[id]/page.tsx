@@ -6,7 +6,7 @@ import { GlassCard } from '@/components/ui/GlassCard'
 import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { ScheduleGrid } from '@/components/ui/ScheduleGrid'
-import { User, Mail, Sparkles, Brain, Clock, ShieldCheck, Image as ImageIcon, ArrowLeft } from 'lucide-react'
+import { User, Mail, Sparkles, Brain, Clock, ShieldCheck, Image as ImageIcon, ArrowLeft, FileText, MapPin } from 'lucide-react'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { ImageCropperModal } from '@/components/ui/ImageCropperModal'
@@ -36,7 +36,20 @@ export default function EditOraclePage() {
         creditsPerMinute: 5,
         pricePerMessage: 10,
         avatarUrl: '',
-        isOnline: true
+        isOnline: true,
+        // Internal data
+        phone: '',
+        cpf: '',
+        birth_date: '',
+        birth_time: '',
+        birth_place: '',
+        zip_code: '',
+        address: '',
+        address_number: '',
+        address_complement: '',
+        neighborhood: '',
+        city: '',
+        state: ''
     })
 
     const [schedule, setSchedule] = useState<Record<number, { start: string, end: string, active: boolean }[]>>({
@@ -103,7 +116,20 @@ export default function EditOraclePage() {
                     creditsPerMinute: data.credits_per_minute || 5,
                     pricePerMessage: data.price_per_message || 10,
                     avatarUrl: data.avatar_url || '',
-                    isOnline: data.is_online ?? true
+                    isOnline: data.is_online ?? true,
+                    // Load internal fields
+                    phone: data.phone || '',
+                    cpf: data.cpf || '',
+                    birth_date: data.birth_date || '',
+                    birth_time: data.birth_time || '',
+                    birth_place: data.birth_place || '',
+                    zip_code: data.zip_code || '',
+                    address: data.address || '',
+                    address_number: data.address_number || '',
+                    address_complement: data.address_complement || '',
+                    neighborhood: data.neighborhood || '',
+                    city: data.city || '',
+                    state: data.state || ''
                 })
 
                 // Load Schedule
@@ -185,7 +211,20 @@ export default function EditOraclePage() {
                     credits_per_minute: isAI ? 0 : formData.creditsPerMinute,
                     price_per_message: formData.pricePerMessage,
                     avatar_url: formData.avatarUrl,
-                    is_online: formData.isOnline
+                    is_online: formData.isOnline,
+                    // Save internal fields
+                    phone: formData.phone,
+                    cpf: formData.cpf,
+                    birth_date: formData.birth_date,
+                    birth_time: formData.birth_time,
+                    birth_place: formData.birth_place,
+                    zip_code: formData.zip_code,
+                    address: formData.address,
+                    address_number: formData.address_number,
+                    address_complement: formData.address_complement,
+                    neighborhood: formData.neighborhood,
+                    city: formData.city,
+                    state: formData.state
                 })
                 .eq('id', oracleId)
 
@@ -483,6 +522,95 @@ export default function EditOraclePage() {
                                 <span>A disponibilidade automática do oráculo no marketplace será baseada nestes horários.</span>
                             </div>
                             <ScheduleGrid schedule={schedule} onChange={setSchedule} />
+                        </GlassCard>
+
+                        {/* Nova Seção: Dados Internos / Administrativos */}
+                        <GlassCard hover={false} className="border-neon-gold/20">
+                            <h3 className="text-sm font-bold text-white mb-6 uppercase tracking-widest flex items-center">
+                                <FileText size={16} className="mr-2 text-neon-gold" /> Dados Internos e Faturamento
+                            </h3>
+
+                            <div className="space-y-8">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GlowInput
+                                        label="E-mail de Acesso"
+                                        icon={<Mail size={16} />}
+                                        value={formData.email}
+                                        readOnly
+                                    />
+                                    <GlowInput
+                                        label="WhatsApp"
+                                        placeholder="(00) 00000-0000"
+                                        value={formData.phone}
+                                        onChange={e => setFormData({ ...formData, phone: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <GlowInput
+                                        label="CPF / CNPJ"
+                                        placeholder="000.000.000-00"
+                                        value={formData.cpf}
+                                        onChange={e => setFormData({ ...formData, cpf: e.target.value })}
+                                    />
+                                    <div className="grid grid-cols-3 gap-3">
+                                        <div className="col-span-2">
+                                            <GlowInput
+                                                label="Data de Nascimento"
+                                                type="date"
+                                                value={formData.birth_date}
+                                                onChange={e => setFormData({ ...formData, birth_date: e.target.value })}
+                                            />
+                                        </div>
+                                        <GlowInput
+                                            label="Hora"
+                                            type="time"
+                                            value={formData.birth_time}
+                                            onChange={e => setFormData({ ...formData, birth_time: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4 pt-4 border-t border-white/5">
+                                    <h4 className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">Endereço de Faturamento</h4>
+                                    <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                                        <GlowInput
+                                            label="CEP"
+                                            value={formData.zip_code}
+                                            onChange={e => setFormData({ ...formData, zip_code: e.target.value })}
+                                        />
+                                        <div className="md:col-span-2">
+                                            <GlowInput
+                                                label="Rua / Logradouro"
+                                                value={formData.address}
+                                                onChange={e => setFormData({ ...formData, address: e.target.value })}
+                                            />
+                                        </div>
+                                        <GlowInput
+                                            label="Número"
+                                            value={formData.address_number}
+                                            onChange={e => setFormData({ ...formData, address_number: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                        <GlowInput
+                                            label="Bairro"
+                                            value={formData.neighborhood}
+                                            onChange={e => setFormData({ ...formData, neighborhood: e.target.value })}
+                                        />
+                                        <GlowInput
+                                            label="Cidade"
+                                            value={formData.city}
+                                            onChange={e => setFormData({ ...formData, city: e.target.value })}
+                                        />
+                                        <GlowInput
+                                            label="Estado (UF)"
+                                            value={formData.state}
+                                            onChange={e => setFormData({ ...formData, state: e.target.value })}
+                                        />
+                                    </div>
+                                </div>
+                            </div>
                         </GlassCard>
 
                         <div className="flex justify-end pt-4 gap-4">
