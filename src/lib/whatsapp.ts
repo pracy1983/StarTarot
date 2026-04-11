@@ -1,8 +1,8 @@
 // Evolution API WhatsApp Integration Service
 
-const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL
 const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY
-const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE
+const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || process.env.EVOLUTION_INSTANCE
 
 interface SendMessageParams {
     phone: string
