@@ -54,7 +54,8 @@ export class EvolutionWhatsAppService {
                 console.error('Evolution API Error:', errorData)
                 try {
                     const jsonError = JSON.parse(errorData)
-                    return { success: false, error: jsonError.message || errorData }
+                    const errMsg = jsonError.response?.data?.message || jsonError.response?.message || jsonError.message || errorData
+                    return { success: false, error: typeof errMsg === 'string' ? errMsg : JSON.stringify(errMsg) }
                 } catch {
                     return { success: false, error: errorData }
                 }

@@ -399,7 +399,11 @@ export const AuthModal = () => {
                                 required
                             />
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
 
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
                                 Atualizar e Entrar
@@ -439,7 +443,11 @@ export const AuthModal = () => {
                                 </div>
                             </div>
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
 
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
                                 Validar e Enviar Código
@@ -468,7 +476,11 @@ export const AuthModal = () => {
                                 className="text-center tracking-[0.5em] text-2xl font-bold"
                             />
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
 
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
                                 Validar Código
@@ -507,7 +519,11 @@ export const AuthModal = () => {
                                 required
                             />
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
 
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg" disabled={!isStrong}>
                                 Redefinir Senha
@@ -533,7 +549,11 @@ export const AuthModal = () => {
                                 className="text-center tracking-[0.5em] text-2xl font-bold"
                             />
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
 
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
                                 Confirmar e Entrar
@@ -663,7 +683,11 @@ export const AuthModal = () => {
                                 </label>
                             </div>
 
-                            {error && <div className="text-red-400 text-sm bg-red-400/10 p-3 rounded-lg border border-red-400/20 text-center">{error}</div>}
+                            {error && (
+                                <div className="text-red-400 text-[10px] sm:text-sm bg-red-400/10 p-2 sm:p-3 rounded-lg border border-red-400/20 text-center break-words overflow-hidden max-h-32 overflow-y-auto">
+                                    {error}
+                                </div>
+                            )}
                             <NeonButton type="submit" variant="purple" fullWidth loading={formLoading} size="lg">
                                 Entrar no Portal
                             </NeonButton>
