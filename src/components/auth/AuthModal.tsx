@@ -39,6 +39,7 @@ export const AuthModal = () => {
         updatePassword,
         requestPasswordReset,
         verifyResetOtp,
+        completePasswordReset,
         profile
     } = useAuthStore()
 
@@ -328,20 +329,23 @@ export const AuthModal = () => {
         e.preventDefault()
         if (!isStrong) return setError('Senha muito fraca.')
         if (newPassword !== confirmPassword) return setError('Senhas não conferem.')
+        if (!otpCode) return setError('Código de verificação ausente.')
 
         setFormLoading(true)
-        // Como o usuário não está logado, usamos uma RPC ou o supabase Auth admin
-        // Mas o Supabase padrão exige reset via link. Aqui simulamos o reset:
-        const { error: resetErr } = await supabase.auth.updateUser({ password: newPassword })
+        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+        
+        const result = await completePasswordReset(fullPhone, otpCode, newPassword)
 
-        if (resetErr) {
-            setError(resetErr.message)
-        } else {
-            // Limpa o flag também se necessário
-            await supabase.from('profiles').update({ force_password_change: false }).eq('id', resetUserId)
+        if (result.success) {
             toast.success('Senha redefinida com sucesso!')
             setLocalAuthMode('auth')
             setIsRegistering(false)
+            // Limpa estados de reset
+            setOtpCode('')
+            setResetEmail('')
+            setResetWhatsapp('')
+        } else {
+            setError(result.error || 'Erro ao redefinir senha.')
         }
         setFormLoading(false)
     }

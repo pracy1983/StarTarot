@@ -75,6 +75,7 @@ interface AuthState {
   updatePassword: (password: string) => Promise<{ success: boolean; error?: string }>
   requestPasswordReset: (email: string, phone: string) => Promise<{ success: boolean; error?: string }>
   verifyResetOtp: (phone: string, code: string) => Promise<{ success: boolean; userId?: string; error?: string }>
+  completePasswordReset: (phone: string, otpCode: string, password: string) => Promise<{ success: boolean; error?: string }>
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -193,6 +194,23 @@ export const useAuthStore = create<AuthState>((set) => ({
       if (!result.success) throw new Error(result.error)
 
       return { success: true, userId: result.user_id }
+    } catch (error: any) {
+      return { success: false, error: error.message }
+    }
+  },
+
+  completePasswordReset: async (phone: string, otpCode: string, password: string) => {
+    try {
+      const response = await fetch('/api/auth/complete-reset', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otpCode, newPassword: password })
+      })
+
+      const data = await response.json()
+      if (!response.ok) throw new Error(data.error || 'Erro ao redefinir senha')
+
+      return { success: true }
     } catch (error: any) {
       return { success: false, error: error.message }
     }
