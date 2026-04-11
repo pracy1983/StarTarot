@@ -1,8 +1,8 @@
 // Evolution API WhatsApp Integration Service
 
-const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || 'https://pracy-evolution-api.vrdrcy.easypanel.host'
-const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY || 'ED3E4B433C76-466E-828D-478208E824BC'
-const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || 'PracyAT2'
+const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL
+const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY
+const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE
 
 interface SendMessageParams {
     phone: string
@@ -20,9 +20,9 @@ export class EvolutionWhatsAppService {
     private instance: string
 
     constructor() {
-        this.baseUrl = EVOLUTION_API_URL
-        this.apiKey = EVOLUTION_API_KEY
-        this.instance = EVOLUTION_INSTANCE
+        this.baseUrl = EVOLUTION_API_URL || ''
+        this.apiKey = EVOLUTION_API_KEY || ''
+        this.instance = EVOLUTION_INSTANCE || ''
     }
 
     /**
@@ -30,6 +30,11 @@ export class EvolutionWhatsAppService {
      */
     async sendTextMessage({ phone, message }: SendMessageParams): Promise<WhatsAppResult> {
         try {
+            if (!this.baseUrl || !this.apiKey || !this.instance) {
+                console.error('WhatsApp Service not configured. Missing environment variables.')
+                return { success: false, error: 'Serviço de WhatsApp não configurado.' }
+            }
+
             const formattedPhone = this.formatPhone(phone)
 
             const response = await fetch(`${this.baseUrl}/message/sendText/${this.instance}`, {
