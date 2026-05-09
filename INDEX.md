@@ -11,5 +11,5 @@ Marketplace de consultas esotéricas (Tarot, Astrologia, Búzios) com oraculista
 
 ## 🚀 Links Úteis
 - **GitHub:** [pracy1983/StarTarot](https://github.com/pracy1983/StarTarot)
-- **Netlify:** [startarot.netlify.app](https://startarot.netlify.app/)
+- **Produção (VPS):** [startarot.com.br](https://startarot.com.br/)
 - **Supabase:** [Projeto zikogpmzbgvswwunjkqh](https://supabase.com/dashboard/project/zikogpmzbgvswwunjkqh)

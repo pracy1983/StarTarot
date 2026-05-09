@@ -131,8 +131,8 @@
 
 ### Integração Contínua
 - **Deploy**:
-  - Netlify para frontend
-  - Supabase para backend
+  - VPS (Ubuntu/Docker) para frontend e servidor
+  - Supabase para banco de dados e auth
   - Ambiente de staging
   - Testes automatizados
 

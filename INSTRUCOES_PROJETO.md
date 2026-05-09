@@ -123,5 +123,5 @@ O StarTarot é um portal de consulta de tarot assistido por IA, com interações
 ### 4. Deploy
 - Build de produção
 - Configurar variáveis ambiente
-- Deploy no Netlify
-- Monitorar logs
+- Deploy em VPS (Ubuntu + Docker/Node.js)
+- Monitorar logs via PM2/Docker
