@@ -61,7 +61,6 @@ export const AuthModal = () => {
     const [error, setError] = useState('')
     const [formLoading, setFormLoading] = useState(false)
     const [otpCode, setOtpCode] = useState('')
-    const [generatedOtp, setGeneratedOtp] = useState('')
     const [existingUser, setExistingUser] = useState<any>(null)
     const [upgradeMode, setUpgradeMode] = useState(false)
     const [rememberMe, setRememberMe] = useState(true)
@@ -94,8 +93,6 @@ export const AuthModal = () => {
         }
     }, [rememberMe])
 
-    const generateOtp = () => Math.floor(100000 + Math.random() * 900000).toString()
-
     const handleStartRegister = async (e: React.FormEvent) => {
         e.preventDefault()
         setError('')
@@ -115,11 +112,19 @@ export const AuthModal = () => {
             const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
 
             if (!isTestNumber) {
-                const { data: foundUser } = await supabase
+                // Duas queries separadas: o .or() com interpolação quebrava com
+                // emails contendo '+' ou vírgula (sintaxe do filtro PostgREST)
+                const { data: userByEmail } = await supabase
                     .from('profiles')
                     .select('id, email, phone, role, is_oracle')
-                    .or(`email.eq.${email.trim().toLowerCase()},phone.eq.${fullPhone}`)
+                    .eq('email', email.trim().toLowerCase())
                     .maybeSingle()
+
+                const foundUser = userByEmail || (await supabase
+                    .from('profiles')
+                    .select('id, email, phone, role, is_oracle')
+                    .eq('phone', fullPhone)
+                    .maybeSingle()).data
 
                 if (foundUser) {
                     setExistingUser(foundUser)
@@ -129,13 +134,12 @@ export const AuthModal = () => {
                 }
             }
 
-            const code = generateOtp()
-            setGeneratedOtp(code)
-
+            // O código agora é gerado e armazenado no servidor (não fica mais
+            // exposto no navegador e sobrevive a reload da página)
             const response = await fetch('/api/auth/send-verification', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ phone: fullPhone, code })
+                body: JSON.stringify({ phone: fullPhone })
             })
 
             const data = await response.json()
@@ -159,14 +163,25 @@ export const AuthModal = () => {
         setFormLoading(true)
 
         const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
-        if (!isTestNumber && otpCode !== generatedOtp) {
-            setError('Código inválido. Verifique o WhatsApp.')
-            setFormLoading(false)
-            return
-        }
 
         try {
             const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
+
+            // Validação server-side do código
+            if (!isTestNumber) {
+                const verifyResponse = await fetch('/api/auth/verify-phone', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone: fullPhone, code: otpCode })
+                })
+
+                if (!verifyResponse.ok) {
+                    const verifyData = await verifyResponse.json()
+                    setError(verifyData.error || 'Código inválido. Verifique o WhatsApp.')
+                    setFormLoading(false)
+                    return
+                }
+            }
 
             // Se já sabemos que é usuário existente, tentamos login direto
             if (upgradeMode || existingUser) {
@@ -219,18 +234,17 @@ export const AuthModal = () => {
     const performLogin = async (email: string, pass: string, phone: string) => {
         const loginResult = await login(email, pass)
         if (loginResult.success) {
-            // Atualiza role e telefone se necessário
-            const updates: any = { phone: phone } // Confirmamos o telefone via OTP
-
-            if (registrationRole === 'oracle') {
-                updates.is_oracle = true
-                updates.role = 'oracle' // Força role oracle se solicitado
-            }
-
+            // Confirmamos o telefone via OTP — atualiza apenas o telefone.
+            // NÃO forçamos role 'oracle' aqui: isso pulava o fluxo de aprovação
+            // (application_status) e permitia qualquer cliente virar oraculista.
             await supabase
                 .from('profiles')
-                .update(updates)
+                .update({ phone })
                 .eq('email', email.trim().toLowerCase())
+
+            if (registrationRole === 'oracle') {
+                toast('Para atender como oraculista, complete sua candidatura em "Tornar-se Oraculista".', { icon: '🔮', duration: 8000 })
+            }
 
             if (rememberMe) {
                 localStorage.setItem('remembered_email', email)
@@ -433,9 +447,15 @@ export const AuthModal = () => {
                             <div className="space-y-1.5">
                                 <label className="text-sm font-medium text-slate-400 ml-1">WhatsApp Cadastrado</label>
                                 <div className="flex gap-2">
-                                    <div className="bg-white/5 border border-white/10 rounded-xl px-3 py-3 text-white text-sm flex items-center justify-center">
-                                        🇧🇷 +55
-                                    </div>
+                                    <select
+                                        value={countryPrefix}
+                                        onChange={(e) => setCountryPrefix(e.target.value)}
+                                        className="bg-white/5 border border-white/10 rounded-xl px-2 py-3 text-white text-sm outline-none focus:border-neon-purple/50 transition-all cursor-pointer"
+                                    >
+                                        {countryCodes.map(c => (
+                                            <option key={c.code} value={c.code} className="bg-deep-space">{c.flag} {c.code}</option>
+                                        ))}
+                                    </select>
                                     <GlowInput
                                         type="tel"
                                         placeholder="(00) 00000-0000"

@@ -180,11 +180,11 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   verifyResetOtp: async (phone: string, code: string) => {
     try {
-      const cleanPhone = phone.replace(/\D/g, '')
-      const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
-
-      const { data, error } = await supabase.rpc('verify_password_reset_otp', {
-        p_phone: '+' + fullPhone,
+      // check_password_reset_otp valida SEM consumir o código — quem consome é
+      // o complete-reset no passo final. (Antes, usar verify aqui marcava o
+      // código como usado e o passo final falhava sempre.)
+      const { data, error } = await supabase.rpc('check_password_reset_otp', {
+        p_phone: phone.replace(/\D/g, ''),
         p_otp_code: code
       })
 
@@ -344,13 +344,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       }
 
       if (data.user) {
-        await new Promise(resolve => setTimeout(resolve, 2000));
-
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('id, role, application_status')
-          .eq('id', data.user.id)
-          .maybeSingle()
+        // Aguarda o trigger de criação do perfil com polling (até ~3s)
+        let profile: { id: string; role: string; application_status: string | null } | null = null
+        for (let attempt = 0; attempt < 6; attempt++) {
+          await new Promise(resolve => setTimeout(resolve, 500))
+          const { data: p } = await supabase
+            .from('profiles')
+            .select('id, role, application_status')
+            .eq('id', data.user.id)
+            .maybeSingle()
+          if (p) {
+            profile = p
+            break
+          }
+        }
 
         if (!profile) {
           const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile', {

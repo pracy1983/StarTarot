@@ -22,9 +22,9 @@ export async function POST(req: Request) {
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-        // 1. Limpa e formata o telefone
-        const cleanPhone = phone.replace(/\D/g, '')
-        const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
+        // 1. Limpa o telefone (a RPC aceita com/sem DDI; não forçamos '55' para
+        // não quebrar números internacionais como +351 ou +1)
+        const fullPhone = phone.replace(/\D/g, '')
 
         // 2. Gerar OTP
         const otp = Math.floor(100000 + Math.random() * 900000).toString()

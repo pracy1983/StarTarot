@@ -95,9 +95,16 @@ export class EvolutionWhatsAppService {
     }
 
     private formatPhone(phone: string): string {
+        const hasDdi = phone.trim().startsWith('+')
         const clean = phone.replace(/\D/g, '')
-        if (clean.length === 11 && clean.startsWith('1')) {
-            // Se for número BR sem DDI mas com DDD
+
+        // Com '+', o DDI já veio explícito — confiar nele.
+        // (A heurística antiga prefixava '55' em números de 11 dígitos começando
+        // com '1', o que quebrava números dos EUA/Canadá: +1 + 10 dígitos)
+        if (hasDdi) return clean
+
+        // Sem DDI: 10-11 dígitos é número BR local (DDD + 8/9 dígitos)
+        if (clean.length === 10 || clean.length === 11) {
             return '55' + clean
         }
         return clean

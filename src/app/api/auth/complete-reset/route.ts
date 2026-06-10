@@ -21,13 +21,14 @@ export async function POST(req: Request) {
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-        // 1. Limpa e formata o telefone (garante consistência com a RPC)
-        const cleanPhone = phone.replace(/\D/g, '')
-        const fullPhone = cleanPhone.startsWith('55') ? cleanPhone : '55' + cleanPhone
+        // 1. Limpa o telefone (a RPC é tolerante a formato; não forçamos '55'
+        // para não quebrar números internacionais)
+        const fullPhone = phone.replace(/\D/g, '')
 
-        // 2. Valida o OTP via RPC (Segunda validação no servidor para segurança)
+        // 2. Valida e CONSOME o OTP via RPC (única validação que consome —
+        // o passo intermediário da UI usa check_password_reset_otp, que não consome)
         const { data: verifyData, error: verifyError } = await supabaseAdmin.rpc('verify_password_reset_otp', {
-            p_phone: '+' + fullPhone,
+            p_phone: fullPhone,
             p_otp_code: otpCode
         })
 
