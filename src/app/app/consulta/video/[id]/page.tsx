@@ -68,6 +68,15 @@ export default function VideoConsultationPage() {
     const [localStartedAt, setLocalStartedAt] = useState<number | null>(null)
     const lastMinuteCharged = useRef(0)
 
+    // Refs espelhando estados usados dentro de closures de handlers do Agora/realtime,
+    // que capturam valores antigos se lerem o estado diretamente
+    const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null)
+    const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null)
+    const hasEstablishedConnectionRef = useRef(false)
+
+    // Status que indicam consulta encerrada no banco (a RPC finalize grava 'completed')
+    const ENDED_STATUSES = ['completed', 'finished', 'answered', 'finalized', 'ended', 'canceled', 'cancelled']
+
     const [showFeedback, setShowFeedback] = useState(false)
     const [stars, setStars] = useState(0)
     const [comment, setComment] = useState('')
@@ -88,23 +97,24 @@ export default function VideoConsultationPage() {
             }, (payload) => {
                 const newStatus = payload.new.status
                 setConsultation((prev: any) => ({ ...prev, ...payload.new }))
-                
-                // If consultation was finished, answered or canceled, end immediately
-                if (newStatus === 'finished' || newStatus === 'answered' || newStatus === 'canceled') {
+
+                // If consultation was ended on the other side, end immediately
+                if (ENDED_STATUSES.includes(newStatus)) {
                     if (disconnectTimerRef.current) {
                         clearTimeout(disconnectTimerRef.current)
                         disconnectTimerRef.current = null
                     }
-                    
+
                     // Force feedback/end state
-                    if (!showFeedback && !isFinalizingRef.current) {
+                    if (!isFinalizingRef.current) {
+                        isFinalizingRef.current = true
                         setShowFeedback(true)
                         setJoined(false)
-                        // Local tracks cleanup
-                        localAudioTrack?.stop()
-                        localAudioTrack?.close()
-                        localVideoTrack?.stop()
-                        localVideoTrack?.close()
+                        // Local tracks cleanup (via refs: o closure deste handler é antigo)
+                        localAudioTrackRef.current?.stop()
+                        localAudioTrackRef.current?.close()
+                        localVideoTrackRef.current?.stop()
+                        localVideoTrackRef.current?.close()
                         if (clientRef.current) clientRef.current.leave().catch(() => {})
                     }
                 }
@@ -116,7 +126,10 @@ export default function VideoConsultationPage() {
             supabase.removeChannel(channel)
             endCall()
         }
-    }, [id, localAudioTrack, localVideoTrack, showFeedback])
+        // Deps restritas a `id`: tracks/showFeedback aqui faziam o cleanup rodar (e finalizar
+        // a consulta no banco) toda vez que a câmera inicializava
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [id])
 
     // Duration sync and Billing Trigger
     useEffect(() => {
@@ -129,6 +142,7 @@ export default function VideoConsultationPage() {
             const seconds = Math.floor((now - effectiveStartedAt) / 1000)
             const currentDuration = Math.max(0, seconds)
             setDuration(currentDuration)
+            durationRef.current = currentDuration
 
             // Billing logic for CLIENT
             if (profile?.role === 'client' && hasEstablishedConnection) {
@@ -224,8 +238,11 @@ export default function VideoConsultationPage() {
             }
 
             // Stabilization: Now accepting BOTH audio or video to consider connection "established"
-            if (!stabilizationTimer.current && !hasEstablishedConnection) {
+            // (ref em vez de estado: o closure deste handler nunca vê atualizações do estado,
+            // o que fazia o timer ser resetado a cada re-publish de mídia)
+            if (!stabilizationTimer.current && !hasEstablishedConnectionRef.current) {
                 stabilizationTimer.current = setTimeout(async () => {
+                    hasEstablishedConnectionRef.current = true
                     setHasEstablishedConnection(true)
                     const startTime = Date.now()
                     setLocalStartedAt(startTime)
@@ -307,6 +324,8 @@ export default function VideoConsultationPage() {
 
             setLocalAudioTrack(audioTrack)
             setLocalVideoTrack(videoTrack)
+            localAudioTrackRef.current = audioTrack
+            localVideoTrackRef.current = videoTrack
 
             // Get available cameras
             const devices = await AgoraRTC.getCameras()
@@ -374,9 +393,11 @@ export default function VideoConsultationPage() {
                 const AgoraRTC = (await import('agora-rtc-sdk-ng')).default
                 if (!audioT) audioT = await AgoraRTC.createMicrophoneAudioTrack()
                 if (!videoT) videoT = await AgoraRTC.createCameraVideoTrack()
-                
+
                 setLocalAudioTrack(audioT)
                 setLocalVideoTrack(videoT)
+                localAudioTrackRef.current = audioT
+                localVideoTrackRef.current = videoT
             }
 
             // 4. Publish Tracks
@@ -384,7 +405,7 @@ export default function VideoConsultationPage() {
 
             setJoined(true)
 
-            // Inicia timer de timeout de conexão (se em 3 minutos o oraculista não entrar, cancela sem taxa)
+            // Inicia timer de timeout de conexão (se em 2 minutos o oraculista não entrar, cancela sem taxa)
             if (!connectionTimeoutRef.current) {
                 connectionTimeoutRef.current = setTimeout(() => {
                     const hasAnyoneJoined = (clientRef.current?.remoteUsers?.length || 0) > 0;
@@ -479,8 +500,10 @@ export default function VideoConsultationPage() {
         try {
             // Se skipCharge for true e duração for muito pequena, podemos tratar como cancelamento no banco se necessário
             // Por enquanto vamos apenas finalizar com duração 0 se não estabilizou
-            const finalDuration = hasEstablishedConnection ? Math.floor(duration) : 0
-            
+            // (refs: esta função é chamada de closures antigos de handlers do Agora,
+            // onde os estados `duration`/`hasEstablishedConnection` estariam desatualizados)
+            const finalDuration = hasEstablishedConnectionRef.current ? Math.floor(durationRef.current) : 0
+
             await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: id,
                 p_duration_seconds: finalDuration,
@@ -490,10 +513,10 @@ export default function VideoConsultationPage() {
             console.error('Error finalizing call:', err)
         }
 
-        localAudioTrack?.stop()
-        localAudioTrack?.close()
-        localVideoTrack?.stop()
-        localVideoTrack?.close()
+        localAudioTrackRef.current?.stop()
+        localAudioTrackRef.current?.close()
+        localVideoTrackRef.current?.stop()
+        localVideoTrackRef.current?.close()
 
         if (clientRef.current) {
             await clientRef.current.leave().catch(() => { })
@@ -501,7 +524,7 @@ export default function VideoConsultationPage() {
 
         setJoined(false)
 
-        if (duration >= 300) {
+        if (durationRef.current >= 300) {
             setShowFeedback(true)
         } else {
             toast.success(endedBy === 'client' ? 'Você encerrou a chamada.' : 'O oraculista encerrou a chamada.')

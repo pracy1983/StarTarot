@@ -67,6 +67,17 @@ export default function ServiceRoomPage() {
     const [now, setNow] = useState(Date.now())
     const [duration, setDuration] = useState(0)
 
+    // Refs espelhando estados lidos dentro de closures (handlers do Agora, beforeunload,
+    // cleanup de effects), que capturam valores antigos se lerem o estado diretamente
+    const durationRef = useRef(0)
+    const joinedRef = useRef(false)
+    const hasEstablishedConnectionRef = useRef(false)
+    const localAudioTrackRef = useRef<IMicrophoneAudioTrack | null>(null)
+    const localVideoTrackRef = useRef<ICameraVideoTrack | null>(null)
+
+    // Status que indicam consulta encerrada no banco (a RPC finalize grava 'completed')
+    const ENDED_STATUSES = ['completed', 'finished', 'answered', 'finalized', 'ended', 'canceled', 'cancelled']
+
     // Camera Switch state
     const [cameras, setCameras] = React.useState<MediaDeviceInfo[]>([])
     const [currentCameraId, setCurrentCameraId] = React.useState<string>('')
@@ -103,6 +114,7 @@ export default function ServiceRoomPage() {
         if (consultation?.started_at && consultation.status === 'active') {
             const seconds = Math.floor((now - new Date(consultation.started_at).getTime()) / 1000)
             setDuration(Math.max(0, seconds))
+            durationRef.current = Math.max(0, seconds)
         } else if (consultation?.duration_seconds) {
             // Keep showing final duration if finished
             setDuration(consultation.duration_seconds)
@@ -137,7 +149,7 @@ export default function ServiceRoomPage() {
                     // Update local consultation state to keep timer in sync
                     setConsultation((prev: any) => ({ ...prev, ...payload.new }))
 
-                    if (newStatus === 'completed' || newStatus === 'ended' || newStatus === 'cancelled') {
+                    if (ENDED_STATUSES.includes(newStatus)) {
                         if (!isEndedRef.current) {
                             isEndedRef.current = true;
                             toast('A consulta foi encerrada.', { icon: 'ℹ️' })
@@ -158,7 +170,7 @@ export default function ServiceRoomPage() {
         fetchQueueCount()
 
         const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-            if (joined) {
+            if (joinedRef.current) {
                 e.preventDefault()
                 e.returnValue = ''
             }
@@ -279,8 +291,10 @@ export default function ServiceRoomPage() {
                 }
 
                 // Stabilization: Now accepting BOTH audio or video to consider connection "established"
-                if (!stabilizationTimer.current && !hasEstablishedConnection) {
+                // (ref em vez de estado: o closure deste handler nunca vê atualizações do estado)
+                if (!stabilizationTimer.current && !hasEstablishedConnectionRef.current) {
                     stabilizationTimer.current = setTimeout(async () => {
+                        hasEstablishedConnectionRef.current = true
                         setHasEstablishedConnection(true)
                         
                         // Try to set active if client hasn't yet, and use result to update local state immediately
@@ -355,11 +369,14 @@ export default function ServiceRoomPage() {
 
             setLocalAudioTrack(audioTrack)
             setLocalVideoTrack(videoTrack)
+            localAudioTrackRef.current = audioTrack
+            localVideoTrackRef.current = videoTrack
             setCurrentCameraId(videoTrack.getMediaStreamTrack().getSettings().deviceId || '')
 
             await client.publish([audioTrack, videoTrack])
 
             setJoined(true)
+            joinedRef.current = true
             if (localPlayerRef.current) {
                 videoTrack.play(localPlayerRef.current, { fit: 'cover' })
             }
@@ -402,10 +419,14 @@ export default function ServiceRoomPage() {
     const leaveCall = async () => {
         if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
 
-        localAudioTrack?.stop()
-        localAudioTrack?.close()
-        localVideoTrack?.stop()
-        localVideoTrack?.close()
+        // Refs: quando chamado do cleanup do effect (unmount), o closure tem os
+        // estados antigos (null) e a câmera ficava ligada após sair da sala
+        localAudioTrackRef.current?.stop()
+        localAudioTrackRef.current?.close()
+        localVideoTrackRef.current?.stop()
+        localVideoTrackRef.current?.close()
+        localAudioTrackRef.current = null
+        localVideoTrackRef.current = null
 
         setLocalAudioTrack(null)
         setLocalVideoTrack(null)
@@ -415,6 +436,7 @@ export default function ServiceRoomPage() {
             clientRef.current = null
         }
         setJoined(false)
+        joinedRef.current = false
         setRemoteUsers([])
     }
 
@@ -450,14 +472,18 @@ export default function ServiceRoomPage() {
     }
 
     const autoFinalizeCall = async (endedBy: 'client' | 'oracle') => {
-        if (!consultationId || isFinalizing) return
+        if (!consultationId || isFinalizing || isEndedRef.current) return
         setIsFinalizing(true)
         isEndedRef.current = true;
 
         try {
+            // durationRef: esta função é chamada de closures antigos (timeout do
+            // handler user-left), onde o estado `duration` estaria desatualizado
+            const finalDuration = Math.floor(durationRef.current)
+
             const { data: result, error } = await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: consultationId,
-                p_duration_seconds: Math.floor(duration),
+                p_duration_seconds: finalDuration,
                 p_end_reason: endedBy === 'oracle' ? 'oracle_ended' : 'client_left'
             })
 
@@ -466,7 +492,7 @@ export default function ServiceRoomPage() {
             const earnings = (result as any)?.[0]?.oracle_earnings || 0
 
             setSummaryData({
-                duration: duration,
+                duration: finalDuration,
                 credits: Math.round(earnings)
             })
 
