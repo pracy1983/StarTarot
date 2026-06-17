@@ -1,8 +1,8 @@
 // Evolution API WhatsApp Integration Service
 
-const EVOLUTION_API_URL = process.env.NEXT_PUBLIC_EVOLUTION_API_URL || process.env.EVOLUTION_API_URL
-const EVOLUTION_API_KEY = process.env.NEXT_PUBLIC_EVOLUTION_API_KEY || process.env.EVOLUTION_API_KEY
-const EVOLUTION_INSTANCE = process.env.NEXT_PUBLIC_EVOLUTION_INSTANCE || process.env.EVOLUTION_INSTANCE
+const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
+const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY
+const EVOLUTION_INSTANCE = process.env.EVOLUTION_INSTANCE
 
 interface SendMessageParams {
     phone: string
@@ -36,6 +36,10 @@ export class EvolutionWhatsAppService {
             }
 
             const formattedPhone = this.formatPhone(phone)
+            console.log('Sending WhatsApp message:', {
+                instance: this.instance,
+                phone: this.maskPhone(formattedPhone)
+            })
 
             const response = await fetch(`${this.baseUrl}/message/sendText/${this.instance}`, {
                 method: 'POST',
@@ -108,6 +112,11 @@ export class EvolutionWhatsAppService {
             return '55' + clean
         }
         return clean
+    }
+
+    private maskPhone(phone: string): string {
+        if (phone.length <= 4) return '****'
+        return `${phone.slice(0, 4)}****${phone.slice(-4)}`
     }
 
     async getConnectionState(): Promise<string> {

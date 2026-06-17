@@ -2,6 +2,19 @@ import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { whatsappService } from '@/lib/whatsapp'
 
+function maskPhone(phone?: string | null) {
+    const digits = (phone || '').replace(/\D/g, '')
+    if (digits.length <= 4) return '****'
+    return `${digits.slice(0, 4)}****${digits.slice(-4)}`
+}
+
+function maskEmail(value?: string | null) {
+    const email = (value || '').trim().toLowerCase()
+    const [name, domain] = email.split('@')
+    if (!name || !domain) return '****'
+    return `${name.slice(0, 2)}****@${domain}`
+}
+
 export async function POST(req: Request) {
     try {
         const { email, phone } = await req.json()
@@ -49,6 +62,13 @@ export async function POST(req: Request) {
                 error: result?.error || 'Dados não conferem. Verifique seu e-mail e telefone.' 
             }, { status: 404 })
         }
+
+        console.log('Password reset OTP requested:', {
+            email: maskEmail(email),
+            inputPhone: maskPhone(fullPhone),
+            profilePhone: maskPhone(result.user_phone),
+            userId: result.user_id
+        })
 
         // 4. Envia via WhatsApp
         const resultWA = await whatsappService.sendTextMessage({
