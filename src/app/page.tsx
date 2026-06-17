@@ -8,7 +8,6 @@ import { NeonButton } from '@/components/ui/NeonButton'
 import { GlowInput } from '@/components/ui/GlowInput'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Mail, Lock, Sparkles, User, ArrowLeft, Phone, ShieldCheck, Search, Moon, Sun, Star, LogIn, LayoutDashboard, ChevronDown, Check, X, Clock, MessageSquare, Video, Smartphone } from 'lucide-react'
-import { whatsappService } from '@/lib/whatsapp'
 import { supabase } from '@/lib/supabase'
 import toast from 'react-hot-toast'
 import { OracleCard } from '@/components/client/OracleCard'
@@ -523,4 +522,3 @@ export default function LandingPage() {
     </div >
   )
 }
-

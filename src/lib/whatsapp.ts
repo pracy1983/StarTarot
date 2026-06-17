@@ -1,4 +1,5 @@
 // Evolution API WhatsApp Integration Service
+import 'server-only'
 
 const EVOLUTION_API_URL = process.env.EVOLUTION_API_URL
 const EVOLUTION_API_KEY = process.env.EVOLUTION_API_KEY
