@@ -664,7 +664,16 @@ export default function AdminOraculistasPage() {
                         <p className="text-slate-500 animate-pulse uppercase tracking-widest text-xs font-bold">Conectando ao Templo...</p>
                     </div>
                 ) : (
-                    <table className="w-full text-left border-collapse">
+                    <div className="w-full overflow-x-auto">
+                    <table className="w-full min-w-[1180px] table-fixed text-left border-collapse">
+                        <colgroup>
+                            <col className="w-[24%]" />
+                            <col className="w-[9%]" />
+                            <col className="w-[13%]" />
+                            <col className="w-[18%]" />
+                            <col className="w-[12%]" />
+                            <col className="w-[24%]" />
+                        </colgroup>
                         <thead className="bg-white/5 border-b border-white/10">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
@@ -762,12 +771,12 @@ export default function AdminOraculistasPage() {
                                             )
                                         })()}
                                     </td>
-                                    <td className="px-6 py-4 text-right">
-                                        <div className="flex items-center justify-end gap-2">
+                                    <td className="px-4 py-4 text-right align-top">
+                                        <div className="grid grid-cols-3 gap-1.5 min-w-[300px]">
                                             {/* Common Action: View Profile */}
                                             <Link
                                                 href={`/app/oraculo/${o.id}`}
-                                                className="flex items-center space-x-1 px-2 py-1.5 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
+                                                className="flex items-center justify-center gap-1 px-2 py-1.5 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
                                                 title="Visualizar Perfil Público"
                                             >
                                                 <Eye size={14} />
@@ -776,7 +785,7 @@ export default function AdminOraculistasPage() {
 
                                             <button
                                                 onClick={() => fetchOracleReviews(o.id, o.full_name)}
-                                                className="flex items-center space-x-1 px-2 py-1.5 text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
+                                                className="flex items-center justify-center gap-1 px-2 py-1.5 text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
                                                 title="Gerenciar Avaliações"
                                             >
                                                 <MessageSquare size={14} />
@@ -790,7 +799,7 @@ export default function AdminOraculistasPage() {
                                                     {o.rejection_reason && (
                                                         <button
                                                             onClick={() => handleViewChanges(o.id)}
-                                                            className="flex items-center space-x-1 px-2 py-1.5 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
+                                                            className="flex items-center justify-center gap-1 px-2 py-1.5 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
                                                             title="Ver Alterações Recentes"
                                                         >
                                                             <RefreshCw size={14} className={loadingSnapshot ? 'animate-spin' : ''} />
@@ -800,7 +809,7 @@ export default function AdminOraculistasPage() {
 
                                                     <button
                                                         onClick={() => handleStatusChange(o.id, 'approved')}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
                                                         title="Aprovar Cadastro"
                                                     >
                                                         <Check size={14} />
@@ -808,7 +817,7 @@ export default function AdminOraculistasPage() {
                                                     </button>
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
                                                         title="Pausar e Solicitar Correções"
                                                     >
                                                         <X size={14} />
@@ -817,7 +826,7 @@ export default function AdminOraculistasPage() {
                                                     <button
                                                         onClick={() => handleDeletePendingUser(o.id, o.full_name)}
                                                         disabled={isDeletingPending === o.id}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
                                                         title="Deletar cadastro permanentemente"
                                                     >
                                                         {isDeletingPending === o.id ? (
@@ -832,7 +841,7 @@ export default function AdminOraculistasPage() {
                                                 <>
                                                     <Link
                                                         href={`/admin/oraculistas/editar/${o.id}?tab=${activeTab}`}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
                                                         title="Editar dados e prompts"
                                                     >
                                                         <Edit2 size={14} />
@@ -841,7 +850,7 @@ export default function AdminOraculistasPage() {
 
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex items-center space-x-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
                                                         title="Pausar e Solicitar Correções"
                                                     >
                                                         <Ban size={14} />
@@ -850,10 +859,11 @@ export default function AdminOraculistasPage() {
 
                                                     <button
                                                         onClick={() => handleDelete(o.id, o.full_name)}
-                                                        className="p-1.5 text-slate-500 hover:text-red-500 hover:bg-red-500/10 rounded-lg transition-all"
+                                                        className="flex items-center justify-center gap-1 px-2 py-1.5 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30"
                                                         title="Remover permanentemente"
                                                     >
-                                                        <Trash2 size={16} />
+                                                        <Trash2 size={14} />
+                                                        <span className="text-[10px] font-bold uppercase">Deletar</span>
                                                     </button>
                                                 </>
                                             )}
@@ -863,6 +873,7 @@ export default function AdminOraculistasPage() {
                             ))}
                         </tbody>
                     </table>
+                    </div>
                 )}
             </GlassCard>
 

@@ -15,6 +15,7 @@ export default function AdminMembrosPage() {
     const [searchTerm, setSearchTerm] = useState('')
     const [editingMember, setEditingMember] = useState<any>(null)
     const [saving, setSaving] = useState(false)
+    const [deleting, setDeleting] = useState(false)
 
     useEffect(() => {
         fetchMembers()
@@ -81,6 +82,32 @@ export default function AdminMembrosPage() {
             toast.error('Erro ao salvar: ' + err.message)
         } finally {
             setSaving(false)
+        }
+    }
+
+    const handleDeleteMember = async () => {
+        if (!editingMember) return
+
+        const name = editingMember.full_name || editingMember.email || 'este usuário'
+        if (!confirm(`Excluir PERMANENTEMENTE o perfil de ${name}? Esta ação também remove o acesso da pessoa e não pode ser desfeita.`)) return
+
+        setDeleting(true)
+        try {
+            const response = await fetch('/api/admin/delete-user', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: editingMember.id })
+            })
+            const data = await response.json()
+            if (!response.ok) throw new Error(data.error || 'Erro ao excluir perfil')
+
+            setMembers(current => current.filter(member => member.id !== editingMember.id))
+            setEditingMember(null)
+            toast.success('Perfil excluído permanentemente')
+        } catch (err: any) {
+            toast.error('Erro ao excluir: ' + err.message)
+        } finally {
+            setDeleting(false)
         }
     }
 
@@ -275,14 +302,24 @@ export default function AdminMembrosPage() {
                                         />
                                     </div>
 
-                                    <div className="pt-4 flex gap-4">
-                                        <NeonButton variant="purple" fullWidth type="submit" loading={saving}>
+                                    <div className="pt-4 flex flex-col-reverse sm:flex-row gap-4">
+                                        <button
+                                            type="button"
+                                            onClick={handleDeleteMember}
+                                            disabled={deleting || saving}
+                                            className="flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                            <Trash2 size={18} />
+                                            {deleting ? 'Excluindo...' : 'Excluir Perfil'}
+                                        </button>
+                                        <NeonButton variant="purple" type="submit" loading={saving} disabled={deleting}>
                                             Salvar Alterações
                                         </NeonButton>
                                         <button
                                             type="button"
                                             onClick={() => setEditingMember(null)}
-                                            className="flex-1 px-6 py-3 rounded-xl border border-white/10 text-slate-400 hover:text-white transition-all font-bold"
+                                            disabled={deleting || saving}
+                                            className="px-6 py-3 rounded-lg border border-white/10 text-slate-400 hover:text-white transition-all font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                         >
                                             Cancelar
                                         </button>
