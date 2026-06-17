@@ -15,19 +15,21 @@
 ### Phase 1: Foundation
 - [x] Criar INDEX.md, PLAN.md, TASKS.md, GLOBAL_RULES.md, WORKFLOW.md
 - [x] Criar `.env.local`
-- [x] Limpar repo (deletar modules antigos, firebase, dashboard antiga)
+- [x] Limpar repo (deletar modules antigos, firebase, netlify, dashboard antiga)
 - [x] Configurar Design System em `tailwind.config.js` e `globals.css`
 - [x] Criar componentes UI base: `GlassCard`, `NeonButton`, `GlowInput`
 
 ### Phase 2: Database Schema
 - [x] Criar SQL Migration inicial
 - [x] Configurar RLS e Triggers
-- [ ] Rodar SQL no dashboard do Supabase (Ação manual do usuário)
+- [x] Rodar SQL no dashboard do Supabase / VPS (Concluído no PostgreSQL interno)
 
 ### Phase 3: Auth & RBAC
 - [x] Refatorar AuthStore para novo schema (profiles/roles)
 - [x] Redesign da página de Login (Ethereal Neon)
 - [x] Criar Middleware de proteção de rotas
+- [x] Bugfix: Corrigir chaves truncadas do Supabase nas variáveis de ambiente (.env.local e orientação no Easypanel)
+
 
 ### Phase 4: Owner Panel (Prioridade Máxima)
 - [x] Dashboard do Owner (Overview com métricas)

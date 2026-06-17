@@ -1,13 +1,14 @@
 # 🔮 Star Tarot - Planejamento (MVP)
 
 ## 🎯 Objetivo
-Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando clientes a oraculistas reais e digitais de forma indistinguível para o cliente.
+Construir um marketplace místico de luxo ("Ethereal Neon") conectando clientes a oraculistas reais e digitais de forma indistinguível para o cliente. Migração em curso de Netlify para VPS (Easypanel).
 
 ## 🏗️ Arquitetura
 - **Frontend:** Next.js 14, React, Tailwind CSS, Framer Motion.
-- **Backend:** Supabase (Auth, DB, Realtime, Edge Functions).
+- **Backend:** PostgreSQL (Interno VPS), Supabase (Auth/Realtime - Migrando para Interno).
 - **IA:** DeepSeek API.
 - **Pagamentos:** Asaas Sandbox.
+- **Infraestrutura:** VPS com Easypanel (Banco de dados interno).
 
 ## 🎨 Design System: Ethereal Neon
 - **Fundo:** Deep Space (`#0a0a1a`).
@@ -21,24 +22,28 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 - **Consultas com IA:** 1-5 perguntas ou vídeo.
 - **Consultas Humans:** Vídeo (tempo real) ou Inbox (texto).
 
+## 🚀 Plano de Migração VPS
+1. **Ambiente:** Configurar variáveis extraídas do Netlify no Easypanel.
+2. **Build:** Ajustar comandos para Nixpacks (`npm install && npm run build`).
+3. **Domínio:** Apontar DNS e configurar SSL no Easypanel.
+4. **Limpeza:** Remover dependências do Netlify do projeto. (Concluído)
+
 ## ✅ Implementações Recentes
-- **Correção de Registro de Oraculista** (RPC `update_oracle_application`).
-- **Sistema de Status Online** (Correção de `last_heartbeat_at`).
-- **Fluxo de Consulta Melhorado:**
-    - Uso de Nome Completo do Perfil.
-    - Status "Aguardando Resposta" claro.
-    - **Cancelamento e Reembolso Automático:**
-        - Cliente pode cancelar consultas pendentes.
-        - Créditos estornados automaticamente.
-        - Oraculista vê "Mensagem Perdida".
-        - Botões de "Reenviar" ou "Buscar Outro".
-    - **Timeout de 24h** (Job `check_consultation_timeouts`).
-- **UI/UX Refinada:**
-    - Filtros de especialidade unificados (Dropdown/Search).
-    - Botões de favoritos com interação `hover-expand` e cores temáticas.
-    - Middleware atualizado para proteção de rotas e acesso público a perfis.
+- **Clonagem do Repositório** para o workspace local.
+- **Extração de Variáveis** do Netlify (Supabase, Evolution, Asaas, Agora, DeepSeek).
+- **Mapeamento de chaves ausentes** (Firebase, OpenAI, Pinecone).
+- **Limpeza de dependências** (Removido Netlify e Firebase).
 
 ## 🛠️ Próximas Implementações (Bugfixes & UX)
+- [x] **Migração Final VPS:** (Concluído)
+    - [x] Configurar chaves no Easypanel.
+    - [x] Validar primeiro deploy.
+- [x] **Migração Banco de Dados Interno:**
+    - [x] Criar serviço PostgreSQL no Easypanel. (Concluído)
+    - [x] Criar SQL Migration inicial. (Concluído)
+    - [x] Configurar RLS e Triggers. (Concluído)
+    - [x] Migrar Schema para o banco interno. (Concluído - Unified SQL rodado no container DB)
+    - [x] Atualizar conexão no App. (Concluído - Variáveis de ambiente configuradas no startarot-web)
 - [ ] **Verificação de Hardware Pré-Consulta (Oráculo):**
     - Implementar check de câmera/microfone antes de aceitar chamada.
     - Exibir estados de "Processando" e "Erro de Hardware" (ex: Câmera em uso).
@@ -46,3 +51,11 @@ Construir um marketplace místico místico de luxo ("Ethereal Neon") conectando 
 - [ ] **Otimização de UI de Aceite:**
     - Feedback visual de processamento ao clicar em aceitar.
     - Fechamento imediato do modal e transição fluida para a sala.
+
+## 🔐 Correções de Autenticação / Configuração (Recente)
+- [x] **Correção de Autenticação (Chaves Truncadas):**
+    - Detectado que as chaves `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY` estavam truncadas no serviço `startarot-web` do Easypanel.
+    - Criado arquivo `.env.local` na raiz com as chaves corretas e completas retiradas do container do Supabase.
+    - Orientado o ajuste das mesmas variáveis no painel administrativo do Easypanel.
+
+
