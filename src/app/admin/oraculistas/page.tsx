@@ -776,20 +776,20 @@ export default function AdminOraculistasPage() {
                                             {/* Common Action: View Profile */}
                                             <Link
                                                 href={`/app/oraculo/${o.id}`}
-                                                className="flex h-9 w-9 items-center justify-center text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
+                                                className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
                                                 title="Visualizar Perfil Público"
                                             >
                                                 <Eye size={14} />
-                                                <span className="sr-only">Ver perfil</span>
+                                                <span className="text-[9px] font-bold uppercase leading-none">Perfil</span>
                                             </Link>
 
                                             <button
                                                 onClick={() => fetchOracleReviews(o.id, o.full_name)}
-                                                className="flex h-9 w-9 items-center justify-center text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
+                                                className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
                                                 title="Gerenciar Avaliações"
                                             >
                                                 <MessageSquare size={14} />
-                                                <span className="sr-only">Avaliações</span>
+                                                <span className="text-[9px] font-bold uppercase leading-none">Avaliações</span>
                                             </button>
 
                                             {/* Tab Specific Actions */}
@@ -799,34 +799,34 @@ export default function AdminOraculistasPage() {
                                                     {o.rejection_reason && (
                                                         <button
                                                             onClick={() => handleViewChanges(o.id)}
-                                                            className="flex h-9 w-9 items-center justify-center text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
+                                                            className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
                                                             title="Ver Alterações Recentes"
                                                         >
                                                             <RefreshCw size={14} className={loadingSnapshot ? 'animate-spin' : ''} />
-                                                            <span className="sr-only">Ver alterações</span>
+                                                            <span className="text-[9px] font-bold uppercase leading-none">Alterações</span>
                                                         </button>
                                                     )}
 
                                                     <button
                                                         onClick={() => handleStatusChange(o.id, 'approved')}
-                                                        className="flex h-9 w-9 items-center justify-center text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
                                                         title="Aprovar Cadastro"
                                                     >
                                                         <Check size={14} />
-                                                        <span className="sr-only">Aprovar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Aprovar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex h-9 w-9 items-center justify-center text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
                                                         title="Pausar e Solicitar Correções"
                                                     >
                                                         <X size={14} />
-                                                        <span className="sr-only">Pausar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Pausar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeletePendingUser(o.id, o.full_name)}
                                                         disabled={isDeletingPending === o.id}
-                                                        className="flex h-9 w-9 items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
                                                         title="Deletar cadastro permanentemente"
                                                     >
                                                         {isDeletingPending === o.id ? (
@@ -834,36 +834,36 @@ export default function AdminOraculistasPage() {
                                                         ) : (
                                                             <Trash2 size={14} />
                                                         )}
-                                                        <span className="sr-only">Deletar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Excluir</span>
                                                     </button>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Link
                                                         href={`/admin/oraculistas/editar/${o.id}?tab=${activeTab}`}
-                                                        className="flex h-9 w-9 items-center justify-center text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
                                                         title="Editar dados e prompts"
                                                     >
                                                         <Edit2 size={14} />
-                                                        <span className="sr-only">Editar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Editar</span>
                                                     </Link>
 
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex h-9 w-9 items-center justify-center text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
                                                         title="Pausar e Solicitar Correções"
                                                     >
                                                         <Ban size={14} />
-                                                        <span className="sr-only">Pausar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Pausar</span>
                                                     </button>
 
                                                     <button
                                                         onClick={() => handleDelete(o.id, o.full_name)}
-                                                        className="flex h-9 w-9 items-center justify-center text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30"
+                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30"
                                                         title="Remover permanentemente"
                                                     >
                                                         <Trash2 size={14} />
-                                                        <span className="sr-only">Deletar</span>
+                                                        <span className="text-[9px] font-bold uppercase leading-none">Excluir</span>
                                                     </button>
                                                 </>
                                             )}
