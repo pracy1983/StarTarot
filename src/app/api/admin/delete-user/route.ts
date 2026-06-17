@@ -3,6 +3,11 @@ import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { supabaseAdmin } from '@/lib/supabaseAdmin'
 
+const ownerEmails = (process.env.OWNER_EMAILS || 'paularacy@gmail.com')
+    .split(',')
+    .map(email => email.trim().toLowerCase())
+    .filter(Boolean)
+
 export async function POST(req: Request) {
     const supabase = createRouteHandlerClient({ cookies })
 
@@ -26,7 +31,15 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Não foi possível validar o acesso administrativo' }, { status: 500 })
         }
 
-        if (callerProfile?.role !== 'owner') {
+        const isOwnerProfile = callerProfile?.role === 'owner'
+        const isOwnerEmail = !!user.email && ownerEmails.includes(user.email.toLowerCase())
+
+        if (!isOwnerProfile && !isOwnerEmail) {
+            console.warn('Delete-user access denied', {
+                callerId: user.id,
+                callerRole: callerProfile?.role,
+                callerEmail: user.email
+            })
             return NextResponse.json({ error: 'Acesso negado: apenas owners podem deletar usuários' }, { status: 403 })
         }
 

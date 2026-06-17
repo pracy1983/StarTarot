@@ -50,18 +50,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }
             fetchPending()
 
-            // Realtime updates for pending count
-            const channel = supabase
-                .channel('admin_pending_count')
-                .on(
-                    'postgres_changes',
-                    { event: '*', schema: 'public', table: 'profiles' },
-                    () => fetchPending()
-                )
-                .subscribe()
+            // Keep the counter fresh even when Realtime is unavailable on the VPS.
+            const pendingInterval = window.setInterval(fetchPending, 30000)
 
             return () => {
-                supabase.removeChannel(channel)
+                window.clearInterval(pendingInterval)
             }
         }
     }, [profile?.id])
@@ -160,7 +153,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </aside>
 
             {/* Main Content Area */}
-            <main className="flex-1 overflow-y-auto relative z-10 w-full">
+            <main className="relative z-10 min-w-0 w-full flex-1 overflow-y-auto">
                 {/* Header Superior */}
                 <header className="h-16 border-b border-white/5 px-4 md:px-8 flex items-center justify-between glass sticky top-0 z-30">
                     <div className="flex items-center gap-4">

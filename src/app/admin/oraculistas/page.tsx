@@ -388,22 +388,22 @@ export default function AdminOraculistasPage() {
     const pendingCount = oraculistas.filter(o => o.has_unseen_changes === true).length
 
     return (
-        <div className="p-8 space-y-8">
-            <div className="flex justify-between items-center">
+        <div className="p-4 md:p-6 2xl:p-8 space-y-6 2xl:space-y-8">
+            <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
                 <div>
                     <h1 className="text-3xl font-bold text-white mb-2">Gestão de <span className="neon-text-purple">Oraculistas</span></h1>
                     <p className="text-slate-400">Adicione, edite ou gerencie os guias do seu marketplace.</p>
                 </div>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-2 gap-3 sm:flex">
                     <button
                         onClick={() => setIsManagingSpecialties(true)}
-                        className="flex items-center px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-bold hover:bg-white/10 transition-all"
+                        className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white font-bold hover:bg-white/10 transition-all"
                     >
                         <Tag size={20} className="mr-2 text-neon-gold" /> Categorias
                     </button>
                     <button
                         onClick={() => router.push(`/admin/oraculistas/novo?tab=${activeTab}`)}
-                        className="flex items-center px-6 py-2.5 bg-neon-purple rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] text-white font-bold hover:scale-105 transition-all"
+                        className="flex items-center justify-center px-4 sm:px-6 py-2.5 bg-neon-purple rounded-xl shadow-[0_0_20px_rgba(168,85,247,0.4)] text-white font-bold hover:scale-105 transition-all"
                     >
                         <Plus size={20} className="mr-2" /> Novo Oraculista
                     </button>
@@ -616,25 +616,25 @@ export default function AdminOraculistasPage() {
                 )}
             </AnimatePresence>
 
-            <div className="flex flex-col md:flex-row gap-4 mb-6 items-center">
-                <div className="flex bg-white/5 p-1 rounded-xl border border-white/10 mr-4 shrink-0">
+            <div className="flex flex-col lg:flex-row gap-4 mb-6 lg:items-center">
+                <div className="flex w-full overflow-x-auto bg-white/5 p-1 rounded-xl border border-white/10 lg:mr-4 lg:w-auto lg:shrink-0">
                     <button
                         onClick={() => handleTabChange('human')}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center ${activeTab === 'human' ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'text-slate-500 hover:text-white'}`}
+                        className={`flex-1 px-4 sm:px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center whitespace-nowrap ${activeTab === 'human' ? 'bg-neon-purple text-white shadow-lg shadow-neon-purple/20' : 'text-slate-500 hover:text-white'}`}
                     >
                         <User size={16} className="mr-2" />
                         Humanos
                     </button>
                     <button
                         onClick={() => handleTabChange('ai')}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center ${activeTab === 'ai' ? 'bg-neon-cyan text-deep-space shadow-lg shadow-neon-cyan/20' : 'text-slate-500 hover:text-white'}`}
+                        className={`flex-1 px-4 sm:px-5 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center whitespace-nowrap ${activeTab === 'ai' ? 'bg-neon-cyan text-deep-space shadow-lg shadow-neon-cyan/20' : 'text-slate-500 hover:text-white'}`}
                     >
                         <Brain size={16} className="mr-2" />
                         IAs
                     </button>
                     <button
                         onClick={() => handleTabChange('pending')}
-                        className={`px-5 py-2 rounded-lg text-sm font-bold transition-all relative flex items-center ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space shadow-lg shadow-neon-gold/20' : 'text-slate-500 hover:text-white'}`}
+                        className={`flex-1 px-4 sm:px-5 py-2 rounded-lg text-sm font-bold transition-all relative flex items-center justify-center whitespace-nowrap ${activeTab === 'pending' ? 'bg-neon-gold text-deep-space shadow-lg shadow-neon-gold/20' : 'text-slate-500 hover:text-white'}`}
                     >
                         <Sparkles size={16} className="mr-2" />
                         Pendentes
@@ -664,8 +664,8 @@ export default function AdminOraculistasPage() {
                         <p className="text-slate-500 animate-pulse uppercase tracking-widest text-xs font-bold">Conectando ao Templo...</p>
                     </div>
                 ) : (
-                    <div className="w-full overflow-x-auto">
-                    <table className="w-full min-w-[960px] table-fixed text-left border-collapse">
+                    <div className="w-full">
+                    <table className="block w-full text-left 2xl:table 2xl:table-fixed 2xl:border-collapse">
                         <colgroup>
                             <col className="w-[25%]" />
                             <col className="w-[9%]" />
@@ -674,7 +674,7 @@ export default function AdminOraculistasPage() {
                             <col className="w-[14%]" />
                             <col className="w-[21%]" />
                         </colgroup>
-                        <thead className="bg-white/5 border-b border-white/10">
+                        <thead className="hidden bg-white/5 border-b border-white/10 2xl:table-header-group">
                             <tr>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
@@ -684,10 +684,10 @@ export default function AdminOraculistasPage() {
                                 <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-white/5">
+                        <tbody className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:table-row-group 2xl:divide-y 2xl:divide-white/5 2xl:p-0">
                             {filteredOracles.map((o) => (
-                                <tr key={o.id} className="hover:bg-white/5 transition-colors group">
-                                    <td className="px-6 py-4">
+                                <tr key={o.id} className="grid min-w-0 grid-cols-2 gap-4 rounded-lg border border-white/10 bg-white/[0.025] p-4 transition-colors hover:bg-white/5 2xl:table-row 2xl:rounded-none 2xl:border-0 2xl:bg-transparent 2xl:p-0 group">
+                                    <td className="col-span-2 block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
                                         <div className="flex items-center gap-3">
                                             <div className="relative shrink-0">
                                                 <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
@@ -718,8 +718,8 @@ export default function AdminOraculistasPage() {
                                                     />
                                                 )}
                                             </div>
-                                            <div className="flex flex-col">
-                                                <span className="text-sm font-bold text-white flex items-center gap-2">
+                                            <div className="flex min-w-0 flex-col">
+                                                <span className="flex min-w-0 flex-wrap items-center gap-2 break-words text-sm font-bold text-white">
                                                     {o.name_fantasy || o.full_name}
                                                     {o.has_unseen_changes && (
                                                         <span className="text-[9px] bg-red-500/20 text-red-400 border border-red-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase">Atualizado</span>
@@ -731,13 +731,18 @@ export default function AdminOraculistasPage() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
+                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Tipo</span>
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${o.is_ai ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'}`}>
                                             {o.is_ai ? 'IA' : 'Humano'}
                                         </span>
                                     </td>
-                                    <td className="px-6 py-4 text-sm text-slate-400">{o.specialty}</td>
-                                    <td className="px-6 py-4">
+                                    <td className="block min-w-0 text-sm text-slate-400 2xl:table-cell 2xl:px-6 2xl:py-4">
+                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Especialidade</span>
+                                        <span className="break-words">{o.specialty || 'Não informada'}</span>
+                                    </td>
+                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
+                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Status do cadastro</span>
                                         <StatusBadge status={o.application_status} />
                                         {/* Show reason tooltip if rejected/pending with reason */}
                                         {(o.application_status === 'rejected' || (o.application_status === 'pending' && o.rejection_reason)) && (
@@ -746,7 +751,8 @@ export default function AdminOraculistasPage() {
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-4">
+                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
+                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Disponibilidade</span>
                                         {(() => {
                                             const { status } = getOracleStatus(o.is_online, o.schedules || [], o.last_heartbeat_at, o.is_ai || o.oracle_type === 'ai')
                                             const isOnline = status === 'online'
@@ -771,8 +777,9 @@ export default function AdminOraculistasPage() {
                                             )
                                         })()}
                                     </td>
-                                    <td className="px-3 py-4 text-right align-top">
-                                        <div className="ml-auto grid w-fit grid-cols-3 gap-1.5">
+                                    <td className="col-span-2 block min-w-0 border-t border-white/10 pt-3 text-right align-top 2xl:table-cell 2xl:border-0 2xl:px-3 2xl:py-4">
+                                        <span className="mb-2 block text-left text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Ações</span>
+                                        <div className="grid w-full grid-cols-2 gap-1.5 sm:grid-cols-3 2xl:ml-auto 2xl:w-fit">
                                             {/* Common Action: View Profile */}
                                             <Link
                                                 href={`/app/oraculo/${o.id}`}
