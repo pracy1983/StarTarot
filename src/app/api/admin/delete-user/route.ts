@@ -55,7 +55,13 @@ export async function POST(req: Request) {
         }
 
         // 4. Preferir a exclusão pelo Auth, que também dispara as cascatas do banco.
-        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
+        let authDeleteError: any = null
+        try {
+            const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+            authDeleteError = error
+        } catch (e: any) {
+            authDeleteError = e
+        }
 
         if (!authDeleteError) {
             return NextResponse.json({ success: true, message: 'Usuário deletado com sucesso' })

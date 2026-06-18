@@ -665,29 +665,29 @@ export default function AdminOraculistasPage() {
                     </div>
                 ) : (
                     <div className="w-full">
-                    <table className="block w-full text-left 2xl:table 2xl:table-fixed 2xl:border-collapse">
+                    <table className="block w-full text-left lg:table lg:table-fixed lg:border-collapse">
                         <colgroup>
-                            <col className="w-[25%]" />
+                            <col className="w-[26%]" />
                             <col className="w-[9%]" />
                             <col className="w-[13%]" />
-                            <col className="w-[18%]" />
-                            <col className="w-[14%]" />
-                            <col className="w-[21%]" />
+                            <col className="w-[15%]" />
+                            <col className="w-[13%]" />
+                            <col className="w-[24%]" />
                         </colgroup>
-                        <thead className="hidden bg-white/5 border-b border-white/10 2xl:table-header-group">
+                        <thead className="hidden bg-white/5 border-b border-white/10 lg:table-header-group">
                             <tr>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status App</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest">Status Online</th>
-                                <th className="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Cadastro</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Online</th>
+                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
                             </tr>
                         </thead>
-                        <tbody className="grid grid-cols-1 gap-3 p-3 md:grid-cols-2 2xl:table-row-group 2xl:divide-y 2xl:divide-white/5 2xl:p-0">
+                        <tbody className="grid grid-cols-1 gap-2 p-2 lg:table-row-group lg:divide-y lg:divide-white/5 lg:p-0">
                             {filteredOracles.map((o) => (
-                                <tr key={o.id} className="grid min-w-0 grid-cols-2 gap-4 rounded-lg border border-white/10 bg-white/[0.025] p-4 transition-colors hover:bg-white/5 2xl:table-row 2xl:rounded-none 2xl:border-0 2xl:bg-transparent 2xl:p-0 group">
-                                    <td className="col-span-2 block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
+                                <tr key={o.id} className="grid min-w-0 grid-cols-[1fr_auto] gap-x-3 gap-y-2 rounded-lg border border-white/10 bg-white/[0.025] p-3 transition-colors hover:bg-white/5 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 group">
+                                    <td className="col-span-2 block min-w-0 lg:table-cell lg:px-5 lg:py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="relative shrink-0">
                                                 <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
@@ -731,28 +731,23 @@ export default function AdminOraculistasPage() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
-                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Tipo</span>
+                                    <td className="block min-w-0 lg:table-cell lg:px-5 lg:py-3">
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${o.is_ai ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'}`}>
                                             {o.is_ai ? 'IA' : 'Humano'}
                                         </span>
                                     </td>
-                                    <td className="block min-w-0 text-sm text-slate-400 2xl:table-cell 2xl:px-6 2xl:py-4">
-                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Especialidade</span>
+                                    <td className="hidden lg:table-cell lg:px-5 lg:py-3 text-sm text-slate-400">
                                         <span className="break-words">{o.specialty || 'Não informada'}</span>
                                     </td>
-                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
-                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Status do cadastro</span>
+                                    <td className="block min-w-0 lg:table-cell lg:px-5 lg:py-3">
                                         <StatusBadge status={o.application_status} />
-                                        {/* Show reason tooltip if rejected/pending with reason */}
                                         {(o.application_status === 'rejected' || (o.application_status === 'pending' && o.rejection_reason)) && (
                                             <div className="text-[10px] text-slate-500 mt-1 max-w-[150px] truncate" title={o.rejection_reason}>
                                                 {o.rejection_reason}
                                             </div>
                                         )}
                                     </td>
-                                    <td className="block min-w-0 2xl:table-cell 2xl:px-6 2xl:py-4">
-                                        <span className="mb-2 block text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Disponibilidade</span>
+                                    <td className="hidden lg:table-cell lg:px-5 lg:py-3">
                                         {(() => {
                                             const { status } = getOracleStatus(o.is_online, o.schedules || [], o.last_heartbeat_at, o.is_ai || o.oracle_type === 'ai')
                                             const isOnline = status === 'online'
@@ -777,100 +772,82 @@ export default function AdminOraculistasPage() {
                                             )
                                         })()}
                                     </td>
-                                    <td className="col-span-2 block min-w-0 border-t border-white/10 pt-3 text-right align-top 2xl:table-cell 2xl:border-0 2xl:px-3 2xl:py-4">
-                                        <span className="mb-2 block text-left text-[9px] font-bold uppercase text-slate-600 2xl:hidden">Ações</span>
-                                        <div className="grid w-full grid-cols-2 gap-1.5 sm:grid-cols-3 2xl:ml-auto 2xl:w-fit">
-                                            {/* Common Action: View Profile */}
+                                    <td className="col-span-2 block min-w-0 border-t border-white/5 pt-2 text-right align-top lg:table-cell lg:border-0 lg:px-3 lg:py-3">
+                                        <div className="flex flex-wrap gap-1 justify-end lg:flex-nowrap lg:justify-end">
                                             <Link
                                                 href={`/app/oraculo/${o.id}`}
-                                                className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30"
-                                                title="Visualizar Perfil Público"
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-neon-cyan hover:bg-neon-cyan/10 rounded-lg transition-all border border-transparent hover:border-neon-cyan/30 whitespace-nowrap"
                                             >
-                                                <Eye size={14} />
-                                                <span className="text-[9px] font-bold uppercase leading-none">Perfil</span>
+                                                <Eye size={13} />
+                                                <span>Perfil</span>
                                             </Link>
 
                                             <button
                                                 onClick={() => fetchOracleReviews(o.id, o.full_name)}
-                                                className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30"
-                                                title="Gerenciar Avaliações"
+                                                className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-neon-purple hover:bg-neon-purple/10 rounded-lg transition-all border border-transparent hover:border-neon-purple/30 whitespace-nowrap"
                                             >
-                                                <MessageSquare size={14} />
-                                                <span className="text-[9px] font-bold uppercase leading-none">Avaliações</span>
+                                                <MessageSquare size={13} />
+                                                <span>Avaliações</span>
                                             </button>
 
-                                            {/* Tab Specific Actions */}
                                             {activeTab === 'pending' ? (
                                                 <>
-                                                    {/* Ver Alterações: apenas se já foi rejeitado antes */}
                                                     {o.rejection_reason && (
                                                         <button
                                                             onClick={() => handleViewChanges(o.id)}
-                                                            className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30"
-                                                            title="Ver Alterações Recentes"
+                                                            className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-blue-400 hover:bg-blue-400/10 rounded-lg transition-all border border-transparent hover:border-blue-400/30 whitespace-nowrap"
                                                         >
-                                                            <RefreshCw size={14} className={loadingSnapshot ? 'animate-spin' : ''} />
-                                                            <span className="text-[9px] font-bold uppercase leading-none">Alterações</span>
+                                                            <RefreshCw size={13} className={loadingSnapshot ? 'animate-spin' : ''} />
+                                                            <span>Alterações</span>
                                                         </button>
                                                     )}
-
                                                     <button
                                                         onClick={() => handleStatusChange(o.id, 'approved')}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30"
-                                                        title="Aprovar Cadastro"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-green-400 hover:bg-green-400/10 rounded-lg transition-all border border-transparent hover:border-green-400/30 whitespace-nowrap"
                                                     >
-                                                        <Check size={14} />
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Aprovar</span>
+                                                        <Check size={13} />
+                                                        <span>Aprovar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
-                                                        title="Pausar e Solicitar Correções"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30 whitespace-nowrap"
                                                     >
-                                                        <X size={14} />
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Pausar</span>
+                                                        <X size={13} />
+                                                        <span>Pausar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeletePendingUser(o.id, o.full_name)}
                                                         disabled={isDeletingPending === o.id}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40"
-                                                        title="Deletar cadastro permanentemente"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 disabled:opacity-40 whitespace-nowrap"
                                                     >
-                                                        {isDeletingPending === o.id ? (
-                                                            <div className="w-3.5 h-3.5 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
-                                                        ) : (
-                                                            <Trash2 size={14} />
-                                                        )}
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Excluir</span>
+                                                        {isDeletingPending === o.id
+                                                            ? <div className="w-3 h-3 border-2 border-red-500 border-t-transparent rounded-full animate-spin" />
+                                                            : <Trash2 size={13} />}
+                                                        <span>Excluir</span>
                                                     </button>
                                                 </>
                                             ) : (
                                                 <>
                                                     <Link
                                                         href={`/admin/oraculistas/editar/${o.id}?tab=${activeTab}`}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20"
-                                                        title="Editar dados e prompts"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-slate-300 hover:bg-white/10 rounded-lg transition-all border border-transparent hover:border-white/20 whitespace-nowrap"
                                                     >
-                                                        <Edit2 size={14} />
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Editar</span>
+                                                        <Edit2 size={13} />
+                                                        <span>Editar</span>
                                                     </Link>
-
                                                     <button
                                                         onClick={() => setRejectionModal({ open: true, id: o.id, name: o.full_name })}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30"
-                                                        title="Pausar e Solicitar Correções"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30 whitespace-nowrap"
                                                     >
-                                                        <Ban size={14} />
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Pausar</span>
+                                                        <Ban size={13} />
+                                                        <span>Pausar</span>
                                                     </button>
-
                                                     <button
                                                         onClick={() => handleDelete(o.id, o.full_name)}
-                                                        className="flex h-12 min-w-0 flex-col items-center justify-center gap-1 text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30"
-                                                        title="Remover permanentemente"
+                                                        className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-red-500 hover:bg-red-500/10 rounded-lg transition-all border border-transparent hover:border-red-500/30 whitespace-nowrap"
                                                     >
-                                                        <Trash2 size={14} />
-                                                        <span className="text-[9px] font-bold uppercase leading-none">Excluir</span>
+                                                        <Trash2 size={13} />
+                                                        <span>Excluir</span>
                                                     </button>
                                                 </>
                                             )}
