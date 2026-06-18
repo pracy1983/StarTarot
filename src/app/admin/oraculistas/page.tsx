@@ -664,30 +664,30 @@ export default function AdminOraculistasPage() {
                         <p className="text-slate-500 animate-pulse uppercase tracking-widest text-xs font-bold">Conectando ao Templo...</p>
                     </div>
                 ) : (
-                    <div className="w-full">
-                    <table className="block w-full text-left lg:table lg:table-fixed lg:border-collapse">
+                    <div className="w-full overflow-x-auto">
+                    <table className="block w-full text-left lg:table lg:min-w-[860px] lg:border-collapse">
                         <colgroup>
-                            <col className="w-[26%]" />
-                            <col className="w-[9%]" />
-                            <col className="w-[13%]" />
-                            <col className="w-[15%]" />
-                            <col className="w-[13%]" />
-                            <col className="w-[24%]" />
+                            <col className="w-[220px]" />
+                            <col className="w-[80px]" />
+                            <col className="w-[120px]" />
+                            <col className="w-[120px]" />
+                            <col className="w-[100px]" />
+                            <col />
                         </colgroup>
                         <thead className="hidden bg-white/5 border-b border-white/10 lg:table-header-group">
                             <tr>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade</th>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Cadastro</th>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Online</th>
-                                <th className="px-5 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
+                                <th className="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Oraculista</th>
+                                <th className="px-3 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Tipo</th>
+                                <th className="px-3 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Especialidade</th>
+                                <th className="px-3 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Cadastro</th>
+                                <th className="px-3 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest">Online</th>
+                                <th className="px-3 py-3 text-xs font-bold text-slate-500 uppercase tracking-widest text-right">Ações</th>
                             </tr>
                         </thead>
                         <tbody className="grid grid-cols-1 gap-2 p-2 lg:table-row-group lg:divide-y lg:divide-white/5 lg:p-0">
                             {filteredOracles.map((o) => (
                                 <tr key={o.id} className="grid min-w-0 grid-cols-[1fr_auto] gap-x-3 gap-y-2 rounded-lg border border-white/10 bg-white/[0.025] p-3 transition-colors hover:bg-white/5 lg:table-row lg:rounded-none lg:border-0 lg:bg-transparent lg:p-0 group">
-                                    <td className="col-span-2 block min-w-0 lg:table-cell lg:px-5 lg:py-3">
+                                    <td className="col-span-2 block min-w-0 lg:table-cell lg:px-3 lg:py-3">
                                         <div className="flex items-center gap-3">
                                             <div className="relative shrink-0">
                                                 <div className="w-10 h-10 rounded-full border border-white/10 overflow-hidden bg-deep-space">
@@ -731,15 +731,15 @@ export default function AdminOraculistasPage() {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="block min-w-0 lg:table-cell lg:px-5 lg:py-3">
+                                    <td className="block min-w-0 lg:table-cell lg:px-3 lg:py-3">
                                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-bold uppercase ${o.is_ai ? 'bg-neon-cyan/20 text-neon-cyan border border-neon-cyan/30' : 'bg-neon-purple/20 text-neon-purple border border-neon-purple/30'}`}>
                                             {o.is_ai ? 'IA' : 'Humano'}
                                         </span>
                                     </td>
-                                    <td className="hidden lg:table-cell lg:px-5 lg:py-3 text-sm text-slate-400">
+                                    <td className="hidden lg:table-cell lg:px-3 lg:py-3 text-sm text-slate-400">
                                         <span className="break-words">{o.specialty || 'Não informada'}</span>
                                     </td>
-                                    <td className="block min-w-0 lg:table-cell lg:px-5 lg:py-3">
+                                    <td className="block min-w-0 lg:table-cell lg:px-3 lg:py-3">
                                         <StatusBadge status={o.application_status} />
                                         {(o.application_status === 'rejected' || (o.application_status === 'pending' && o.rejection_reason)) && (
                                             <div className="text-[10px] text-slate-500 mt-1 max-w-[150px] truncate" title={o.rejection_reason}>
@@ -747,7 +747,7 @@ export default function AdminOraculistasPage() {
                                             </div>
                                         )}
                                     </td>
-                                    <td className="hidden lg:table-cell lg:px-5 lg:py-3">
+                                    <td className="hidden lg:table-cell lg:px-3 lg:py-3">
                                         {(() => {
                                             const { status } = getOracleStatus(o.is_online, o.schedules || [], o.last_heartbeat_at, o.is_ai || o.oracle_type === 'ai')
                                             const isOnline = status === 'online'
