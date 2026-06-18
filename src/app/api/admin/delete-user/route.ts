@@ -54,15 +54,46 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Não é possível deletar a própria conta' }, { status: 400 })
         }
 
-        // 4. Deletar do Auth (cascata apaga profiles e demais tabelas com FK)
-        const { error } = await supabaseAdmin.auth.admin.deleteUser(userId)
+        // 4. Preferir a exclusão pelo Auth, que também dispara as cascatas do banco.
+        const { error: authDeleteError } = await supabaseAdmin.auth.admin.deleteUser(userId)
 
-        if (error) {
-            console.error('Error deleting user from auth:', error)
-            return NextResponse.json({ error: error.message }, { status: 500 })
+        if (!authDeleteError) {
+            return NextResponse.json({ success: true, message: 'Usuário deletado com sucesso' })
         }
 
-        return NextResponse.json({ success: true, message: 'Usuário deletado com sucesso' })
+        console.error('Error deleting user from auth, removing profile as fallback:', authDeleteError)
+
+        // Algumas instalações self-hosted usam segredos diferentes no Auth e no
+        // PostgREST. Nesse caso, ainda removemos o cadastro com a sessão owner.
+        let { data: deletedProfiles, error: profileDeleteError } = await supabaseAdmin
+            .from('profiles')
+            .delete()
+            .eq('id', userId)
+            .select('id')
+
+        if (profileDeleteError || !deletedProfiles?.length) {
+            const sessionDelete = await supabase
+                .from('profiles')
+                .delete()
+                .eq('id', userId)
+                .select('id')
+
+            deletedProfiles = sessionDelete.data
+            profileDeleteError = sessionDelete.error
+        }
+
+        if (profileDeleteError || !deletedProfiles?.length) {
+            console.error('Error deleting user profile fallback:', profileDeleteError)
+            return NextResponse.json({
+                error: profileDeleteError?.message || 'O Supabase não confirmou a exclusão do perfil'
+            }, { status: 500 })
+        }
+
+        return NextResponse.json({
+            success: true,
+            authCleanupPending: true,
+            message: 'Perfil deletado com sucesso'
+        })
     } catch (error: any) {
         console.error('Delete user error:', error)
         return NextResponse.json({ error: error.message || 'Erro ao deletar usuário' }, { status: 500 })
