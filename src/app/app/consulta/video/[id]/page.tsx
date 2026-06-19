@@ -196,7 +196,7 @@ export default function VideoConsultationPage() {
             const minRequired = (o.initial_fee_credits || 0) + (o.credits_per_minute || 5)
             if (profile?.role === 'client' && (profile.credits || 0) < minRequired) {
                 toast.error(`Saldo insuficiente. Você precisa de pelo menos ${minRequired} Créditos para iniciar.`)
-                router.push('/app/planos')
+                router.push('/app/carteira')
                 return
             }
 

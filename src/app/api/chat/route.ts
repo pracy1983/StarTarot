@@ -156,7 +156,7 @@ export async function POST(req: Request) {
         // Ganho do oraculista
         await supabase.from('transactions').insert({
             user_id: oracleId,
-            type: 'credit_purchase',
+            type: 'earnings',
             amount: price,
             metadata: { client_id: session.user.id, chat_id: chatId, type: 'oracle_earning' },
             status: 'confirmed'

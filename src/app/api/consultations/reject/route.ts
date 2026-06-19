@@ -40,8 +40,8 @@ export async function POST(req: Request) {
             .select('status')
             .eq('user_id', consultation.client_id)
             .eq('type', 'consultation_charge')
-            .contains('metadata', { consultation_id: consultationId })
-            .single()
+            .filter('metadata->>consultation_id', 'eq', consultationId)
+            .maybeSingle()
 
         if (existingTransactions?.status === 'refunded') {
             return NextResponse.json({ error: 'O valor desta consulta já foi estornado.' }, { status: 400 })
@@ -80,7 +80,7 @@ export async function POST(req: Request) {
             .update({ status: 'refunded' })
             .eq('user_id', consultation.client_id)
             .eq('type', 'consultation_charge')
-            .contains('metadata', { consultation_id: consultationId })
+            .filter('metadata->>consultation_id', 'eq', consultationId)
 
         // Oracle (Earnings) -> Cancelled
         await supabaseAdmin
@@ -88,7 +88,7 @@ export async function POST(req: Request) {
             .update({ status: 'cancelled' })
             .eq('user_id', consultation.oracle_id)
             .eq('type', 'earnings')
-            .contains('metadata', { consultation_id: consultationId })
+            .filter('metadata->>consultation_id', 'eq', consultationId)
 
         // 5. Registrar transação de estorno (Visualização explícita se necessário, mas update do status costuma bastar)
         // Opcional: Criar uma transação do tipo 'refund' se o sistema exigir histórico aditivo.
