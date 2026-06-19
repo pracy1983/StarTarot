@@ -24,7 +24,9 @@ export async function POST(req: Request) {
     try {
         const { secret } = await req.json().catch(() => ({ secret: null }))
         const expectedSecret = process.env.CRON_SECRET
-        if (expectedSecret && secret !== expectedSecret) {
+        // Fail-closed: sem CRON_SECRET configurado, ou com secret divergente,
+        // o endpoint é negado (evita disparo público do processador de IA).
+        if (!expectedSecret || secret !== expectedSecret) {
             return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
         }
 
@@ -96,7 +98,7 @@ async function processAIConsultation(consultation: any) {
     const { data: globalSettings } = await supabaseAdmin.from('global_settings').select('value').eq('key', 'master_ai_prompt').maybeSingle()
     const masterPrompt = globalSettings?.value || ''
 
-    const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
+    const apiKey = process.env.DEEPSEEK_API_KEY
     if (!apiKey) throw new Error('DEEPSEEK_API_KEY não configurada')
 
     // 1. Mapa do Cliente

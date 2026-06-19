@@ -1,4 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
+import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs'
+import { cookies } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { whatsappService } from '@/lib/whatsapp'
 
@@ -9,6 +11,24 @@ export async function POST(req: Request) {
     try {
         const { oracleId } = await req.json()
         if (!oracleId) return NextResponse.json({ error: 'Missing oracleId' }, { status: 400 })
+
+        // AUTORIZAÇÃO: só o próprio oráculo (ou um owner) pode disparar o blast
+        // de notificações — caso contrário qualquer um poderia spammar o
+        // WhatsApp e arriscar o banimento do número.
+        const supabaseAuth = createRouteHandlerClient({ cookies })
+        const { data: { session } } = await supabaseAuth.auth.getSession()
+        if (!session) return NextResponse.json({ error: 'Não autorizado' }, { status: 401 })
+
+        if (session.user.id !== oracleId) {
+            const { data: caller } = await supabaseAuth
+                .from('profiles')
+                .select('role')
+                .eq('id', session.user.id)
+                .maybeSingle()
+            if (caller?.role !== 'owner') {
+                return NextResponse.json({ error: 'Acesso negado' }, { status: 403 })
+            }
+        }
 
         const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,

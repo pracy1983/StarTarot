@@ -69,5 +69,21 @@ export const asaasService = {
             console.error('Asaas getPixQrCode error:', error);
             throw error;
         }
+    },
+
+    // Consulta o pagamento direto na API do Asaas. Usado pelo webhook para
+    // CONFIRMAR de forma autoritativa que o pagamento realmente existe e foi
+    // recebido — assim um webhook forjado não consegue creditar saldo.
+    async getPayment(paymentId: string) {
+        const response = await fetch(`${ASAAS_API_URL}/payments/${paymentId}`, {
+            method: 'GET',
+            headers: {
+                'access_token': ASAAS_API_KEY!
+            }
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.errors?.[0]?.description || 'Erro ao consultar pagamento no Asaas');
+        return data;
     }
 };

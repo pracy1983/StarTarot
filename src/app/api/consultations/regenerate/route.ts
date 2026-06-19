@@ -51,7 +51,7 @@ export async function POST(req: Request) {
         const { data: globalSettings } = await supabaseAdmin.from('global_settings').select('value').eq('key', 'master_ai_prompt').maybeSingle()
         const masterPrompt = globalSettings?.value || ''
 
-        const apiKey = process.env.DEEPSEEK_API_KEY || process.env.NEXT_PUBLIC_DEEPSEEK_API_KEY
+        const apiKey = process.env.DEEPSEEK_API_KEY
         if (!apiKey) throw new Error('DEEPSEEK_API_KEY N/D')
 
         // 3. Mapas Astrológicos

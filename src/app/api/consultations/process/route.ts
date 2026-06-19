@@ -27,6 +27,26 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Consulta não encontrada' }, { status: 404 })
         }
 
+        // 1.1 AUTORIZAÇÃO: só o próprio cliente da consulta pode processá-la.
+        // (Evita que outro usuário force o débito da carteira alheia — IDOR.)
+        if (consultation.client_id !== session.user.id) {
+            return NextResponse.json({ error: 'Acesso negado a esta consulta' }, { status: 403 })
+        }
+
+        // 1.2 IDEMPOTÊNCIA: se já existe uma cobrança para esta consulta, ela já
+        // foi processada. Retornamos sucesso sem debitar de novo (evita
+        // cobrança dupla por reenvio/duplo clique/replay).
+        const { data: existingCharge } = await supabaseAdmin
+            .from('transactions')
+            .select('id')
+            .eq('type', 'consultation_charge')
+            .filter('metadata->>consultation_id', 'eq', consultationId)
+            .maybeSingle()
+
+        if (existingCharge) {
+            return NextResponse.json({ success: true, message: 'Consulta já processada' })
+        }
+
         const oracle = consultation.oracle
         const client = consultation.client
 
