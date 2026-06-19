@@ -339,11 +339,20 @@ export default function VideoConsultationPage() {
             }
         } catch (err: any) {
             console.error('Error initializing client preview:', err)
-            if (err.code === 'NOT_READABLE' || err.message?.includes('NotReadableError') || err.message?.includes('Device in use')) {
+            const msg = `${err.code || ''} ${err.message || ''}`
+            if (err.code === 'NOT_READABLE' || msg.includes('NotReadableError') || msg.includes('Device in use')) {
                 setIsDeviceBusy(true);
                 toast.error('Câmera ocupada por outro aplicativo. Feche-os e tente novamente.', { duration: 6000 });
+            } else if (err.code === 'PERMISSION_DENIED' || msg.includes('NotAllowedError') || msg.includes('Permission')) {
+                setIsDeviceBusy(true);
+                toast.error('Permissão de câmera/microfone negada. Clique no cadeado da barra de endereço e permita o acesso, depois recarregue.', { duration: 8000 });
+            } else if (err.code === 'DEVICE_NOT_FOUND' || msg.includes('NotFoundError')) {
+                setIsDeviceBusy(true);
+                toast.error('Nenhuma câmera ou microfone encontrado neste dispositivo.', { duration: 6000 });
+            } else if (msg.includes('SecurityError') || (typeof window !== 'undefined' && window.location.protocol !== 'https:')) {
+                toast.error('O acesso à câmera exige conexão segura (HTTPS).', { duration: 6000 });
             } else {
-                toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso.');
+                toast.error('Erro ao acessar câmera/microfone. Por favor, autorize o acesso e recarregue a página.', { duration: 6000 });
             }
         }
     }
