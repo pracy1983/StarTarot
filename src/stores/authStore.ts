@@ -66,6 +66,7 @@ interface AuthState {
   signUp: (email: string, password: string, full_name: string, phone: string, role?: UserRole) => Promise<{ success: boolean; error?: string }>
   logout: () => Promise<void>
   setProfile: (profile: Profile) => void
+  refreshCredits: () => Promise<number | null>
   showAuthModal: boolean
   setShowAuthModal: (show: boolean) => void
   authMode: 'login' | 'register'
@@ -404,6 +405,30 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setProfile: (profile: Profile) => {
     set({ profile })
+  },
+
+  // Relê o saldo atual da carteira e sincroniza o profile em memória.
+  // Usado durante a videoconsulta após cada débito para manter o aviso de
+  // saldo baixo correto sem precisar recarregar a página.
+  refreshCredits: async (): Promise<number | null> => {
+    try {
+      const currentProfile = useAuthStore.getState().profile
+      if (!currentProfile?.id) return null
+
+      const { data: wallet, error } = await supabase
+        .from('wallets')
+        .select('balance')
+        .eq('user_id', currentProfile.id)
+        .maybeSingle()
+
+      if (error) return null
+
+      const balance = wallet?.balance ?? 0
+      set({ profile: { ...currentProfile, credits: balance } })
+      return balance
+    } catch {
+      return null
+    }
   },
   showAuthModal: false,
   setShowAuthModal: (show: boolean) => set({ showAuthModal: show }),

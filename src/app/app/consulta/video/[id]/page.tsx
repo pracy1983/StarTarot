@@ -31,7 +31,7 @@ const CONNECTION_TIMEOUT_MS = 60000 // 1 minuto para conectar ou cancelar sem ta
 // Versão Limpa - Corrigindo conflitos de merge residuais do remoto
 export default function VideoConsultationPage() {
     const { id } = useParams() // consultation_id
-    const { profile, setProfile } = useAuthStore()
+    const { profile, refreshCredits } = useAuthStore()
     const router = useRouter()
 
     const [loading, setLoading] = useState(true)
@@ -455,7 +455,7 @@ export default function VideoConsultationPage() {
                 is_initial: true
             })
             if (error) throw error
-            setProfile({ ...profile!, credits: (profile?.credits || 0) - oracle.initial_fee_credits })
+            await refreshCredits()
             toast.success('Taxa inicial processada.')
         } catch (err: any) {
             console.error('Initial fee error:', err)
@@ -479,8 +479,10 @@ export default function VideoConsultationPage() {
 
             if (error) throw error
 
-            const newBalance = wallet.balance - cost
-            setProfile({ ...profile!, credits: newBalance })
+            // Relê o saldo autoritativo da carteira (evita drift entre o estado
+            // em memória e o que o banco realmente debitou).
+            const synced = await refreshCredits()
+            const newBalance = synced ?? (wallet.balance - cost)
 
             if (newBalance < WARNING_THRESHOLD) {
                 toast('Seu saldo está acabando!', { icon: '⚠️', position: 'top-center' })
@@ -506,13 +508,13 @@ export default function VideoConsultationPage() {
         if (billingInterval.current) clearInterval(billingInterval.current)
         if (connectionTimeoutRef.current) clearTimeout(connectionTimeoutRef.current)
 
-        try {
-            // Se skipCharge for true e duração for muito pequena, podemos tratar como cancelamento no banco se necessário
-            // Por enquanto vamos apenas finalizar com duração 0 se não estabilizou
-            // (refs: esta função é chamada de closures antigos de handlers do Agora,
-            // onde os estados `duration`/`hasEstablishedConnection` estariam desatualizados)
-            const finalDuration = hasEstablishedConnectionRef.current ? Math.floor(durationRef.current) : 0
+        // Se skipCharge for true e duração for muito pequena, podemos tratar como cancelamento no banco se necessário
+        // Por enquanto vamos apenas finalizar com duração 0 se não estabilizou
+        // (refs: esta função é chamada de closures antigos de handlers do Agora,
+        // onde os estados `duration`/`hasEstablishedConnection` estariam desatualizados)
+        const finalDuration = hasEstablishedConnectionRef.current ? Math.floor(durationRef.current) : 0
 
+        try {
             await supabase.rpc('finalize_video_consultation', {
                 p_consultation_id: id,
                 p_duration_seconds: finalDuration,
@@ -533,7 +535,9 @@ export default function VideoConsultationPage() {
 
         setJoined(false)
 
-        if (durationRef.current >= 300) {
+        // Mostra o resumo/avaliação sempre que houve consulta real (duração > 0).
+        // Se não houve conexão (duração 0), redireciona direto.
+        if (finalDuration > 0) {
             setShowFeedback(true)
         } else {
             toast.success(endedBy === 'client' ? 'Você encerrou a chamada.' : 'O oraculista encerrou a chamada.')
@@ -542,6 +546,13 @@ export default function VideoConsultationPage() {
     }
 
     const handleFeedbackSubmit = async () => {
+        // Apenas o cliente avalia o oraculista. Para o oraculista, o modal é só
+        // um resumo — o botão segue direto para a tela de resposta.
+        if (profile?.role !== 'client') {
+            router.push(`/app/consulta/resposta/${id}`)
+            return
+        }
+
         if (stars === 0) {
             toast.error('Por favor, selecione uma nota.')
             return
@@ -636,14 +647,16 @@ export default function VideoConsultationPage() {
                         />
 
                         <div className="flex gap-4">
-                            <button
-                                onClick={() => router.push(`/app/consulta/resposta/${id}`)}
-                                className="flex-1 py-3 text-slate-400 hover:text-white transition-colors"
-                            >
-                                Pular
-                            </button>
+                            {profile?.role === 'client' && (
+                                <button
+                                    onClick={() => router.push(`/app/consulta/resposta/${id}`)}
+                                    className="flex-1 py-3 text-slate-400 hover:text-white transition-colors"
+                                >
+                                    Pular
+                                </button>
+                            )}
                             <NeonButton variant="purple" fullWidth onClick={handleFeedbackSubmit} disabled={isSubmitting}>
-                                {isSubmitting ? 'Enviando...' : 'Enviar Avaliação'}
+                                {isSubmitting ? 'Enviando...' : (profile?.role === 'client' ? 'Enviar Avaliação' : 'Concluir')}
                             </NeonButton>
                         </div>
                     </GlassCard>
