@@ -1,8 +1,5 @@
 import { NextResponse } from 'next/server';
-import { exec } from 'child_process';
-import { promisify } from 'util';
-
-const execAsync = promisify(exec);
+import { Client } from 'pg';
 
 export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
@@ -14,12 +11,6 @@ export async function GET(req: Request) {
     }
 
     try {
-        console.log('Installing pg dynamically...');
-        await execAsync('npm install pg');
-        
-        // Dynamically require pg after installation
-        const { Client } = require('pg');
-        
         console.log('Connecting to database...');
         const client = new Client({
             connectionString: 'postgresql://postgres:wj8qimxarx7jd91yvwxd@startarot-db:5432/startarot'
