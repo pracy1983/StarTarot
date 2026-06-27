@@ -10,6 +10,7 @@ import { useSearchParams } from 'next/navigation'
 
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
+import { fixMojibakeArray, fixMojibakeText } from '@/utils/text'
 
 export default function MarketplacePage() {
     const { profile } = useAuthStore()
@@ -67,10 +68,10 @@ export default function MarketplacePage() {
         ])
 
         if (specsRes.data) {
-            setSpecialties(specsRes.data.map(s => s.name))
+            setSpecialties(specsRes.data.map(s => fixMojibakeText(s.name)))
         }
         if (catsRes.data) {
-            setCategories(catsRes.data.map(c => c.name))
+            setCategories(catsRes.data.map(c => fixMojibakeText(c.name)))
         }
     }
 
@@ -136,6 +137,14 @@ export default function MarketplacePage() {
             // 3. Mapeia horários para cada perfil
             const oraclesWithSchedules = activeProfiles.map(p => ({
                 ...p,
+                full_name: fixMojibakeText(p.full_name),
+                name_fantasy: fixMojibakeText(p.name_fantasy),
+                specialty: fixMojibakeText(p.specialty),
+                bio: fixMojibakeText(p.bio),
+                custom_category: fixMojibakeText(p.custom_category),
+                custom_topic: fixMojibakeText(p.custom_topic),
+                categories: fixMojibakeArray(p.categories),
+                topics: fixMojibakeArray(p.topics),
                 schedules: schedules?.filter(s => s.oracle_id === p.id) || []
             }))
 

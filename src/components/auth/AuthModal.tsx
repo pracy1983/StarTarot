@@ -25,6 +25,17 @@ const countryCodes = [
 
 const TEST_PHONE = '11986224808'
 
+const buildPhoneWithCountryCode = (countryPrefix: string, phone: string) => {
+    const prefixDigits = countryPrefix.replace(/\D/g, '')
+    let phoneDigits = phone.replace(/\D/g, '')
+
+    if (phoneDigits.startsWith(prefixDigits)) {
+        phoneDigits = phoneDigits.slice(prefixDigits.length)
+    }
+
+    return `${countryPrefix}${phoneDigits}`
+}
+
 export const AuthModal = () => {
     const router = useRouter()
     const {
@@ -108,7 +119,7 @@ export const AuthModal = () => {
                 return
             }
 
-            const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
+            const fullPhone = buildPhoneWithCountryCode(countryPrefix, whatsapp)
             const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
 
             if (!isTestNumber) {
@@ -165,7 +176,7 @@ export const AuthModal = () => {
         const isTestNumber = whatsapp.replace(/\D/g, '') === TEST_PHONE
 
         try {
-            const fullPhone = countryPrefix + whatsapp.replace(/\D/g, '')
+            const fullPhone = buildPhoneWithCountryCode(countryPrefix, whatsapp)
 
             // Validação server-side do código
             if (!isTestNumber) {
@@ -313,9 +324,9 @@ export const AuthModal = () => {
         setFormLoading(true)
 
         // Formata telefone
-        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+        const fullPhone = buildPhoneWithCountryCode(countryPrefix, resetWhatsapp)
 
-        const result = await requestPasswordReset(resetEmail, fullPhone)
+        const result = await requestPasswordReset(resetEmail.trim(), fullPhone)
         if (result.success) {
             toast.success('Código enviado via WhatsApp!')
             setLocalAuthMode('reset-otp')
@@ -328,7 +339,7 @@ export const AuthModal = () => {
     const handleVerifyResetOtp = async (e: React.FormEvent) => {
         e.preventDefault()
         setFormLoading(true)
-        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+        const fullPhone = buildPhoneWithCountryCode(countryPrefix, resetWhatsapp)
         const result = await verifyResetOtp(fullPhone, otpCode)
         if (result.success) {
             setResetUserId(result.userId!)
@@ -346,7 +357,7 @@ export const AuthModal = () => {
         if (!otpCode) return setError('Código de verificação ausente.')
 
         setFormLoading(true)
-        const fullPhone = countryPrefix + resetWhatsapp.replace(/\D/g, '')
+        const fullPhone = buildPhoneWithCountryCode(countryPrefix, resetWhatsapp)
         
         const result = await completePasswordReset(fullPhone, otpCode, newPassword)
 

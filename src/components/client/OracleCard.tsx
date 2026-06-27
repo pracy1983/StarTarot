@@ -7,6 +7,7 @@ import { Sparkles, MessageSquare, Video, DollarSign, Calendar, Star, Bell, BellO
 import { useRouter, usePathname } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
+import { fixMojibakeText } from '@/utils/text'
 
 import { ClientCallModal } from './ClientCallModal'
 import { ClientQueueModal } from './ClientQueueModal'
@@ -271,6 +272,13 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
         oracle.is_ai || oracle.oracle_type === 'ai'
     )
     const isZeroFee = oracle.initial_fee_credits === 0 && oracle.allows_video && !oracle.is_ai && oracle.oracle_type !== 'ai'
+    const displayName = fixMojibakeText(oracle.name_fantasy || oracle.full_name)
+    const displayFullName = fixMojibakeText(oracle.full_name)
+    const displaySpecialty = fixMojibakeText(oracle.specialty)
+    const displayCategories = oracle.categories && oracle.categories.length > 0
+        ? oracle.categories.map(c => fixMojibakeText(c === 'Outros' ? oracle.custom_category : c)).join(' · ')
+        : displaySpecialty
+    const displayBio = fixMojibakeText(oracle.bio)
 
     const handleStartConsultation = (e: React.MouseEvent) => {
         e.stopPropagation()
@@ -356,8 +364,8 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                         }`} />
                     <div className="w-14 h-14 lg:w-16 lg:h-16 rounded-full p-0.5 bg-gradient-to-tr from-white/10 to-white/5 relative z-10 transition-transform duration-500 group-hover:scale-105">
                         <img
-                            src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${oracle.full_name}&background=12122a&color=a855f7`}
-                            alt={oracle.full_name}
+                            src={oracle.avatar_url || `https://ui-avatars.com/api/?name=${displayFullName}&background=12122a&color=a855f7`}
+                            alt={displayFullName}
                             className="w-full h-full rounded-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all border-2 border-[#0f0f2d]"
                         />
                     </div>
@@ -372,12 +380,10 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
                 <div className="space-y-0.5">
                     <h3 className="text-sm lg:text-base font-bold text-white group-hover:text-neon-purple transition-colors duration-300 leading-tight">
-                        {oracle.name_fantasy || oracle.full_name}
+                        {displayName}
                     </h3>
                     <p className="text-neon-cyan text-[9px] lg:text-[10px] font-bold uppercase tracking-[0.15em] line-clamp-1 px-2">
-                        {oracle.categories && oracle.categories.length > 0
-                            ? oracle.categories.map(c => c === 'Outros' ? oracle.custom_category : c).join(' · ')
-                            : oracle.specialty}
+                        {displayCategories}
                     </p>
                     <p className="text-slate-500 text-[8px] lg:text-[9px] uppercase tracking-widest line-clamp-1 px-2">
                         {oracle.topics && oracle.topics.length > 0
@@ -403,7 +409,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
                 </div>
 
                 <p className="text-slate-400 text-[11px] lg:text-[12px] line-clamp-2 lg:line-clamp-2 min-h-[32px] px-1 leading-snug">
-                    {oracle.bio}
+                    {displayBio}
                 </p>
 
                 {/* Schedule info */}
@@ -512,7 +518,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
             <ClientCallModal
                 isOpen={callModalOpen}
-                oracleName={oracle.full_name}
+                oracleName={displayFullName}
                 avatarUrl={oracle.avatar_url || ''}
                 creditsPerMinute={oracle.credits_per_minute || 0}
                 initialFee={oracle.initial_fee_credits || 0}
@@ -521,7 +527,7 @@ export const OracleCard = ({ oracle }: OracleCardProps) => {
 
             <ClientQueueModal
                 isOpen={queueModalOpen}
-                oracleName={oracle.full_name}
+                oracleName={displayFullName}
                 queuePosition={queuePosition}
                 onConfirm={createConsultation}
                 onCancel={() => setQueueModalOpen(false)}
