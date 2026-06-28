@@ -1,6 +1,7 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
 import { whatsappService } from '@/lib/whatsapp'
+import { onlyDigits, phoneMatches } from '@/utils/phone'
 
 export async function POST(req: Request) {
     try {
@@ -21,7 +22,7 @@ export async function POST(req: Request) {
         }
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-        const phoneDigits = phone.replace(/\D/g, '')
+        const phoneDigits = onlyDigits(phone)
 
         // Rate limit simples: máximo 3 códigos a cada 10 minutos por telefone
         const tenMinAgo = new Date(Date.now() - 10 * 60 * 1000).toISOString()
@@ -41,12 +42,24 @@ export async function POST(req: Request) {
         const code = Math.floor(100000 + Math.random() * 900000).toString()
         const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString() // 10 min
 
-        // Invalida códigos anteriores não usados deste telefone
-        await supabaseAdmin
+        // Invalida códigos anteriores não usados deste telefone, aceitando
+        // variações como +55, máscara e nono dígito.
+        const { data: activeOtps } = await supabaseAdmin
             .from('phone_verification_otps')
-            .update({ is_used: true })
-            .eq('phone', phoneDigits)
+            .select('id, phone')
             .eq('is_used', false)
+            .gte('expires_at', new Date().toISOString())
+
+        const previousIds = activeOtps
+            ?.filter(item => phoneMatches(item.phone, phoneDigits))
+            .map(item => item.id) || []
+
+        if (previousIds.length > 0) {
+            await supabaseAdmin
+                .from('phone_verification_otps')
+                .update({ is_used: true })
+                .in('id', previousIds)
+        }
 
         const { error: insertError } = await supabaseAdmin
             .from('phone_verification_otps')

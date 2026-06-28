@@ -173,7 +173,7 @@ export const AuthModal = () => {
                 const verifyResponse = await fetch('/api/auth/verify-phone', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ phone: fullPhone, code: otpCode })
+                    body: JSON.stringify({ phone: fullPhone, code: otpCode, consume: false })
                 })
 
                 if (!verifyResponse.ok) {
@@ -196,6 +196,7 @@ export const AuthModal = () => {
             const result = await signUp(email, password, fullName, fullPhone, registrationRole)
 
             if (result.success) {
+                await consumePhoneVerificationCode(fullPhone)
                 // Cadastro criado com sucesso, faz login automático
                 const loginResult = await login(email, password)
                 if (loginResult.success) {
@@ -232,9 +233,22 @@ export const AuthModal = () => {
         }
     }
 
+    const consumePhoneVerificationCode = async (phone: string) => {
+        try {
+            await fetch('/api/auth/verify-phone', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phone, code: otpCode, consume: true })
+            })
+        } catch (err) {
+            console.warn('Não foi possível consumir o código de cadastro:', err)
+        }
+    }
+
     const performLogin = async (email: string, pass: string, phone: string) => {
         const loginResult = await login(email, pass)
         if (loginResult.success) {
+            await consumePhoneVerificationCode(phone)
             // Confirmamos o telefone via OTP — atualiza apenas o telefone.
             // NÃO forçamos role 'oracle' aqui: isso pulava o fluxo de aprovação
             // (application_status) e permitia qualquer cliente virar oraculista.

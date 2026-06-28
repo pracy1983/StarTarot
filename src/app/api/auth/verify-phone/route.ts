@@ -1,9 +1,10 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { onlyDigits, phoneMatches } from '@/utils/phone'
 
 export async function POST(req: Request) {
     try {
-        const { phone, code } = await req.json()
+        const { phone, code, consume = false } = await req.json()
 
         if (!phone || !code) {
             return NextResponse.json({ error: 'Telefone e código são obrigatórios' }, { status: 400 })
@@ -20,27 +21,34 @@ export async function POST(req: Request) {
         }
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
-        const phoneDigits = phone.replace(/\D/g, '')
+        const phoneDigits = onlyDigits(phone)
+        const cleanCode = onlyDigits(code)
 
-        const { data: otp } = await supabaseAdmin
+        const { data: otps, error: otpError } = await supabaseAdmin
             .from('phone_verification_otps')
-            .select('id')
-            .eq('phone', phoneDigits)
-            .eq('otp_code', code)
+            .select('id, phone, created_at')
+            .eq('otp_code', cleanCode)
             .eq('is_used', false)
             .gte('expires_at', new Date().toISOString())
             .order('created_at', { ascending: false })
-            .limit(1)
-            .maybeSingle()
+
+        if (otpError) {
+            console.error('Error fetching phone OTP:', otpError)
+            return NextResponse.json({ error: 'Erro ao validar código. Tente novamente.' }, { status: 500 })
+        }
+
+        const otp = otps?.find(item => phoneMatches(item.phone, phoneDigits))
 
         if (!otp) {
             return NextResponse.json({ error: 'Código inválido ou expirado.' }, { status: 401 })
         }
 
-        await supabaseAdmin
-            .from('phone_verification_otps')
-            .update({ is_used: true })
-            .eq('id', otp.id)
+        if (consume) {
+            await supabaseAdmin
+                .from('phone_verification_otps')
+                .update({ is_used: true })
+                .eq('id', otp.id)
+        }
 
         return NextResponse.json({ success: true })
     } catch (err: any) {
