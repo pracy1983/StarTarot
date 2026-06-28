@@ -14,6 +14,7 @@ import { OracleCard } from '@/components/client/OracleCard'
 import { OracleFilters } from '@/components/client/OracleFilters'
 import { AuthModal } from '@/components/auth/AuthModal'
 import { getOracleStatus } from '@/lib/status'
+import { normalizeOracleServicesList } from '@/utils/oracle'
 
 const countryCodes = [
   { code: '+55', country: 'Brasil', flag: '🇧🇷' },
@@ -105,7 +106,7 @@ export default function LandingPage() {
 
       if (pError) throw pError
 
-      const activeProfiles = profiles.filter(p => p.allows_video || p.allows_text)
+      const activeProfiles = normalizeOracleServicesList(profiles || [])
 
       const { data: schedules } = await supabase
         .from('schedules')

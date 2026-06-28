@@ -11,6 +11,7 @@ import { useSearchParams } from 'next/navigation'
 import { useAuthStore } from '@/stores/authStore'
 import { getOracleStatus } from '@/lib/status'
 import { fixMojibakeArray, fixMojibakeText } from '@/utils/text'
+import { normalizeOracleServicesList } from '@/utils/oracle'
 
 export default function MarketplacePage() {
     const { profile } = useAuthStore()
@@ -125,8 +126,7 @@ export default function MarketplacePage() {
 
             if (pError) throw pError
 
-            // Filter out unavailable oracles (neither video nor text)
-            const activeProfiles = profiles.filter(p => p.allows_video || p.allows_text)
+            const activeProfiles = normalizeOracleServicesList(profiles || [])
 
             // 2. Busca todos os horários para esses oraculistas
             const { data: schedules } = await supabase
@@ -189,9 +189,9 @@ export default function MarketplacePage() {
     })
 
     const filteredOracles = availableOracles.filter(o => {
-        const matchesSearch = o.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        const matchesSearch = (o.full_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
             (o.name_fantasy && o.name_fantasy.toLowerCase().includes(searchTerm.toLowerCase())) ||
-            o.specialty.toLowerCase().includes(searchTerm.toLowerCase())
+            (o.specialty || '').toLowerCase().includes(searchTerm.toLowerCase())
 
         let matchesStatus = true
         if (filter === 'online') {

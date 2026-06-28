@@ -169,6 +169,12 @@ export default function AdminOraculistasPage() {
             } else if (newStatus === 'approved') {
                 updates.role = 'oracle'
                 updates.rejection_reason = null
+                updates.suspended_until = null
+                const currentProfile = oraculistas.find(o => o.id === id)
+                if (!currentProfile?.allows_video && !currentProfile?.allows_text) {
+                    updates.allows_video = false
+                    updates.allows_text = true
+                }
             }
 
             const { error } = await supabase
