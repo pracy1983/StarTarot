@@ -25,7 +25,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     const router = useRouter()
     const [ownerBalance, setOwnerBalance] = useState<number | null>(null)
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
-    const [pendingOracles, setPendingOracles] = useState(0)
+    const [unseenOracleChanges, setUnseenOracleChanges] = useState(0)
 
     useEffect(() => {
         if (profile?.id) {
@@ -39,19 +39,20 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     setOwnerBalance(data?.balance ?? 0)
                 })
 
-            // Fetch Pending Oracles
-            const fetchPending = async () => {
+            // Fetch only new/unreviewed oracle changes for the sidebar badge.
+            const fetchUnseenOracleChanges = async () => {
                 const { count } = await supabase
                     .from('profiles')
                     .select('*', { count: 'exact', head: true })
                     .in('application_status', ['pending', 'waitlist'])
+                    .eq('has_unseen_changes', true)
 
-                setPendingOracles(count || 0)
+                setUnseenOracleChanges(count || 0)
             }
-            fetchPending()
+            fetchUnseenOracleChanges()
 
             // Keep the counter fresh even when Realtime is unavailable on the VPS.
-            const pendingInterval = window.setInterval(fetchPending, 30000)
+            const pendingInterval = window.setInterval(fetchUnseenOracleChanges, 30000)
 
             return () => {
                 window.clearInterval(pendingInterval)
@@ -66,7 +67,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
     const navItems = [
         { label: 'Visão Geral', icon: <LayoutDashboard size={20} />, href: '/admin' },
-        { label: 'Gerenciar Usuários', icon: <Users size={20} />, href: '/admin/usuarios', badge: pendingOracles },
+        { label: 'Gerenciar Usuários', icon: <Users size={20} />, href: '/admin/usuarios', badge: unseenOracleChanges },
         { label: 'Créditos', icon: <Wallet size={20} />, href: '/admin/creditos' },
         { label: 'Consultas', icon: <MessageSquare size={20} />, href: '/admin/consultas' },
         { label: 'Cupons', icon: <Ticket size={20} />, href: '/admin/cupons' },
