@@ -322,68 +322,22 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const safeRole = (role === 'owner') ? 'client' : role;
 
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            full_name,
-            phone,
-            role: safeRole
-          }
-        }
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email,
+          password,
+          fullName: full_name,
+          phone,
+          role: safeRole
+        })
       })
 
-      if (error) throw error
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Erro ao criar conta')
 
-      if (data.user && data.user.identities && data.user.identities.length === 0) {
-        return { success: false, error: 'User already registered' }
-      }
-
-      if (data.user) {
-        // Aguarda o trigger de criação do perfil com polling (até ~3s)
-        let profile: { id: string; role: string; application_status: string | null } | null = null
-        for (let attempt = 0; attempt < 6; attempt++) {
-          await new Promise(resolve => setTimeout(resolve, 500))
-          const { data: p } = await supabase
-            .from('profiles')
-            .select('id, role, application_status')
-            .eq('id', data.user.id)
-            .maybeSingle()
-          if (p) {
-            profile = p
-            break
-          }
-        }
-
-        if (!profile) {
-          const { data: rpcData, error: rpcError } = await supabase.rpc('ensure_user_profile', {
-            p_user_id: data.user.id,
-            p_email: email.trim().toLowerCase(),
-            p_full_name: full_name.trim(),
-            p_role: safeRole
-          })
-
-          const isSuccessful = Array.isArray(rpcData)
-            ? (rpcData[0] as any)?.success
-            : (rpcData as any)?.success
-
-          if (rpcError || !isSuccessful) {
-            console.error('Failed to create profile via RPC fallback:', rpcError || rpcData)
-            return { success: false, error: 'Erro ao criar perfil de usuário. Tente novamente.' }
-          } else {
-            await supabase.from('profiles').update({ phone }).eq('id', data.user.id)
-          }
-        } else {
-          if (safeRole === 'oracle' && profile.application_status !== 'pending') {
-            console.warn('Oracle created but status is', profile.application_status)
-          }
-        }
-
-        return { success: true }
-      }
-
-      return { success: false, error: 'Ocorreu um erro ao criar a conta.' }
+      return { success: true }
     } catch (error: any) {
       console.error('Erro no signUp:', error.message)
       return { success: false, error: error.message || 'Erro ao criar conta' }
