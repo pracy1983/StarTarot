@@ -41,7 +41,8 @@ export const AuthModal = () => {
         requestPasswordReset,
         verifyResetOtp,
         completePasswordReset,
-        profile
+        profile,
+        setProfile
     } = useAuthStore()
 
     const isRegistering = authMode === 'register'
@@ -202,7 +203,7 @@ export const AuthModal = () => {
                 if (loginResult.success) {
                     toast.success('Bem-vindo ao Templo! 🔮')
                     setShowAuthModal(false)
-                    router.push('/app')
+                    router.push(registrationRole === 'oracle' ? '/app/dashboard/perfil' : '/app')
                 } else {
                     // Cadastro OK mas login falhou (raro)
                     setError('Conta criada! Por favor, faça login manualmente.')
@@ -249,16 +250,33 @@ export const AuthModal = () => {
         const loginResult = await login(email, pass)
         if (loginResult.success) {
             await consumePhoneVerificationCode(phone)
-            // Confirmamos o telefone via OTP — atualiza apenas o telefone.
-            // NÃO forçamos role 'oracle' aqui: isso pulava o fluxo de aprovação
-            // (application_status) e permitia qualquer cliente virar oraculista.
-            await supabase
+            const currentProfile = useAuthStore.getState().profile
+            const shouldStartOracleApplication = registrationRole === 'oracle' && currentProfile?.role !== 'owner'
+            const updates: Record<string, any> = { phone }
+
+            if (shouldStartOracleApplication) {
+                updates.role = 'oracle'
+                updates.is_oracle = true
+                updates.application_status = currentProfile?.application_status || 'pending'
+                updates.has_unseen_changes = true
+            }
+
+            const { data: updatedProfile } = await supabase
                 .from('profiles')
-                .update({ phone })
+                .update(updates)
                 .eq('email', email.trim().toLowerCase())
+                .select('*')
+                .maybeSingle()
+
+            if (updatedProfile) {
+                setProfile({
+                    ...updatedProfile,
+                    credits: currentProfile?.credits || 0
+                })
+            }
 
             if (registrationRole === 'oracle') {
-                toast('Para atender como oraculista, complete sua candidatura em "Tornar-se Oraculista".', { icon: '🔮', duration: 8000 })
+                toast('Sua candidatura de oraculista foi iniciada. Complete seus dados para análise.', { icon: '🔮', duration: 8000 })
             }
 
             if (rememberMe) {
@@ -269,7 +287,7 @@ export const AuthModal = () => {
 
             toast.success('Acesso recuperado e atualizado!')
             setShowAuthModal(false)
-            router.push('/app')
+            router.push(shouldStartOracleApplication ? '/app/dashboard/perfil' : '/app')
         } else {
             setError(loginResult.error || 'Erro ao entrar na conta.')
             setFormLoading(false)
