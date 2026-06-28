@@ -181,20 +181,16 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   verifyResetOtp: async (phone: string, code: string) => {
     try {
-      // check_password_reset_otp valida SEM consumir o código — quem consome é
-      // o complete-reset no passo final. (Antes, usar verify aqui marcava o
-      // código como usado e o passo final falhava sempre.)
-      const { data, error } = await supabase.rpc('check_password_reset_otp', {
-        p_phone: phone.replace(/\D/g, ''),
-        p_otp_code: code
+      const response = await fetch('/api/auth/check-reset-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone, otpCode: code })
       })
 
-      if (error) throw error
+      const result = await response.json()
+      if (!response.ok) throw new Error(result.error || 'Código inválido.')
 
-      const result = Array.isArray(data) ? data[0] : data
-      if (!result.success) throw new Error(result.error)
-
-      return { success: true, userId: result.user_id }
+      return { success: true, userId: result.userId }
     } catch (error: any) {
       return { success: false, error: error.message }
     }

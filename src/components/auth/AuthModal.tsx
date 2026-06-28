@@ -11,6 +11,7 @@ import { useAuthStore } from '@/stores/authStore'
 import toast from 'react-hot-toast'
 import { useRouter } from 'next/navigation'
 import { validatePassword, isPasswordStrong } from '@/utils/passwordUtils'
+import { buildPhoneWithCountryCode } from '@/utils/phone'
 import { PasswordStrength } from './PasswordStrength'
 
 const countryCodes = [
@@ -24,17 +25,6 @@ const countryCodes = [
 ]
 
 const TEST_PHONE = '11986224808'
-
-const buildPhoneWithCountryCode = (countryPrefix: string, phone: string) => {
-    const prefixDigits = countryPrefix.replace(/\D/g, '')
-    let phoneDigits = phone.replace(/\D/g, '')
-
-    if (phoneDigits.startsWith(prefixDigits)) {
-        phoneDigits = phoneDigits.slice(prefixDigits.length)
-    }
-
-    return `${countryPrefix}${phoneDigits}`
-}
 
 export const AuthModal = () => {
     const router = useRouter()

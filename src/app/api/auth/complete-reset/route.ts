@@ -1,5 +1,6 @@
 import { createClient } from '@supabase/supabase-js'
 import { NextResponse } from 'next/server'
+import { onlyDigits, phoneMatches } from '@/utils/phone'
 
 export async function POST(req: Request) {
     try {
@@ -21,32 +22,48 @@ export async function POST(req: Request) {
 
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey)
 
-        // 1. Limpa o telefone (a RPC é tolerante a formato; não forçamos '55'
-        // para não quebrar números internacionais)
-        const fullPhone = phone.replace(/\D/g, '')
+        // 1. Limpa e compara telefone no backend, sem depender da RPC do banco
+        // estar atualizada em produção.
+        const fullPhone = onlyDigits(phone)
 
-        // 2. Valida e CONSOME o OTP via RPC (única validação que consome —
-        // o passo intermediário da UI usa check_password_reset_otp, que não consome)
-        const { data: verifyData, error: verifyError } = await supabaseAdmin.rpc('verify_password_reset_otp', {
-            p_phone: fullPhone,
-            p_otp_code: otpCode
-        })
+        const { data: profiles, error: profileError } = await supabaseAdmin
+            .from('profiles')
+            .select('id, phone')
+            .not('phone', 'is', null)
 
-        if (verifyError) {
-            console.error('Verify RPC Error:', verifyError)
-            return NextResponse.json({ error: verifyError.message }, { status: 500 })
+        if (profileError) {
+            console.error('Profile lookup error in complete-reset:', profileError)
+            return NextResponse.json({ error: 'Erro ao validar dados de redefinição.' }, { status: 500 })
         }
 
-        const result = Array.isArray(verifyData) ? verifyData[0] : verifyData
-        if (!result || !result.success) {
-            return NextResponse.json({ 
-                error: result?.error || 'Código inválido ou expirado.' 
-            }, { status: 401 })
+        const matchingProfiles = profiles?.filter(profile => phoneMatches(profile.phone, fullPhone)) || []
+        if (matchingProfiles.length === 0) {
+            return NextResponse.json({ error: 'Usuário não encontrado' }, { status: 404 })
         }
 
-        const userId = result.user_id
+        const { data: otp, error: otpError } = await supabaseAdmin
+            .from('password_reset_otps')
+            .select('id, user_id')
+            .in('user_id', matchingProfiles.map(profile => profile.id))
+            .eq('otp_code', otpCode)
+            .eq('is_used', false)
+            .gt('expires_at', new Date().toISOString())
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .maybeSingle()
 
-        // 3. Atualiza a senha via Auth Admin API
+        if (otpError) {
+            console.error('OTP lookup error in complete-reset:', otpError)
+            return NextResponse.json({ error: 'Erro ao validar código.' }, { status: 500 })
+        }
+
+        if (!otp) {
+            return NextResponse.json({ error: 'Código inválido ou expirado.' }, { status: 401 })
+        }
+
+        const userId = otp.user_id
+
+        // 2. Atualiza a senha via Auth Admin API
         const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(userId, {
             password: newPassword
         })
@@ -56,7 +73,12 @@ export async function POST(req: Request) {
             return NextResponse.json({ error: 'Erro ao atualizar senha no sistema de autenticação.' }, { status: 500 })
         }
 
-        // 4. Limpa o flag force_password_change no perfil
+        // 3. Consome o código e limpa o flag force_password_change no perfil
+        await supabaseAdmin
+            .from('password_reset_otps')
+            .update({ is_used: true })
+            .eq('id', otp.id)
+
         await supabaseAdmin
             .from('profiles')
             .update({ force_password_change: false })
