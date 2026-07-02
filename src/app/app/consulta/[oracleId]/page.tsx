@@ -96,8 +96,29 @@ export default function NewConsultationPage() {
             )
             .subscribe()
 
+        // Polling fallback every 5 seconds just in case Realtime WS fails
+        const pollInterval = setInterval(async () => {
+            const { data } = await supabase
+                .from('consultations')
+                .select('status')
+                .eq('id', consultationId)
+                .single()
+                
+            if (data) {
+                if (data.status === 'active') {
+                    toast.success('O oraculista aceitou a chamada!')
+                    router.push(`/app/consulta/video/${consultationId}`)
+                } else if (data.status === 'canceled' || data.status === 'missed') {
+                    setCallModalOpen(false)
+                    setConsultationId(null)
+                    toast.error('O oraculista não pôde atender no momento.')
+                }
+            }
+        }, 5000)
+
         return () => {
             supabase.removeChannel(channel)
+            clearInterval(pollInterval)
         }
     }, [consultationId, callModalOpen])
 

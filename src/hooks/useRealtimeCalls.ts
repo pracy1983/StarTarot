@@ -33,7 +33,7 @@ export function useRealtimeCalls() {
     useEffect(() => {
         if (!profile?.id || (profile.role !== 'oracle' && profile.role !== 'owner')) return
 
-        // Check for existing pending calls on mount
+        // Check for existing pending calls
         const checkPending = async () => {
             const { data } = await supabase
                 .from('consultations')
@@ -45,26 +45,50 @@ export function useRealtimeCalls() {
                 `)
                 .eq('oracle_id', profile.id)
                 .eq('status', 'pending')
-                .gt('created_at', new Date(Date.now() - 20000).toISOString()) // Only recent (last 20s)
+                .gt('created_at', new Date(Date.now() - 60000).toISOString()) // 60s fallback
                 .order('created_at', { ascending: false })
                 .limit(1)
                 .maybeSingle()
 
             if (data) {
-                setIncomingCall({
-                    id: data.id,
-                    client_id: data.client_id,
-                    client_name: (data as any).client?.full_name || 'Cliente',
-                    client_avatar: (data as any).client?.avatar_url,
-                    created_at: data.created_at
+                // Fetch the client data if missing (sanity check)
+                let cName = (data as any).client?.full_name || 'Cliente'
+                let cAvatar = (data as any).client?.avatar_url
+                
+                setIncomingCall(prev => {
+                    // Only ring if it's a new call
+                    if (prev?.id !== data.id) {
+                        playRing()
+                    }
+                    return {
+                        id: data.id,
+                        client_id: data.client_id,
+                        client_name: cName,
+                        client_avatar: cAvatar,
+                        created_at: data.created_at
+                    }
+                })
+            } else {
+                setIncomingCall(prev => {
+                    if (prev) stopRing()
+                    return null
                 })
             }
         }
 
+        let interval: NodeJS.Timeout | null = null;
         if (isOnline) {
             checkPending()
+            
+            // Polling fallback every 10 seconds just in case Realtime WS fails
+            interval = setInterval(() => {
+                if (typeof window !== 'undefined' && !window.location.pathname.includes('/video')) {
+                    checkPending()
+                }
+            }, 10000)
         }
-
+            
+        // We still keep realtime below
         const channel = supabase
             .channel('realtime_calls')
             .on(
@@ -120,6 +144,9 @@ export function useRealtimeCalls() {
 
         return () => {
             supabase.removeChannel(channel)
+            if (interval) {
+                clearInterval(interval)
+            }
             stopRing()
         }
     }, [profile?.id, isOnline])
