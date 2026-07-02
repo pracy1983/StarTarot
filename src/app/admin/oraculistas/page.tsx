@@ -819,7 +819,7 @@ export default function AdminOraculistasPage() {
                                                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30 whitespace-nowrap"
                                                     >
                                                         <X size={13} />
-                                                        <span>Pausar</span>
+                                                        <span>Reprovar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDeletePendingUser(o.id, o.full_name)}
@@ -846,7 +846,7 @@ export default function AdminOraculistasPage() {
                                                         className="inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-orange-400 hover:bg-orange-400/10 rounded-lg transition-all border border-transparent hover:border-orange-400/30 whitespace-nowrap"
                                                     >
                                                         <Ban size={13} />
-                                                        <span>Pausar</span>
+                                                        <span>Reprovar</span>
                                                     </button>
                                                     <button
                                                         onClick={() => handleDelete(o.id, o.full_name)}
@@ -971,8 +971,8 @@ export default function AdminOraculistasPage() {
                         >
                             <GlassCard className="border-red-500/30" hover={false}>
                                 <div className="space-y-4">
-                                    <h3 className="text-xl font-bold text-white">Pausar / Solicitar Ajustes</h3>
-                                    <p className="text-sm text-slate-400">Informe ao oraculista <span className="text-white font-bold">{rejectionModal.name}</span> o motivo da pausa/rejeição. Ele deverá corrigir os pontos citados e reenviar a candidatura.</p>
+                                    <h3 className="text-xl font-bold text-white">Reprovar / Solicitar Ajustes</h3>
+                                    <p className="text-sm text-slate-400">Informe ao oraculista <span className="text-white font-bold">{rejectionModal.name}</span> o motivo da rejeição. Ele deverá corrigir os pontos citados e reenviar a candidatura.</p>
 
                                     <textarea
                                         value={rejectionMessage}
@@ -993,7 +993,7 @@ export default function AdminOraculistasPage() {
                                             disabled={isProcessingStatus || !rejectionMessage.trim()}
                                             className="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-bold hover:bg-red-600 transition-all disabled:opacity-50"
                                         >
-                                            {isProcessingStatus ? 'Processando...' : 'Confirmar Pausa'}
+                                            {isProcessingStatus ? 'Processando...' : 'Confirmar Reprovação'}
                                         </button>
                                     </div>
                                 </div>
